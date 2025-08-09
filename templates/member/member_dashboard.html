@@ -1,0 +1,194 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% load static %}
+
+{% block title %}Dashboard - Admin Panel{% endblock %}
+
+{% block content %}
+<div id="dashboard" class="content-section active">
+    <div class="content-card">
+        <h1>Dashboard Overview</h1>
+        <p>Welcome to your admin dashboard. Here's a quick overview of your system.</p>
+    </div>
+
+{% if pending_guarantor_loans %}        
+ 
+       <div class="content-card">
+        <h3>Loan Guarantee Requests</h3>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Borrower</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Loan Type</th>
+                        <th>Amount</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in pending_guarantor_loans %}
+        <tr>
+            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.member }}</td>
+            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.loan_type }}</td>
+            <td>₦{{ loan.amount }}</td>
+            <td>
+                <div class="d-flex">
+
+                    <a href="{% url 'guarantor_approval_page' loan.id %}" class="btn btn-sm btn-primary ">
+                        Review&Accept
+                    </a>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" class="text-center text-muted">No loans waiting for your approval.</td>
+        </tr>
+        {% endfor %}
+                   
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+
+       <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-primary">
+                <i class="bi bi-folder"></i>
+            </div>
+            <div class="stat-content">
+                <p>Total Savings</p>
+                <h6 class="text-success">₦{{ total_savings|floatformat:0|intcomma }}</h6>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-success">
+                <i class="bi bi-people"></i>
+            </div>
+            <div class="stat-content">
+                <p>Total Investments</p>
+                <h6 class="text-primary">₦{{ investment_total|floatformat:0|intcomma }}</h6>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <p>Loanable</p>
+                <h6 class="text-warning"> ₦{{ loanable_total|floatformat:0|intcomma }}</h6>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-danger">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <div class="stat-content">
+                <h3>95%</h3>
+                <p>Success Rate</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+     {% if loan and loan.status != "rejected" %}
+    <div class="content-card">
+        <h3>Active Loan</h3>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Approved Amount</th>
+                        <th>Monthly Payment</th>
+                        <th>Amount Paid</th>
+                        <th>Remaining Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>₦{{ loan.approved_amount|floatformat:0|intcomma }}</td>
+                        <td>₦{{ loan.monthly_payment|floatformat:2 }}</td>
+                        <td>₦{{ loan_paid|floatformat:0|intcomma }}</td>
+                        <td>₦{{ loan_balance|floatformat:0|intcomma }}</td>
+                    </tr>
+                  
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    <!-- Recent Activity -->
+     {% if approved_consumable %}
+    <div class="content-card">
+        <h3>Recent Activity</h3>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                    <th>Date</th>
+                    <!-- <th>Items</th> -->
+                    <th>Approved Amount</th>
+                    <th>Paid</th>
+                    <th>Balance</th>
+                    <th>Monthly Payment</th>
+                </tr>
+                </thead>
+                <tbody>
+                    {% for item in approved_consumable %}
+                <tr>
+                    <td>{{ item.consumable.date_created|date:"M d, Y" }}</td>
+                    <td>₦{{ item.approved_amount|floatformat:0|intcomma }}</td>
+                    <td>₦{{ item.total_paid|floatformat:0|intcomma }}</td>
+                    <td>₦{{ item.balance|floatformat:0|intcomma }}</td>
+                    <td>₦{{ item.monthly_payment|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    <!-- Recent Activity -->
+    <div class="content-card">
+        <h3>Recent Activity</h3>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>User</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><i class="bi bi-folder-plus me-2"></i>New case created</td>
+                        <td>John Doe</td>
+                        <td>2 minutes ago</td>
+                        <td><span class="status-badge status-active">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td><i class="bi bi-person-plus me-2"></i>Member added</td>
+                        <td>Jane Smith</td>
+                        <td>15 minutes ago</td>
+                        <td><span class="status-badge status-completed">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td><i class="bi bi-file-earmark me-2"></i>Report generated</td>
+                        <td>System</td>
+                        <td>1 hour ago</td>
+                        <td><span class="status-badge status-pending">Pending</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock content %}

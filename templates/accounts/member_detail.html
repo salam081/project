@@ -1,0 +1,215 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-12">
+            <!-- Single Comprehensive Card -->
+            <div class="card shadow border-0">
+                <!-- Header with User Name -->
+                <div class="card-header bg-gradient-primary text-white py-3">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h4 class="mb-0">
+                                <i class="fas fa-user-circle me-2"></i>
+                                {{ user.first_name }} {{ user.last_name }} {{ user.other_name }}
+                            </h4>
+                            <small class="opacity-75">User Profile Details</small>
+                        </div>
+                        <div class="col-auto">
+                            {% if user.passport %}
+                                <img src="{{ user.passport.url }}" class="rounded-circle border border-white border-3 shadow-sm" style="width: 60px; height: 60px; object-fit: cover;" alt="Profile">
+                            {% else %}
+                                <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-user text-white opacity-75"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Body with All Information -->
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        
+                        <!-- Basic Information Section -->
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3 border-bottom border-primary border-opacity-25 pb-2">
+                                <i class="fas fa-info-circle me-2"></i>Basic Information
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-4 col-sm-8">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Full Name
+                                    <b class="mb-2">{{ user.first_name }}  {{ user.first_name }}</b>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 col-sm-8">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Email
+                                    <b class="mb-2">{{ user.email }}</b>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 col-sm-8">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Phone
+                                    <b class="mb-2">{{ user.phone1 }}{% if user.phone2 %} / {{ user.phone2 }}{% endif %}</b>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 col-sm-8">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Department
+                                    <b class="mb-2">{{ user.department }}</b>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 col-sm-8">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Unit
+                                    <b class="mb-2">{{ user.unit }}</b>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 col-sm-8">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Gender
+                                    <b class="mb-2">{{ user.gender }}</b>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 col-sm-8">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Religion
+                                    <b class="mb-2">{{ user.religion }}</b>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 col-sm-6">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Marital Status
+                                    <b class="mb-2">{{ user.marital_status }}</b>
+                                    </small>
+                                </div>
+                                <div class="col-md-4 col-sm-6">
+                                    <small class="text-muted text-uppercase fw-bold d-block">IPPIS Number
+                                    <b class="mb-2 fw-semibold">{{ member.ippis }}</b>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Information (if exists) -->
+                        {% if address %}
+                        <div class="col-12">
+                            <h6 class="text-info mb-3 border-bottom border-info border-opacity-25 pb-2">
+                                <i class="fas fa-map-marker-alt me-2"></i>Address Information
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Country</small>
+                                    <p class="mb-2">{{ address.country }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted text-uppercase fw-bold d-block">State of Origin</small>
+                                    <p class="mb-2">{{ address.state_of_origin }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted text-uppercase fw-bold d-block">LGA</small>
+                                    <p class="mb-2">{{ address.local_government_area }}</p>
+                                </div>
+                                <div class="col-12">
+                                    <small class="text-muted text-uppercase fw-bold d-block">Full Address</small>
+                                    <p class="mb-2">{{ address.address }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Next of Kin Information (if exists) -->
+                        {% if next_of_kin %}
+                        <div class="col-12">
+                            <h6 class="text-warning mb-3 border-bottom border-warning border-opacity-25 pb-2">
+                                <i class="fas fa-users me-2"></i>Next of Kin
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <div class="row g-3">
+                                        <div class="col-sm-6">
+                                            <small class="text-muted text-uppercase fw-bold d-block">Full Name</small>
+                                            <p class="mb-2">{{ next_of_kin.full_names }}</p>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <small class="text-muted text-uppercase fw-bold d-block">Phone</small>
+                                            <p class="mb-2">{{ next_of_kin.phone_no }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <small class="text-muted text-uppercase fw-bold d-block">Email</small>
+                                            <p class="mb-2">{{ next_of_kin.email }}</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <small class="text-muted text-uppercase fw-bold d-block">Address</small>
+                                            <p class="mb-2">{{ next_of_kin.address }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    {% if next_of_kin.netofkin_passport %}
+                                        <img src="{{ next_of_kin.netofkin_passport.url }}" class="img-fluid rounded border shadow-sm" style="max-width: 120px; max-height: 120px; object-fit: cover;" alt="Next of Kin">
+                                    {% else %}
+                                        <div class="bg-light rounded border d-flex align-items-center justify-content-center mx-auto" style="width: 120px; height: 120px;">
+                                            <i class="fas fa-user text-muted fa-2x"></i>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">No photo</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+
+                <!-- Footer with Action Buttons -->
+                <div class="card-footer bg-light border-0 d-flex justify-content-between align-items-center py-3">
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>Last updated: Today
+                    </small>
+                    <div class="btn-group">
+                        <a href="{% url 'complete_profile' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </a>
+                       
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .info-item {
+        background: #f8f9fa;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        height: 100%;
+    }
+    
+    .info-item small {
+        font-size: 0.7rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .info-item p {
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+        font-weight: 500;
+    }
+    
+    
+    
+   
+    
+    .border-opacity-25 {
+        --bs-border-opacity: 0.25;
+    }
+    
+    h6 {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+</style>
+
+{% endblock content %}

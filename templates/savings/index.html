@@ -1,0 +1,161 @@
+<!-- filepath: core/templates/main/index.html -->
+{% extends 'base/base.html' %}
+
+{% block title %}Dashboard - Main{% endblock %}
+
+{% block content %}
+<div class="container  mt-4">
+    <!-- Header Section -->
+   
+
+    <!-- Filter Form Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                 
+                        <h3 class="text-center">Income Dashboard</h3>
+                </div>
+                <div class="card-body">
+                    <form method="get">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label for="date_from" class="form-label fw-semibold">From Date</label>
+                                <input type="date" id="date_from" name="date_from" class="form-control form-control" value="{{ date_from }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="date_to" class="form-label fw-semibold">To Date</label>
+                                <input type="date" id="date_to" name="date_to" class="form-control form-control" value="{{ date_to }}">
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-grid d-flex gap-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-search me-2"></i>Apply Filter
+                                    </button>
+                                      <a href="{% url 'index' %}" class="btn btn-outline-danger">Clear</a>
+                                </div>
+                            </div>
+                           
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards Section -->
+    <div class="row g-4 mb-5">
+        <!-- Total Loans Form Fee -->
+        <div class="col-sm-12 col-md-6 col-xl-4">
+            <div class="card border shadow h-100">
+                <div class="card-body text-center">
+                   
+                    <h6 class="card-title text-muted mb-2">Total Loans Form Fee</h6>
+                    <h3 class="fw-bold text-primary mb-0"> ₦{% if filters_applied %}{{ total_loans_fee|floatformat:2 }}{% else %}0.00{% endif %}</h3>
+                </div>
+               
+            </div>
+        </div>
+
+       
+
+        <!-- Total Savings Received -->
+        <div class="col-sm-12 col-md-6 col-xl-4">
+            <div class="card border shadow h-100">
+                <div class="card-body text-center">
+                  
+                    <h6 class="card-title text-muted mb-2">Total Savings Received</h6>
+                    <h3 class="fw-bold text-success mb-0"> ₦{% if filters_applied %}{{ total_savings|floatformat:2 }}{% else %}0.00{% endif %}</h3>
+                </div>
+               
+            </div>
+        </div>
+
+        <!-- Total Admin Fee Received -->
+       <div class="col-sm-12 col-md-6 col-xl-4">
+            <div class="card border shadow h-100">
+                <div class="card-body text-center">
+                    
+                    <h6 class="card-title text-muted mb-2">Total Admin Fee Received</h6>
+                    <h3 class="fw-bold text-warning mb-0">₦{% if filters_applied %}{{ deducted_amount|floatformat:2 }}{% else %}0.00{% endif %}</h3>
+                </div>
+               
+            </div>
+        </div>
+
+        <!-- Total Loan Payback -->
+       <div class="col-sm-12 col-md-6 col-xl-4">
+            <div class="card border shadow h-100">
+                <div class="card-body text-center">
+                   
+                    <h6 class="card-title text-muted mb-2">Total Loan Payback</h6>
+                    <h3 class="fw-bold text-info mb-0"> ₦{% if filters_applied %}{{ payback_loans|floatformat:2 }}{% else %}0.00{% endif %}</h3>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- Total Consumable Payback -->
+       <div class="col-sm-12 col-md-6 col-xl-4">
+            <div class="card border shadow h-100">
+                <div class="card-body text-center">
+                   
+                    <h6 class="card-title text-muted mb-2">Total Consumable Payback</h6>
+                    <h3 class="fw-bold text-secondary mb-0">
+                        ₦{% if filters_applied %}{{ total_consumable_payback|floatformat:2 }}{% else %}0.00{% endif %}
+                    </h3>
+                </div>
+               
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Income Summary -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg bg-gradient">
+                <div class="card-body text-center py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="text-white">
+                        <i class="bi bi-currency-dollar fs-4 mb-3 d-block"></i>
+                        <h2 class="fw-bold mb-2">Total Income</h2>
+                        <h1 class="display-4 fw-bold"> ₦{% if filters_applied %}{{ income|floatformat:2 }}{% else %}0.00{% endif %}</h1>
+                        <p class="mb-0 opacity-75">Cumulative revenue from all sources</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add custom styles for better visual appeal -->
+<style>
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    transform: translateY(-1px);
+}
+</style>
+{% endblock %}

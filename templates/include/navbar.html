@@ -1,0 +1,45 @@
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="navbar-content">
+        <div class="navbar-left">
+            <!-- Mobile toggle - only shows on mobile -->
+            <button class="toggle-btn mobile-toggle" id="mobileToggle" aria-label="Toggle mobile menu">
+                <i class="bi bi-list"></i>
+            </button>
+              
+            <a href="{% url 'home' %}" class="navbar-brand">
+                <i class="bi bi-shield-check"></i> Admin Dashboard
+            </a>
+            <!-- Desktop toggle - only shows on desktop -->
+            <button class="toggle-btn desktop-toggle" id="desktopToggle" aria-label="Toggle sidebar">
+                <i class="bi bi-list" id="toggleIcon"></i>
+                <i class="bi bi-list" id="toggleIcon"></i>
+            </button>
+          
+        </div>
+        
+        <div class="navbar-right">
+            <button class="profile-btn" aria-label="Messages" title="Messages">
+                <i class="bi bi-envelope"></i>
+                <span class="badge">3</span>
+            </button>
+            
+            {% comment %} <button class="profile-btn" aria-label="Notifications" title="Notifications">
+                <i class="bi bi-bell"></i>
+                <span class="badge">5</span>
+            </button> {% endcomment %}
+            
+            <div class="dropdown profile-dropdown">
+                <button class="profile-btn" data-bs-toggle="dropdown" aria-label="Profile menu" title="Profile">
+                    <i class="bi bi-person-circle"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Profile</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,339 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block content %}
+
+<div class="container py-4 d-flex flex-column align-items-center text-center">
+    <!-- Header -->
+    <div class="row ">
+        <div class="col-12">
+            <h2 class="text-center mb-4 text-primary fw-bold">Monthly Summary</h2>
+        </div>
+    </div>
+
+    <!-- Savings Section -->
+    <div class="row col-9 mb-3">
+        <div class="col-12">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white col-12">
+                    <h3 class="mb-0"><i class="bi bi-piggy-bank me-2"></i>Savings</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-semibold">Month</th>
+                                    <th class="fw-semibold">Year</th>
+                                    <th class="fw-semibold">Total</th>
+                                    <th class="fw-semibold">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in savings_page %}
+                                <tr class="border-bottom">
+                                    <td class="fw-medium">{{ item.month }}</td>
+                                    <td>{{ item.year }}</td>
+                                    <td class="text-success fw-bold">₦{{ item.total|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <a href="{% url 'get_upload_details' item.month_num %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye me-1"></i>Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Total -->
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="bg-light rounded">
+                                <p class="text-end mb-0 fs-5 fw-bold text-success">
+                                    Total Savings: ₦{{ total_savings|floatformat:2|intcomma }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav aria-label="Savings pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if savings_page.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">&laquo; First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ savings_page.previous_page_number }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">Page {{ savings_page.number }} of {{ savings_page.paginator.num_pages }}</span>
+                            </li>
+                            
+                            {% if savings_page.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ savings_page.next_page_number }}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ savings_page.paginator.num_pages }}">Last &raquo;</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Fee Section -->
+    <div class="row col-9 mb-3">
+        <div class="col-md-12">
+            <div class="card shadow border-0">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0"><i class="bi bi-calculator me-2"></i>Admin Fee</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-semibold">Month</th>
+                                    <th class="fw-semibold">Year</th>
+                                    <th class="fw-semibold">Total</th>
+                                    <th class="fw-semibold">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in interest_page %}
+                                <tr class="border-bottom">
+                                    <td class="fw-medium">{{ item.month }}</td>
+                                    <td>{{ item.year }}</td>
+                                    <td class="text-warning fw-bold">₦{{ item.total|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <a href="{% url 'get_upload_interest_details' item.month_num %}" class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-eye me-1"></i>Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Total -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="bg-light rounded">
+                                <p class="text-end mb-0 fs-5 fw-bold text-warning">
+                                    Total Interest: ₦{{ total_interest|floatformat:2|intcomma }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav aria-label="Interest pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if interest_page.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">&laquo; First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ interest_page.previous_page_number }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">Page {{ interest_page.number }} of {{ interest_page.paginator.num_pages }}</span>
+                            </li>
+                            
+                            {% if interest_page.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ interest_page.next_page_number }}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ interest_page.paginator.num_pages }}">Last &raquo;</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loanable Section -->
+   <div class="row col-9 mb-3">
+        <div class="col-md-12">
+            <div class="card shadow border-0">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0"><i class="bi bi-cash-coin me-2"></i>Loanable</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-semibold">Month</th>
+                                    <th class="fw-semibold">Year</th>
+                                    <th class="fw-semibold">Total</th>
+                                    <th class="fw-semibold">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in loanable_page %}
+                                <tr class="border-bottom">
+                                    <td class="fw-medium">{{ item.month }}</td>
+                                    <td>{{ item.year }}</td>
+                                    <td class="text-info fw-bold">₦{{ item.total|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <a href="{% url 'loanable_investment_details' item.year item.month_num %}" class="btn btn-sm btn-outline-info">
+                                            <i class="bi bi-eye me-1"></i>Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Total -->
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="bg-light  rounded">
+                                <p class="text-end mb-0 fs-5 fw-bold text-info">
+                                    Total Loanable: ₦{{ total_loanable|floatformat:2|intcomma }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav aria-label="Loanable pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if loanable_page.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">&laquo; First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ loanable_page.previous_page_number }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">Page {{ loanable_page.number }} of {{ loanable_page.paginator.num_pages }}</span>
+                            </li>
+                            
+                            {% if loanable_page.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ loanable_page.next_page_number }}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ loanable_page.paginator.num_pages }}">Last &raquo;</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Investment Section -->
+  <div class="row col-9 mb-3">
+        <div class="col-md-12">
+            <div class="card shadow border-0">
+                <div class="card-header bg-secondary text-white">
+                    <h3 class="mb-0 text-white"><i class="bi bi-graph-up me-2"></i>Investment</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-semibold">Month</th>
+                                    <th class="fw-semibold">Year</th>
+                                    <th class="fw-semibold">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in investment_page %}
+                                <tr class="border-bottom">
+                                    <td class="fw-medium">{{ item.month }}</td>
+                                    <td>{{ item.year }}</td>
+                                    <td class="text-secondary fw-bold">₦{{ item.total|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Total -->
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="bg-light  rounded">
+                                <p class="text-end mb-0 fs-5 fw-bold text-secondary">
+                                    Total Investment: ₦{{ total_investment|floatformat:2|intcomma }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav aria-label="Investment pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if investment_page.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">&laquo; First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ investment_page.previous_page_number }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">Page {{ investment_page.number }} of {{ investment_page.paginator.num_pages }}</span>
+                            </li>
+                            
+                            {% if investment_page.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ investment_page.next_page_number }}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ investment_page.paginator.num_pages }}">Last &raquo;</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards Section -->
+  <div class="row col-12 mb-3">
+        <div class="col-6 mb-6">
+            <div class="card border-0 shadow-lg bg-primary text-white">
+                <div class="card-body text-center py-1">
+                   
+                    <h5 class="card-title mb-3 fw-semibold">Grand Total For All Members Savings</h5>
+                    <h4 class=" fw-bold mb-0">₦{{ total_savings|floatformat:2|intcomma }}</h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 ">
+            <div class="card border-0 shadow bg-success text-white">
+                <div class="card-body text-center py-1">
+                    <h5 class="card-title mb-3 fw-semibold">Grand Total Of Savings And Admin Fee</h5>
+                    <h4 class=" fw-bold mb-0">₦{{ grand_total|floatformat:2|intcomma }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

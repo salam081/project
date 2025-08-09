@@ -1,0 +1,286 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Consumable Request Status Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center py-4">
+                    <h1 class="card-title mb-3">
+                        <i class="fas fa-clipboard-list me-3"></i>
+                        Consumable Request Report
+                    </h1>
+                    <h6 class="card-subtitle mb-0">Monitor and track all consumable requests across your organization</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Filter Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-filter me-2"></i>
+                        Filter Options
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="filterForm">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label" for="status">Status</label>
+                                <select class="form-select" name="status" id="status">
+                                    {% for value, label in status_choices %}
+                                        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="date_from">Date From</label>
+                                <input type="date" class="form-control" name="date_from" id="date_from" value="{{ filters.date_from }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="date_to">Date To</label>
+                                <input type="date" class="form-control" name="date_to" id="date_to" value="{{ filters.date_to }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="consumable_type">Filter by Consumable Type</label>
+                                <select name="consumable_type" id="consumable_type" class="form-select">
+                                    <option value="">All Types</option>
+                                    {% for type in consumable_types %}
+                                        <option value="{{ type.id }}" {% if filters.consumable_type == type.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ type.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="fas fa-search me-2"></i>
+                                    Apply Filters
+                                </button>
+                                <a href="{% url 'request_status_report' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times me-2"></i>
+                                    Clear Filters
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+   <div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon bg-primary">
+            <i class="fas fa-list-ul"></i>
+        </div>
+        <div class="stat-content">
+            <h3>{{ summary.total_requests }}</h3>
+            <p>Total Requests</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon bg-success">
+            <i class="fas fa-money-bill-wave"></i>
+        </div>
+        <div class="stat-content">
+            <h3>₦{{ summary.total_value|floatformat:2|intcomma }}</h3>
+            <p>Total Value</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon bg-info">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+            <h3>₦{{ summary.total_paid|floatformat:2|intcomma }}</h3>
+            <p>Total Paid</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon bg-warning">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+            <h3>₦{{ summary.total_balance|floatformat:2|intcomma }}</h3>
+            <p>Balance Remaining</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon bg-warning">
+            <i class="fas fa-hourglass-half"></i>
+        </div>
+        <div class="stat-content">
+            <h3>{{ summary.pending_count }}</h3>
+            <p>Pending</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon bg-primary">
+            <i class="fas fa-thumbs-up"></i>
+        </div>
+        <div class="stat-content">
+            <h3>{{ summary.approved_count }}</h3>
+            <p>Approved</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon bg-success">
+            <i class="fas fa-wallet"></i>
+        </div>
+        <div class="stat-content">
+            <h3>{{ summary.paid_count }}</h3>
+            <p>Paid</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon bg-danger">
+            <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-content">
+            <h3>{{ summary.declined_count }}</h3>
+            <p>Declined</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon bg-success">
+            <i class="fas fa-shopping-cart"></i>
+        </div>
+        <div class="stat-content">
+            <h3>{{ summary.itempicked_count }}</h3>
+            <p>Item Picked</p>
+        </div>
+    </div>
+</div>
+
+    <!-- Data Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Request Details</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Member</th>
+                                    <th>Date Created</th>
+                                    <th>Status</th>
+                                    <th>Total Price</th>
+                                    <th>Total Paid</th>
+                                    <th>Balance</th>
+                                    <th>Items</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in requests %}
+                                <tr>
+                                    <td><strong>#{{ req.id }}</strong></td>
+                                    <td>{{ req.user.get_full_name|default:req.user.username }}</td>
+                                    <td>{{ req.date_created|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <span class="status-badge 
+                                            {% if req.status == 'Pending' %}status-pending
+                                            {% elif req.status == 'Approved' %}status-active
+                                            {% elif req.status == 'Itempicked' %}status-info
+                                            {% elif req.status == 'FullyPaid' %}status-completed
+                                            {% elif req.status == 'Declined' %}status-cancelled
+                                            {% else %}status-secondary{% endif %}">
+                                            {% if req.status == 'Itempicked' %}
+                                                Item Picked
+                                            {% elif req.status == 'FullyPaid' %}
+                                                Fully Paid
+                                            {% else %}
+                                                {{ req.status }}
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>₦{{ req.total_price|floatformat:2|intcomma }}</td>
+                                    <td>₦{{ req.total_paid|floatformat:2|intcomma }}</td>
+                                    <td>₦{{ req.balance|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <span class="badge bg">{{ req.items_count }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="fas fa-search fa-3x mb-3 d-block"></i>
+                                            <h5>No Records Found</h5>
+                                            <p class="mb-0">No records found for the selected criteria. Try adjusting your filters.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if requests.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if requests.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ requests.previous_page_number }}{% if filters.status != 'all' %}&status={{ filters.status }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.consumable_type %}&consumable_type={{ filters.consumable_type }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in requests.paginator.page_range %}
+                        {% if requests.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > requests.number|add:'-3' and num < requests.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if filters.status != 'all' %}&status={{ filters.status }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.consumable_type %}&consumable_type={{ filters.consumable_type }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if requests.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ requests.next_page_number }}{% if filters.status != 'all' %}&status={{ filters.status }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.consumable_type %}&consumable_type={{ filters.consumable_type }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

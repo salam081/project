@@ -1,0 +1,50 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+
+  <div class="main-content mt-5">
+    <div class="content-body mt-5">
+      <div class="card card-custom">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">Arbitration Cases</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>Case ID</th>
+                  <th>Parties</th>
+                  <th>Status</th>
+                  <th>Arbitrator</th>
+                  <th>Hearing Date</th>
+                  <th>Issues</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for m in members %}
+                <tr>
+                  <td class="text-nowrap text-truncate" style="max-width: 270px;"><span class="user-name">{{ m.first_name }} {{ m.last_name }}</span></td>
+                                <td class="savings-amount">₦{{ m.savings|default:"0"|floatformat:2 }}</td>
+                                <td>{{ m.phone1 }}</td>
+                                <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.date_of_birth }}</td>
+                                <td>{{ m.department|default:"Not Set" }}</td>
+                                <td>
+                                    {% if m.member and m.member.ippis %} {# Check if member object exists before accessing ippis #}
+                                        <span class="user-code">{{ m.member.ippis }}</span>
+                                    {% else %}
+                                        <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+                 
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

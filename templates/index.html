@@ -1,0 +1,124 @@
+
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div id="content-container">
+    <!-- Dashboard Content -->
+    <section id="dashboard" class="content-section">
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="stats-card d-flex align-items-center">
+                    <div class="stats-icon bg-primary">
+                        <i class="bi bi-folder2-open"></i>
+                    </div>
+                    <div class="ms-3">
+                        <p class="text-muted mb-1">Total Cases</p>
+                        <h4 class="mb-0">125</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="stats-card d-flex align-items-center">
+                    <div class="stats-icon bg-success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="ms-3">
+                        <p class="text-muted mb-1">Completed</p>
+                        <h4 class="mb-0">80</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="stats-card d-flex align-items-center">
+                    <div class="stats-icon bg-warning">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div class="ms-3">
+                        <p class="text-muted mb-1">In Progress</p>
+                        <h4 class="mb-0">30</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="stats-card d-flex align-items-center">
+                    <div class="stats-icon bg-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="ms-3">
+                        <p class="text-muted mb-1">Pending</p>
+                        <h4 class="mb-0">15</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Recent Cases Table -->
+        <div class="card-custom mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Recent Cases</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Case ID</th>
+                                <th>Client Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>#1021</td>
+                                <td>Jane Smith</td>
+                                <td>Uncontested</td>
+                                <td><span class="status-badge status-active">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>#1022</td>
+                                <td>Robert Johnson</td>
+                                <td>Contested</td>
+                                <td><span class="status-badge status-pending">Pending</span></td>
+                            </tr>
+                            <!-- More rows can be dynamically generated here from a Django view -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Other Sections -->
+    <section id="cases" class="content-section d-none">
+        <div class="card-custom p-4">
+            <h3 class="mb-3">Cases Management</h3>
+            <p class="text-muted">This is the content for managing all divorce cases. You can add a table, filters, and search functionality here.</p>
+        </div>
+    </section>
+    <section id="clients" class="content-section d-none">
+        <div class="card-custom p-4">
+            <h3 class="mb-3">Clients List</h3>
+            <p class="text-muted">This section will contain a list of all clients, with details and contact information.</p>
+        </div>
+    </section>
+    <section id="documents" class="content-section d-none">
+        <div class="card-custom p-4">
+            <h3 class="mb-3">Document Center</h3>
+            <p class="text-muted">Manage, upload, and organize all case-related documents here.</p>
+        </div>
+    </section>
+    <section id="reports" class="content-section d-none">
+        <div class="card-custom p-4">
+            <h3 class="mb-3">Reports & Analytics</h3>
+            <p class="text-muted">View performance metrics, case statistics, and other reports in this section.</p>
+        </div>
+    </section>
+    <section id="settings" class="content-section d-none">
+        <div class="card-custom p-4">
+            <h3 class="mb-3">Account Settings</h3>
+            <p class="text-muted">Customize your profile, change password, and manage system settings here.</p>
+        </div>
+    </section>
+</div>
+{% endblock content %}

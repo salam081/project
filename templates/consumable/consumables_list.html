@@ -1,0 +1,254 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}
+    Consumable Requests List
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="text-primary fw-bold mb-0">
+                <i class="bi bi-clipboard-check me-3"></i>Consumable Requests List
+            </h5>
+            {# Optional: Add a button for creating new requests if applicable #}
+            {# <a href="{% url 'request_consumable' %}" class="btn btn-primary">New Request</a> #}
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h5 class="card-title text-dark mb-3">Filter Requests</h5>
+                <form method="GET" action="{% url 'admin_consumables_list' %}" class="row g-3 align-items-end">
+                    <div class="col-md-4 col-lg-3">
+                        <label for="status-filter" class="form-label fw-bold">Status:</label>
+                        <select name="status" id="status-filter" class="form-select">
+                            <option value="all" {% if not selected_status or selected_status == 'all' %}selected{% endif %}>All Statuses</option>
+                            {% for status_value, status_label in status_choices %}
+                                <option value="{{ status_value }}" {% if selected_status == status_value %}selected{% endif %}>{{ status_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 col-lg-3">
+                        <label for="user-filter" class="form-label fw-bold">User:</label>
+                        <select name="user" id="user-filter" class="form-select">
+                            <option value="all" {% if not selected_user or selected_user == 'all' %}selected{% endif %}>All Users</option>
+                            {% for user in all_users %}
+                                <option value="{{ user.id }}" {% if selected_user|floatformat:0 == user.id|floatformat:0 %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 col-lg-3">
+                        <label for="consumable-type-filter" class="form-label fw-bold">Consumable Type:</label>
+                        <select name="consumable_type" id="consumable-type-filter" class="form-select">
+                            <option value="all" {% if not selected_consumable_type or selected_consumable_type == 'all' %}selected{% endif %}>All Types</option>
+                            {% for type in all_consumable_types %}
+                                <option value="{{ type.id }}" {% if selected_consumable_type|floatformat:0 == type.id|floatformat:0 %}selected{% endif %}>
+                                    {{ type.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-12 col-lg-3 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                        <a href="{% url 'admin_consumables_list' %}" class="btn btn-secondary">Clear</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h5 class="card-title text-dark mb-3">All Consumable Requests</h5>
+                {% if consumables_list %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th scope="col">ID</th>
+                                    <th scope="col">User</th>
+                                    <th scope="col">Consumable Type</th>
+                                    <th scope="col">Date Created</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request_obj in consumables_list %}
+                                    <tr>
+                                        <td>#{{ request_obj.id }}</td>
+                                        <td>{{ request_obj.user.get_full_name|default:request_obj.user.username }}</td>
+                                        <td>{{ request_obj.consumable_type.name }}</td>
+                                        <td>{{ request_obj.date_created|date:'M j, Y, P' }}</td>
+                                        <td>
+                                           
+                                            <span class="status-badge 
+                                                {% if request_obj.status == 'Pending' %}status-pending
+                                                {% elif request_obj.status == 'Approved' %}status-active
+                                                {% elif request_obj.status == 'Itempicked' %}status-info
+                                                {% elif request_obj.status == 'FullyPaid' %}status-completed
+                                                {% elif request_obj.status == 'Declined' %}status-cancelled
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ request_obj.status }}
+                                            </span>
+                                        </td>
+                                       
+                                        <td>
+                                            <div class="d-flex">
+                                            <a href="{% url 'admin_consumable_detail' request_obj.id %}" class="btn btn-sm btn-outline-primary me-1" title="View Details">
+                                                <i class="bi bi-eye"></i> 
+                                            </a>
+                                            {% if request_obj.status == 'Pending' %}
+                                                <a href="" class="btn btn-sm btn-success me-1" title="Approve">
+                                                    <i class="bi bi-check-circle"></i> 
+                                                </a>
+                                                {# Decline button now triggers a modal for confirmation #}
+                                              
+                                             <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" 
+                                                        data-bs-target="#declineConfirmModal" 
+                                                        data-request-id="{{ request_obj.id }}"
+                                                        data-url="{% url 'admin_request_reject' request_obj.id %}">
+                                                    <i class="fas fa-times"></i> Decline
+                                             </button>
+                                            {% elif request_obj.status == 'Approved' %}
+                                                <a href="{% url 'admin_request_taking' request_obj.id %}" class="btn btn-sm btn-info me-1" title="Mark as Item Picked">
+                                                    <i class="bi bi-box-seam"></i> Picked
+                                                </a>
+                                                {# Add Payment button now triggers a modal #}
+                                                <button type="button" class="btn btn-sm btn-warning" title="Add Payment"
+                                                        data-bs-toggle="modal" data-bs-target="#addPaymentModal"
+                                                        data-request-id="{{ request_obj.id }}"
+                                                        data-balance="{{ request_obj.balance|floatformat:2 }}">
+                                                    <i class="bi bi-currency-dollar"></i> Payment
+                                                </button>
+                                            {% elif request_obj.status == 'Itempicked' %}
+                                                {# Add Payment button now triggers a modal #}
+                                               <button type="button" class="btn btn-sm btn-warning" title="Add Payment"
+                                                        data-bs-toggle="modal" data-bs-target="#addPaymentModal"
+                                                        data-request-id="{{ request_obj.id }}"
+                                                        data-balance="{{ request_obj.balance|floatformat:2 }}"
+                                                        data-url="{% url 'add_payment' request_obj.id %}">
+                                                    <i class="bi bi-currency-dollar"></i> Add Payment
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info text-center" role="alert">
+                        <i class="bi bi-info-circle me-2"></i> No consumable requests found matching your criteria.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Payment Modal (Moved outside the loop) -->
+    <div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addPaymentModalLabel">Add New Payment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" id="addPaymentForm">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <p class="text-muted">For Request ID: <strong id="modalRequestId"></strong></p>
+                        <div class="mb-3">
+                            <label for="amount_paid" class="form-label fw-bold">Amount Paid (₦)</label>
+                            <input type="number" class="form-control" id="amount_paid" name="amount_paid" step="0.01" min="0.01" required
+                                   placeholder="e.g., 1000.00">
+                            <div class="form-text text-muted">Remaining Balance: ₦<span id="modalRemainingBalance"></span></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="repayment_date" class="form-label fw-bold">Repayment Date</label>
+                            <input type="date" class="form-control" id="repayment_date" name="repayment_date" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Submit Payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decline Confirmation Modal -->
+    <div class="modal fade" id="declineConfirmModal" tabindex="-1" aria-labelledby="declineConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="declineConfirmModalLabel">Confirm Decline</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to **decline** this consumable request (<strong id="declineRequestId"></strong>)? This action cannot be undone.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="post" id="declineForm" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Decline Request</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Script for Add Payment Modal
+            const addPaymentModal = document.getElementById('addPaymentModal');
+            addPaymentModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget; // Button that triggered the modal
+                const requestId = button.getAttribute('data-request-id');
+                const balance = button.getAttribute('data-balance');
+
+                const modalTitle = addPaymentModal.querySelector('.modal-title');
+                const modalRequestId = addPaymentModal.querySelector('#modalRequestId');
+                const modalRemainingBalance = addPaymentModal.querySelector('#modalRemainingBalance');
+                const amountPaidInput = addPaymentModal.querySelector('#amount_paid');
+                const addPaymentForm = addPaymentModal.querySelector('#addPaymentForm');
+                const formActionUrl = button.getAttribute('data-url');
+                
+
+                // Update modal content
+                modalTitle.textContent = `Add New Payment for Request #${requestId}`;
+                modalRequestId.textContent = requestId;
+                modalRemainingBalance.textContent = balance;
+                amountPaidInput.setAttribute('max', balance);
+                amountPaidInput.value = balance; // Pre-fill with remaining balance
+
+                // Update the form action dynamically
+                // Ensure your Django URL pattern for 'add_payment' expects the request_id in this format
+                {% comment %} addPaymentForm.action = `/consumables/add_payment/${requestId}/`; {% endcomment %}
+                addPaymentForm.action = formActionUrl;
+            });
+
+                        // Script for Decline Confirmation Modal
+                    // Script for Decline Confirmation Modal
+            declineConfirmModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget; // Button that triggered the modal
+                const requestId = button.getAttribute('data-request-id');
+                const formActionUrl = button.getAttribute('data-url');
+
+                const declineRequestId = declineConfirmModal.querySelector('#declineRequestId');
+                const declineForm = declineConfirmModal.querySelector('#declineForm');
+
+                declineRequestId.textContent = `#${requestId}`;
+                // This line is now correct because the URL comes from the template
+                declineForm.action = formActionUrl; 
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}
+    Consumable Dashboard
+{% endblock %}
+
+{% block content %}
+ 
+
+    <div class="dashboard-container fade-in">
+        <div class="dashboard-header">
+            <h1>Consumable Requests Dashboard</h1>
+        </div>
+ <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <span class="icon">📈</span>
+            </div>
+            <div class="stat-content">
+                <h6>Total Requests</h6>
+                <p>{{ total_requests }}</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+               <span class="icon">⏳</span>
+            </div>
+            <div class="stat-content">
+                <h6>Pending Requests</h6>
+                <p>{{ pending_count }}</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon ">
+                <span class="icon">✅</span>
+            </div>
+            <div class="stat-content">
+                <h6>Approved Requests</h6>
+                <p>{{ approved_count }}</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon ">
+                <span class="icon">💰</span>
+            </div>
+            <div class="stat-content">
+                <h6>Fully Paid Requests</h6>
+                <p>{{ completed_count }}</p>
+            </div>
+        </div>
+    </div>
+     
+        <div class="row">
+            <div class="col-lg-7 col-md-12 mb-4">
+                <div class="dashboard-section">
+                    <h3>Recent Requests</h3>
+                    {% if recent_requests %}
+                        <div class="table-responsive">
+                            <table class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>User</th>
+                                        <th>Type</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for request_obj in recent_requests %}
+                                        <tr>
+                                            <td>#{{ request_obj.id }}</td>
+                                            <td>{{ request_obj.user.get_full_name|default:request_obj.user.username }}</td>
+                                            <td>{{ request_obj.consumable_type.name }}</td>
+                                            <td>{{ request_obj.date_created|date:'M j, Y' }}</td>
+                                            <td>
+                                                <span class="status-badge status-{{ request_obj.status }}">
+                                                    {{ request_obj.status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="" class="btn btn-sm btn-primary">View</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="no-records-message">
+                            <p>No recent requests to display.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-lg-5 col-md-12 mb-4">
+                <div class="dashboard-section">
+                    <h3>Pending Approvals</h3>
+                    {% if pending_approvals %}
+                        <div class="table-responsive">
+                            <table class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>User</th>
+                                        <th>Type</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for request_obj in pending_approvals %}
+                                        <tr>
+                                            <td>#{{ request_obj.id }}</td>
+                                            <td>{{ request_obj.user.get_full_name|default:request_obj.user.username }}</td>
+                                            <td>{{ request_obj.consumable_type.name }}</td>
+                                            <td>
+                                                <a href="" class="btn btn-sm btn-warning">Review</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="no-records-message">
+                            <p>No pending approvals at the moment. Great job!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

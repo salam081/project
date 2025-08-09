@@ -1,0 +1,90 @@
+{% extends 'base/base.html' %}
+
+{% load static %}
+
+{% block title %}Dashboard - Admin Panel{% endblock %}
+
+{% block content %}
+<div id="dashboard" class="content-section active">
+    <div class="content-card">
+        <h1>Dashboard Overview</h1>
+        <p>Welcome to your admin dashboard. Here's a quick overview of your system.</p>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-primary">
+                <i class="bi bi-folder"></i>
+            </div>
+            <div class="stat-content">
+                <h3>150</h3>
+                <p>Total Cases</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-success">
+                <i class="bi bi-people"></i>
+            </div>
+            <div class="stat-content">
+                <h3>1,250</h3>
+                <p>Active Members</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <h3>25</h3>
+                <p>Pending Cases</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-danger">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <div class="stat-content">
+                <h3>95%</h3>
+                <p>Success Rate</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="content-card">
+        <h3>Recent Activity</h3>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>FullName</th>
+                        <th>Month</th>
+                        <th>MonthlySavings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                     {% for m in savings %}
+                    <tr>
+                        <td>{{forloop.counter}}</td>
+                        <td class="text-nowrap text-truncate" style="max-width: 230px;">{{ m.member.member.first_name }} {{ m.member.member.first_name }} {{ m.member.ippis }}</td>
+                        <td class="text-nowrap text-truncate" style="max-width: 100px;">{{ m.month }}</td>
+                        <td>₦{{m.month_saving}}</td>
+                    </tr>
+                   {% endfor %}
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-primary"><b>Total</b> : {{total_savings}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock content %}

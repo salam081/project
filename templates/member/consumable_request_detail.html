@@ -1,0 +1,318 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Consumable Request Details{% endblock %}
+
+{% block content %}
+
+<style>
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .status-pending, .status-itempicked {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .status-approved, .status-fullypaid {
+        background-color: #28a745;
+        color: #fff;
+    }
+    
+    .status-rejected {
+        background-color: #dc3545;
+        color: #fff;
+    }
+    
+    .status-disbursed {
+        background-color: #17a2b8;
+        color: #fff;
+    }
+    
+    .financial-summary {
+        background: linear-gradient(135deg, #2c7a94ff 0%, #1b616dff 100%);
+        color: white;
+    }
+    
+    .financial-summary .card-body {
+        border-radius: 0.375rem;
+    }
+    
+    .progress-custom {
+        height: 8px;
+        background-color: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-custom .progress-bar {
+        background-color: #28a745;
+        transition: width 0.3s ease;
+    }
+    
+    .repayment-item {
+        border-left: 4px solid #28a745;
+        margin-bottom: 1rem;
+        padding-left: 1rem;
+    }
+    
+    .repayment-item:last-child {
+        border-left-color: #17a2b8;
+    }
+    
+    .action-button {
+        transition: all 0.3s ease;
+    }
+    
+    .action-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    @media (max-width: 768px) {
+        .financial-summary h3 {
+            font-size: 1.5rem;
+        }
+        
+        .financial-summary h5 {
+            font-size: 1.1rem;
+        }
+    }
+</style>
+
+<div class="container mt-4">
+    <!-- Header Section -->
+    <div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div class="mb-2 mb-md-0">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'my_consumablerequests' %}" class="text-decoration-none">
+                            <i class="fas fa-home me-1"></i>My Consumable Requests
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Request #{{ consumable_request.id }}
+                    </li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <span class="badge status-badge status-{{ consumable_request.status|lower|cut:' ' }}">
+                <i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i>
+                {{ consumable_request.status|title }}
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Request Overview Card -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2 text-primary"></i>
+                        Request Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted mb-1">Request ID</label>
+                                <b class="fw-bold">#{{ consumable_request.id }}</b>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted mb-1">Application Date</label>
+                                <b class="fw-bold">{{ consumable_request.date_created|date:"M d, Y" }}</b>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted mb-1">Status</label>
+                                <b>
+                                    <span class="badge status-{{ consumable_request.status|lower|cut:' ' }}">
+                                        {{ consumable_request.status|title }}
+                                    </span>
+                                </b>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted mb-1">Consumable Type</label>
+                                <b class="fw-bold">{{ consumable_request.consumable_type.name }}</b>
+                            </div>
+                            {% if consumable_request.approved_by %}
+                            <div class="mb-3">
+                                <label class="form-label text-muted mb-1">Approved By</label>
+                                <b class="fw-2">{{ consumable_request.approved_by.get_full_name|default:consumable_request.approved_by.username }}</b>
+                            </div>
+                            {% endif %}
+                            {% if consumable_request.file_payslpt %}
+                            <div class="mb-3">
+                                <label class="form-label text-muted mb-1">Payslip</label><br>
+                                <a href="{{ consumable_request.file_payslpt.url }}" class="btn btn-sm btn-outline-primary action-button">
+                                  <i class="fas fa-download me-1"></i> View Payslip
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items Requested Card -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2 text-primary"></i>
+                        Items Requested
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if details %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Price per Item</th>
+                                    <th>Total Price</th>
+                                    <th>Term (Months)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detail in details %}
+                                    <tr>
+                                        <td>{{ detail.item.title }}</td>
+                                        <td class="text-center">{{ detail.quantity }}</td>
+                                        <td>₦{{ detail.item_price|floatformat:2 }}</td>
+                                        <td>₦{{ detail.total_price|floatformat:2 }}</td>
+                                        <td class="text-center">{{ detail.loan_term_months }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        No items found for this request.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Repayment History Card -->
+           
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Financial Summary Card -->
+            <div class="card financial-summary mb-4 shadow">
+                <div class="card-body text-center">
+                    <h5 class="mb-3">
+                        <i class="fas fa-calculator me-2"></i>
+                        Financial Summary
+                    </h5>
+                    <hr class="bg-white opacity-50">
+                    
+                    <div class="mb-4">
+                        <small class="text-white-70">Total  Amount</small>
+                        <h3 class="mb-0">₦{{ total_price|floatformat:2 }}</h3>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    {% if total_price and total_price > 0 %}
+                    <div class="mb-4">
+                        <div class="progress-custom">
+                            <div class="progress-bar" style="width: {% widthratio total_paid total_price 100 %}%;"></div>
+                        </div>
+                        <small class="text-white-100  mt-1 d-block">
+                            {% if total_paid > 0 %}
+                                {{ total_paid|floatformat:2 }} of {{ total_price|floatformat:2 }} repaid
+                            {% else %}
+                                0% repaid
+                            {% endif %}
+                        </small>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row text-start">
+                        <div class="col-6 border-end border-white-50">
+                            <div class="text-center">
+                                <h5 class="mb-0">₦{{ total_paid|floatformat:2 }}</h5>
+                                <small class="text-white-50">Paid</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h5 class="mb-0">₦{{ balance|floatformat:2 }}</h5>
+                                <small class="text-white-50">Balance</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+             <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2 text-primary"></i>
+                        Payment History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if repayments %}
+                        <div class="repayment-timeline">
+                            {% for payment in repayments %}
+                               
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="">
+                                            <span class="mb-1">{{ payment.repayment_date|date:"M d, Y" }}</span>
+                                            <span class=" mb-0  text-success ">
+                                               Amount Paid: ₦{{ payment.amount_paid|floatformat:2 }}
+                                            </span>
+                                        </div>
+                                    </div>
+                               
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-history text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3">No payments made yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Actions Card -->
+            {% comment %} <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <i class="fas fa-tasks me-2"></i>
+                        Available Actions
+                    </h6>
+                    
+                    {% if consumable_request.status == 'approved' or consumable_request.status == 'Item picked' %}
+                        <a href="#" class="btn btn-primary w-100 mb-2 action-button">
+                            <i class="fas fa-credit-card me-2"></i>
+                            Make Repayment
+                        </a>
+                    {% endif %}
+
+                    <a href="{% url 'my_consumablerequests' %}" class="btn btn-outline-primary w-100 action-button">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Back to My Requests
+                    </a>
+                </div>
+            </div> {% endcomment %}
+        </div>
+    </div>
+</div>
+</div>
+
+{% endblock content %}

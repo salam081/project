@@ -1,0 +1,48 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<style>
+    .card-header{
+        background: linear-gradient(135deg, #8a2cb8, #b0469e);
+        color: white;
+        font-size: 2.1rem;
+        text-align: center;
+        font-weight: 500;
+        padding: 1rem 1.5rem;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+    }
+    .btn-primary{
+       background: linear-gradient(135deg, #8a2cb8, #b0469e);
+    }
+</style>
+<div class="container mt-5 col-md-6">
+    <div class="card-header">
+        Distribute Monthly Savings
+    </div>
+       <!-- Progress Bar -->
+          <div id="progressContainer" class="progress mt-3" style="display: none; height: 25px;">
+    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-info" style="width: 0%;">
+        0%
+    </div>
+</div>
+    <div class="card col-md-12">
+        <div class="card-body">
+            <form method="post" class="border p-4 shadow-sm bg-light" id="savingsForm">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="month" class="form-label">Select Month</label>
+                    <input type="month" name="month" id="month" class="form-control" required>
+                </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">Distribute Savings Equally</button>
+                </div>
+            </form>
+
+         
+
+        </div>
+    </div>
+</div>
+{% endblock content %}
+

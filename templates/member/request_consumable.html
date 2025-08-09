@@ -1,0 +1,300 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+
+
+    <style>
+        
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            {% comment %} background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); {% endcomment %}
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .form-content {
+            padding: 40px;
+        }
+
+      
+
+        .messages li.info {
+            border-left-color: #17a2b8;
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input[type="file"] {
+            padding: 6px 10px;
+            background: #f8f9fa;
+            border-style: dashed;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #333;
+            margin: 40px 0 24px 0;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #1e71c5ff;
+        }
+
+        #item-selection-container {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e1e5e9;
+        }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #e1e5e9;
+            transition: all 0.3s ease;
+        }
+
+        .item-row:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+
+        .item-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .item-row label {
+            flex: 1;
+            font-weight: 500;
+            margin: 0;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .item-row input[type="number"] {
+            width: 120px;
+            padding: 8px 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .item-row input[type="number"]:disabled {
+            background: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .item-row input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .price {
+            font-weight: 600;
+            color: #28a745;
+        }
+
+        .no-items {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 40px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 13px 22px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: block;
+            margin: 40px auto 0;
+            min-width: 200px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 12px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h2 {
+                font-size: 1.5rem;
+            }
+
+            .form-content {
+                padding: 20px;
+            }
+
+            .item-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .item-row input[type="number"] {
+                width: 100%;
+            }
+        }
+    </style>
+
+    <div class="container mt-5" style="border-top: 3px solid #764ba2;">
+        <div class="header">
+            <h2>Request New Consumable</h2>
+        </div>
+        
+        <div class="form-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row">
+                <div class="form-group col-md-4">
+                    <label for="id_consumable_type">Consumable Type</label>
+                    <select name="consumable_type" id="id_consumable_type" required>
+                        <option value="">Select a consumable type...</option>
+                        {% for type in consumable_types %}
+                            <option value="{{ type.id }}">{{ type.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label for="id_loan_term_months">Loan Term (in Months)</label>
+                    <input type="number" name="loan_term_months" id="id_loan_term_months" placeholder="e.g., 6, 12, 24" min="1" required>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label for="id_file_payslpt">Payslip (Image)</label>
+                    <input type="file" name="file_payslpt" id="id_file_payslpt" accept="image/*">
+                </div>
+               </div>
+                <h3 class="">Select Items</h3>
+                <div id="item-selection-container">
+                    {% for item in items %}
+                        <div class="item-row col-md-8">
+                            <input type="checkbox" id="item_{{ item.id }}" name="selected_items" value="{{ item.id }}">
+                            <label for="item_{{ item.id }}">
+                                {{ item.title }} - <span class="price">₦{{ item.price|floatformat:0 }}</span>
+                            </label>
+                            <input type="number" name="quantity_{{ item.id }}" placeholder="Quantity" min="1"  disabled required>
+                        </div>
+                    {% empty %}
+                        <p class="no-items">No items are currently available.</p>
+                    {% endfor %}
+                    <button type="submit" class="submit-btn">Submit Request</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const itemContainer = document.getElementById('item-selection-container');
+            
+            itemContainer.addEventListener('change', function(event) {
+                if (event.target.type === 'checkbox') {
+                    const checkbox = event.target;
+                    const quantityInput = document.querySelector(`input[name="quantity_${checkbox.value}"]`);
+                    
+                    if (quantityInput) {
+                        quantityInput.disabled = !checkbox.checked;
+                        
+                        if (checkbox.checked) {
+                            quantityInput.focus();
+                            quantityInput.style.background = 'white';
+                        } else {
+                            quantityInput.style.background = '#f8f9fa';
+                            quantityInput.value = '1'; // Reset to default
+                        }
+                    }
+                }
+            });
+
+            // Add smooth scrolling for form submission
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                const submitBtn = document.querySelector('.submit-btn');
+                submitBtn.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    submitBtn.style.transform = 'scale(1)';
+                }, 150);
+            });
+        });
+    </script>
+
+
+{% endblock content %}
+

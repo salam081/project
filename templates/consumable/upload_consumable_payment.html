@@ -1,0 +1,101 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Upload Consumable Payments{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>Upload Consumable Payments
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        <div class="messages">
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle me-2"></i>Upload Instructions</h5>
+                        <ul class="mb-0">
+                            <li>Excel file must contain columns: <strong>IPPIS</strong> and <strong>Amount Paid</strong>.</li>
+                            <li>Select the consumable type for the payments you are uploading.</li>
+                            <li>Payments will be processed with the single repayment date selected below.</li>
+                            <li>Payments are processed for requests with an outstanding balance.</li>
+                            <li>Duplicate payments for the same member and repayment date will be skipped.</li>
+                        </ul>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" class="mb-4">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="selected_type" class="form-label">Select Consumable Type</label>
+                                <select class="form-select" id="selected_type" name="selected_type" required>
+                                    <option value="">Choose...</option>
+                                    {% for consumable_type, requests in grouped_list %}
+                                        <option value="{{ consumable_type.id }}">
+                                            {{ consumable_type.name }} ({{ requests|length }} requests)
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="repayment_date" class="form-label">Repayment Date</label>
+                                <input type="date" class="form-control" id="repayment_date" name="repayment_date" required>
+                            </div>
+                            <div class="col-12 mt-4">
+                                <label for="excel_file" class="form-label">Upload Excel File</label>
+                                <input class="form-control" type="file" id="excel_file" name="excel_file" accept=".xls,.xlsx" required>
+                            </div>
+                            <div class="col-12 mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-upload me-2"></i>Upload Payments
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    {% if uploaded_list or skipped_list %}
+                        <div class="mt-5">
+                            <h5>Upload Results</h5>
+                            <table class="table table-bordered table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>IPPIS</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ippis in uploaded_list %}
+                                        <tr>
+                                            <td>{{ ippis }}</td>
+                                            <td><span class="badge bg-success">Uploaded</span></td>
+                                        </tr>
+                                    {% endfor %}
+                                    {% for ippis in skipped_list %}
+                                        <tr>
+                                            <td>{{ ippis }}</td>
+                                            <td><span class="badge bg-warning text-dark">Skipped</span></td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% block content %}
+  <div class="container col-md-9">
+    <div class="stats-grid">
+      <div class="stat-card shadow">
+        <div class="stat-icon bg-primary">
+          <i class="bi bi-folder"></i>
+        </div>
+        <div class="stat-content">
+          <p>Total Amount Requested</p>
+          <h3>₦{{ loan|floatformat:2|intcomma }}</h3>
+        </div>
+      </div>
+
+      <div class="stat-card shadow">
+        <div class="stat-icon bg-warning">
+          <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+          <p>Total Form Fee Amount</p>
+          <h3>₦{{ fee|floatformat:2|intcomma }}</h3>
+          <b>Request Count : {{ loan_req_form }}</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-4 mb-4">
+      <div class="card col-md-12 shadow">
+        <div class="card-body">
+          <h4 class="text-center text-light">Loan Registration Fee Form</h4>
+          <form method="post">
+            {% csrf_token %}
+            <div class="row">
+              <div class="col-md-4">
+                <label for="member_ippis" class="form-label">Member IPPIS Number:</label>
+                <input type="number" class="form-control" id="member_ippis" name="member_ippis" placeholder="Enter Member IPPIS" required />
+              </div>
+              <div class="col-md-4">
+                <label for="form_fee" class="form-label">Form Fee (₦):</label>
+                <input type="number" step="0.01" class="form-control" id="form_fee" name="form_fee" placeholder="Enter Form Fee" required />
+              </div>
+              <div class="col-md-4">
+                <label for="loan_amount" class="form-label">Loan Amount (₦):</label>
+                <input type="number" step="0.01" class="form-control" id="loan_amount" name="loan_amount" placeholder="Enter Loan Amount" required />
+              </div>
+            </div>
+            <div class="d-grid">
+              <button class="btn btn-info mt-4" type="submit">Submit</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+   <div class="content-card shadow">
+        <h3>Recent Activity</h3>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Loan Amount</th>
+                        <th>Form Fee</th>
+                        <th>Created By</th>
+                        <th>Created At</th>
+                     
+                    </tr>
+                </thead>
+                <tbody>
+
+                    {% for m in members %}
+                        <tr>
+
+                            <td>{{ m.member.member.first_name }} {{ m.member.member.last_name }}</td>
+                            <td> {{m.loan_amount}}</td>
+                            <td> {{m.form_fee}}</td>
+                            <td> {{m.created_by.first_name}} {{m.created_by.last_name}}</td>
+                            <td> {{m.created_at}}</td>
+                           
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+              <nav aria-label="Page navigation" class="d-flex justify-content-center">
+    <ul class="pagination">
+        <!-- Previous Button -->
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                    Previous
+                </a>
+            </li>
+        {% endif %}
+
+        <!-- Page Number Links -->
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active" aria-current="page">
+                    <a class="page-link" href="#">{{ num }}</a>
+                </li>
+            {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Next Button -->
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                    Next
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+    </div>
+{% endblock %}

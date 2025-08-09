@@ -1,0 +1,262 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block content %}
+
+
+   
+    <style>
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: 1px solid rgba(0, 0, 0, 0.125);
+        }
+        .table-responsive {
+            border-radius: 0.375rem;
+        }
+        .badge {
+            font-size: 0.75em;
+        }
+        .btn-group .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        .form-control:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid py-4">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="h3 mb-0 text-gray-800">
+                    <i class="fas fa-money-check-alt me-2"></i>
+                    Loan Type Management
+                </h1>
+                <p class="text-muted">Manage loan types, their availability, and configuration</p>
+            </div>
+        </div>
+
+        <div class="row">
+             <!-- Loan Types List -->
+            <div class="col-lg-6 col-md-4">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Existing Loan Types
+                            <span class="badge bg-secondary ms-2">{{ loan_types.count }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if loan_types %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Name</th>
+                                            <!-- <th>Description</th> -->
+                                            <!-- <th>Max Amount</th> -->
+                                            <!-- <th>Max Term</th> -->
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for loan_type in loan_types %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ loan_type.name }}</strong>
+                                                </td>
+                                                <!-- <td>
+                                                    <span class="text-muted">
+                                                        {% if loan_type.description %}
+                                                            {{ loan_type.description|truncatechars:50 }}
+                                                        {% else %}
+                                                            <em>No description</em>
+                                                        {% endif %}
+                                                    </span>
+                                                </td> -->
+                                                <!-- <td>
+                                                    {% if loan_type.max_amount %}
+                                                        <span class="badge bg-info">
+                                                            ${{ loan_type.max_amount|floatformat:2 }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">No limit</span>
+                                                    {% endif %}
+                                                </td> -->
+                                                <!-- <td>
+                                                    {% if loan_type.max_loan_term_months %}
+                                                        <span class="badge bg-warning text-dark">
+                                                            {{ loan_type.max_loan_term_months }} months
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">No limit</span>
+                                                    {% endif %}
+                                                </td> -->
+                                                <td>
+                                                    {% if loan_type.available %}
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-check me-1"></i>
+                                                            Available
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">
+                                                            <i class="fas fa-times me-1"></i>
+                                                            Unavailable
+                                                        </span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                                onclick="editLoanType({{ loan_type.id }}, '{{ loan_type.name }}', '{{ loan_type.description|default_if_none:"" }}', '{{ loan_type.max_amount|default_if_none:"" }}', '{{ loan_type.max_loan_term_months|default_if_none:"" }}')">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <form method="post" style="display: inline;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="loan_type_id" value="{{ loan_type.id }}">
+                                                            <input type="hidden" name="action" value="toggle">
+                                                            <button type="submit" class="btn btn-sm btn-outline-{% if loan_type.available %}warning{% else %}success{% endif %}" 
+                                                                    onclick="return confirm('Are you sure you want to {% if loan_type.available %}disable{% else %}enable{% endif %} this loan type?')">
+                                                                <i class="fas fa-{% if loan_type.available %}eye-slash{% else %}eye{% endif %}"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No loan types found</h5>
+                                <p class="text-muted">Create your first loan type to get started.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- Add/Edit Loan Type Form -->
+            <div class="col-lg-6 col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-plus me-2"></i>
+                            <span id="form-title">Add New Loan Type</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" id="loan-type-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="loan_type_id" id="loan_type_id">
+                            <input type="hidden" name="action" id="action" value="">
+                            
+                            <div class="mb-3">
+                                <label for="name" class="form-label">
+                                    <i class="fas fa-tag me-1"></i>
+                                    Name <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">
+                                    <i class="fas fa-align-left me-1"></i>
+                                    Description
+                                </label>
+                                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter loan type description"></textarea>
+                            </div>
+                            
+                            <!-- <div class="mb-3">
+                                <label for="max_amount" class="form-label">
+                                    <i class="fas fa-dollar-sign me-1"></i>
+                                    Maximum Amount
+                                </label>
+                                <input type="number" class="form-control" id="max_amount" name="max_amount" step="0.01" min="0" placeholder="Enter maximum loan amount">
+                                <div class="form-text">Leave blank for no limit</div>
+                            </div> -->
+                            
+                            <!-- <div class="mb-3">
+                                <label for="max_loan_term_months" class="form-label">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Maximum Term (Months)
+                                </label>
+                                <input type="number" class="form-control" id="max_loan_term_months" name="max_loan_term_months" min="1" placeholder="Enter maximum loan term in months">
+                                <div class="form-text">Leave blank for no limit</div>
+                            </div> -->
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>
+                                    <span id="submit-text">Create Loan Type</span>
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="cancel-edit" style="display: none;">
+                                    <i class="fas fa-times me-2"></i>
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+           
+        </div>
+    </div>
+
+    <script>
+        function editLoanType(id, name, description, maxAmount, maxTermMonths) {
+            // Populate form fields
+            document.getElementById('loan_type_id').value = id;
+            document.getElementById('name').value = name;
+            document.getElementById('description').value = description;
+            document.getElementById('max_amount').value = maxAmount;
+            document.getElementById('max_loan_term_months').value = maxTermMonths;
+            document.getElementById('action').value = 'edit';
+            
+            // Update form appearance
+            document.getElementById('form-title').textContent = 'Edit Loan Type';
+            document.getElementById('submit-text').textContent = 'Update Loan Type';
+            document.getElementById('cancel-edit').style.display = 'block';
+            
+            // Change card header color
+            document.querySelector('.card-header').classList.remove('bg-primary');
+            document.querySelector('.card-header').classList.add('bg-warning');
+            
+            // Scroll to form
+            document.getElementById('loan-type-form').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function resetForm() {
+            document.getElementById('loan-type-form').reset();
+            document.getElementById('loan_type_id').value = '';
+            document.getElementById('action').value = '';
+            document.getElementById('form-title').textContent = 'Add New Loan Type';
+            document.getElementById('submit-text').textContent = 'Create Loan Type';
+            document.getElementById('cancel-edit').style.display = 'none';
+            
+            // Reset card header color
+            document.querySelector('.card-header').classList.remove('bg-warning');
+            document.querySelector('.card-header').classList.add('bg-primary');
+        }
+        
+        // Cancel edit button event
+        document.getElementById('cancel-edit').addEventListener('click', resetForm);
+        
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+
+    
+{% endblock content %}

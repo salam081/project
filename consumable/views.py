@@ -1,21 +1,23 @@
 from multiprocessing.sharedctypes import Value
-from django.forms import DecimalField
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator,PageNotAnInteger,EmptyPage
-from django.db import transaction
-from django.db.models.functions import Coalesce
-from decimal import Decimal
+from django.forms import DecimalField
+from django.http import JsonResponse, HttpResponse
 from django.db.models import F, Q, Sum, DecimalField, Value
+from django.db.models.functions import Coalesce
+from collections import defaultdict
+import pandas as pd
+from datetime import datetime
+from django.contrib import messages
+from django.db import transaction
+from decimal import Decimal
 from django.db.models import Count
 from collections import defaultdict
 from django.utils import timezone
-from datetime import datetime
-import pandas as pd
-from django.contrib import messages
 
 from loan.models import *
 from .models import *
@@ -24,16 +26,13 @@ from accounts.models import *
 from accounts.models import *
 from accounts.models import *
 from main.models import *
-from django.http import JsonResponse, HttpResponse
 
 
 
- 
+
 
 @login_required  
 def consumable_dashboard(request):
-    """Admin dashboard with statistics"""
-    
     # Get basic statistics
     total_requests = ConsumableRequest.objects.count()
     pending_count = ConsumableRequest.objects.filter(status='Pending').count()
@@ -51,12 +50,10 @@ def consumable_dashboard(request):
     ).select_related('user', 'consumable_type')[:5]
     
     context = {
-        'total_requests': total_requests,
-        'pending_count': pending_count,
-        'approved_count': approved_count,
-        'completed_count': completed_count,
-        'recent_requests': recent_requests,
-        'pending_approvals': pending_approvals,
+        'total_requests': total_requests, 'pending_approvals': pending_approvals,
+        'pending_count': pending_count,'approved_count': approved_count,
+        'completed_count': completed_count, 'recent_requests': recent_requests,
+       
     }
     
     return render(request, 'consumable/consumable_dashboard.html', context)
@@ -191,13 +188,8 @@ def delete_item(request,id):
     messages.success(request, 'Consumable item Deleted successfully')
     return redirect('consumable_items')
 
-
 @login_required
 def admin_consumables_list(request):
-    """
-    Admin dashboard to list consumable requests with filtering capabilities.
-    Filters can be applied by status, user, and consumable type.
-    """
     consumables_list = ConsumableRequest.objects.select_related('user', 'consumable_type').order_by('-date_created')
 
     # Apply filters based on GET parameters
@@ -208,36 +200,74 @@ def admin_consumables_list(request):
     if status_filter and status_filter != 'all':
         consumables_list = consumables_list.filter(status=status_filter)
     
-    if user_filter and user_filter != 'all':
-        try:
-            user_filter_id = int(user_filter)
-            consumables_list = consumables_list.filter(user_id=user_filter_id)
-        except ValueError:
-            # Handle invalid user_id gracefully (e.g., ignore filter or show error)
-            pass 
+    # Corrected filter for the 'user' input field using Q objects
+    if user_filter:
+        consumables_list = consumables_list.filter(
+            Q(user__username__icontains=user_filter) |
+            Q(user__first_name__icontains=user_filter) |
+            Q(user__last_name__icontains=user_filter)
+        )
 
     if consumable_type_filter and consumable_type_filter != 'all':
         try:
             consumable_type_filter_id = int(consumable_type_filter)
             consumables_list = consumables_list.filter(consumable_type_id=consumable_type_filter_id)
         except ValueError:
-            # Handle invalid consumable_type_id gracefully
             pass
 
-    # Get all available consumable types and users for filter dropdowns
     all_consumable_types = ConsumableType.objects.filter(available=True).order_by('name')
-    all_users = User.objects.all().order_by('username') # Or filter for specific user types if needed
-
+    
     context = {
         'consumables_list': consumables_list,
         'all_consumable_types': all_consumable_types,
-        'all_users': all_users,
-        'status_choices': ConsumableRequest.STATUS_CHOICES, # Pass status choices for dropdown
+        'status_choices': ConsumableRequest.STATUS_CHOICES,
         'selected_status': status_filter,
         'selected_user': user_filter,
         'selected_consumable_type': consumable_type_filter,
     }
     return render(request, 'consumable/consumables_list.html', context)
+# @login_required
+# def admin_consumables_list(request):
+#     consumables_list = ConsumableRequest.objects.select_related('user', 'consumable_type').order_by('-date_created')
+
+#     # Apply filters based on GET parameters
+#     status_filter = request.GET.get('status')
+#     user_filter = request.GET.get('user')
+#     consumable_type_filter = request.GET.get('consumable_type')
+
+#     if status_filter and status_filter != 'all':
+#         consumables_list = consumables_list.filter(status=status_filter)
+    
+#     if user_filter and user_filter != 'all':
+#         try:
+#             user_filter_id = int(user_filter)
+#             consumables_list = consumables_list.filter(user_id=user_filter_id)
+#         except ValueError:
+#             # Handle invalid user_id gracefully (e.g., ignore filter or show error)
+#             pass 
+
+#     if consumable_type_filter and consumable_type_filter != 'all':
+#         try:
+#             consumable_type_filter_id = int(consumable_type_filter)
+#             consumables_list = consumables_list.filter(consumable_type_id=consumable_type_filter_id)
+#         except ValueError:
+#             # Handle invalid consumable_type_id gracefully
+#             pass
+
+#     # Get all available consumable types and users for filter dropdowns
+#     all_consumable_types = ConsumableType.objects.filter(available=True).order_by('name')
+#     all_users = User.objects.all().order_by('username') # Or filter for specific user types if needed
+
+#     context = {
+#         'consumables_list': consumables_list,
+#         'all_consumable_types': all_consumable_types,
+#         'all_users': all_users,
+#         'status_choices': ConsumableRequest.STATUS_CHOICES, # Pass status choices for dropdown
+#         'selected_status': status_filter,
+#         'selected_user': user_filter,
+#         'selected_consumable_type': consumable_type_filter,
+#     }
+#     return render(request, 'consumable/consumables_list.html', context)
 
 
 def admin_consumable_detail(request, request_id):
@@ -286,7 +316,7 @@ def admin_request_taking(request, request_id):
         consumable_request.date_created = timezone.now()
         consumable_request.save()
         messages.success(request, f"Request #{request_id} has been marked as Itempicked.")
-    return redirect('admin_request_taking', request_id=request_id)
+    return redirect('admin_consumable_detail', request_id=request_id)
 
 
 def consumable_types_with_requests(request):
@@ -444,6 +474,45 @@ def add_payment(request, request_id):
     return redirect('admin_consumable_detail', request_id=request_id)
 
 
+def admin_edit_consumable_request(request, request_id):
+    consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
+    details = consumable_request.details.all()
+
+    if request.method == 'POST':
+        detail_id = request.POST.get('detail_id')
+        if not detail_id:
+            messages.error(request, "Detail ID is missing.")
+            return redirect('admin_edit_consumable_request')
+
+        detail_to_update = get_object_or_404(ConsumableRequestDetail, id=detail_id, request=consumable_request)
+        form = AdminUpdateConsumableRequestForm(request.POST)
+
+        if form.is_valid():
+            loan_term_months = form.cleaned_data['loan_term_months']
+            quantity = form.cleaned_data.get('quantity', detail_to_update.quantity)
+            item_price = form.cleaned_data.get('item_price', detail_to_update.item_price)
+
+            try:
+                with transaction.atomic():
+                    detail_to_update.loan_term_months = loan_term_months
+                    detail_to_update.quantity = quantity
+                    detail_to_update.item_price = item_price
+                    detail_to_update.save()
+
+                messages.success(request, "Consumable request updated successfully.")
+                return redirect('admin_edit_consumable_request')
+
+            except Exception as e:
+                messages.error(request, f"An error occurred: {e}")
+                
+        else:
+            messages.error(request, "Please provide a valid loan term.")
+            
+    # GET request or form is invalid
+    context = {'request_obj': consumable_request,'details': details, 'form': AdminUpdateConsumableRequestForm()}
+    return render(request, 'consumable/admin_edit_request.html', context)
+
+
 def add_single_consumable_payment(request):
    
     requests = []
@@ -527,170 +596,9 @@ def add_single_consumable_payment(request):
         return redirect(request.path + f"?ippis={ippis}")
 
     # Render the form for GET requests
-    return render(request, "consumable/add_single_payment.html", {
-        "requests": requests,
-        "selected_user": selected_user,
-    })
+    return render(request, "consumable/add_single_payment.html", { "requests": requests, "selected_user": selected_user,})
 
 
-# @login_required
-# def upload_consumable_payment(request):
-#     # Get approved requests with calculated balances - using the same logic as your original code
-#     all_approved_requests = ConsumableRequest.objects.filter(
-#         status="Approved"
-#     ).annotate(
-#         total_price=Sum(F('details__item_price') * F('details__quantity')),
-#         total_paid=Sum('repayments__amount_paid')
-#     ).select_related("consumable_type", "user__member")
-
-#     # Filter using the same logic as your original code
-#     requests_with_balance = []
-#     for req in all_approved_requests:
-#         # Apply the same filter logic as your original Q filter
-#         total_paid = req.total_paid
-#         total_price = req.total_price
-        
-#         # Same condition as your original: Q(total_paid__isnull=True) | Q(total_paid__lt=F('total_price'))
-#         if total_paid is None or (total_price is not None and total_paid < total_price):
-#             remaining_balance = (total_price or 0) - (total_paid or 0)
-#             if remaining_balance > 0:
-#                 req.remaining_balance = remaining_balance
-#                 requests_with_balance.append(req)
-
-#     # Group requests that have remaining balance
-#     grouped_by_type = defaultdict(list)
-#     for req in requests_with_balance:
-#         grouped_by_type[req.consumable_type].append(req)
-
-#     # The grouped_list will now only contain consumable types that have requests with pending payments.
-#     grouped_list = sorted(grouped_by_type.items(), key=lambda item: item[0].name)
-
-#     if request.method == "POST":
-#         selected_type_id = request.POST.get("selected_type")
-#         repayment_date_str = request.POST.get("repayment_date")
-#         file = request.FILES.get("excel_file")
-
-#         if not selected_type_id or not repayment_date_str or not file:
-#             messages.error(request, "Consumable type, date, and file are all required.")
-#             return redirect("upload_consumable_payment")
-
-#         try:
-#             selected_type = ConsumableType.objects.get(id=selected_type_id)
-#             repayment_date = datetime.strptime(repayment_date_str, "%Y-%m-%d").date()
-#         except (ConsumableType.DoesNotExist, ValueError):
-#             messages.error(request, "Invalid consumable type or date format.")
-#             return redirect("upload_consumable_payment")
-
-#         try:
-#             df = pd.read_excel(file)
-#         except Exception as e:
-#             messages.error(request, f"Error reading Excel file: {e}")
-#             return redirect("upload_consumable_payment")
-
-#         required_cols = {"IPPIS", "Amount Paid"}
-#         if not required_cols.issubset(df.columns):
-#             messages.error(request, "Excel must contain 'IPPIS' and 'Amount Paid' columns.")
-#             return redirect("upload_consumable_payment")
-        
-#         # Get requests for selected type with remaining balance
-#         requests_for_type = []
-#         for consumable_type, requests in grouped_by_type.items():
-#             if consumable_type.id == selected_type.id:
-#                 requests_for_type = requests
-#                 break
-
-#         # Create IPPIS mapping for O(1) lookup
-#         ippis_map = {
-#             str(req.user.member.ippis): req
-#             for req in requests_for_type
-#             if hasattr(req.user, "member") and req.user.member.ippis
-#         }
-
-#         # Get all existing payments for this date and type to avoid duplicates - single query
-#         existing_payment_ippis = set(
-#             PaybackConsumable.objects.filter(
-#                 consumable_request__consumable_type=selected_type,
-#                 repayment_date=repayment_date
-#             ).values_list('consumable_request__user__member__ippis', flat=True)
-#         )
-
-#         repayments_to_create = []
-#         skipped_ippis = []
-#         uploaded_count = 0
-
-#         # Process Excel rows without database queries in the loop
-#         for _, row in df.iterrows():
-#             ippis_str = str(row["IPPIS"]).strip()
-#             amount_paid_str = str(row["Amount Paid"]).strip()
-            
-#             try:
-#                 amount_paid = Decimal(amount_paid_str)
-#             except ValueError:
-#                 skipped_ippis.append(f"{ippis_str} (invalid amount)")
-#                 continue
-
-#             request_obj = ippis_map.get(ippis_str)
-#             if not request_obj:
-#                 skipped_ippis.append(f"{ippis_str} (no matching request for selected type)")
-#                 continue
-
-#             # Check if no balance is remaining
-#             if not hasattr(request_obj, 'remaining_balance') or request_obj.remaining_balance <= 0:
-#                 skipped_ippis.append(f"{ippis_str} (no remaining balance)")
-#                 continue
-
-#             # Check if payment amount exceeds remaining balance
-#             if amount_paid > request_obj.remaining_balance:
-#                 skipped_ippis.append(f"{ippis_str} (payment amount {amount_paid} exceeds remaining balance {request_obj.remaining_balance})")
-#                 continue
-
-#             # Check for existing payment using the pre-fetched set
-#             if ippis_str in map(str, existing_payment_ippis):
-#                 skipped_ippis.append(f"{ippis_str} (payment for {repayment_date} already exists)")
-#                 continue
-
-#             repayments_to_create.append(PaybackConsumable(
-#                 consumable_request=request_obj,
-#                 amount_paid=amount_paid,
-#                 repayment_date=repayment_date,
-#                 created_by=request.user
-#             ))
-#             uploaded_count += 1
-        
-#         # Single bulk database operation
-#         if repayments_to_create:
-#             with transaction.atomic():
-#                 PaybackConsumable.objects.bulk_create(repayments_to_create)
-
-#         messages.success(request, f"{uploaded_count} payment(s) for {selected_type.name} uploaded successfully.")
-#         if skipped_ippis:
-#             messages.warning(request, f"Skipped payments for: {', '.join(skipped_ippis)}")
-
-#         return redirect("upload_consumable_payment")
-
-#     context = {"grouped_list": grouped_list}
-#     return render(request, "consumable/upload_consumable_payment.html", context)
-
-
-from collections import defaultdict
-from decimal import Decimal
-from datetime import datetime
-import pandas as pd
-
-from django.db import transaction
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-
-from .models import ConsumableRequest, ConsumableType, PaybackConsumable
-
-
-from decimal import Decimal
-from collections import defaultdict
-from django.db import transaction
-from django.contrib import messages
-import pandas as pd
-from datetime import datetime
 
 @login_required
 def upload_consumable_payment(request):

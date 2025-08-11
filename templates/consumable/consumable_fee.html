@@ -58,9 +58,9 @@
                 <thead>
                     <tr>
                         <th>Member</th>
-                        <th>Form Fee</th>
-                        <th>Created By</th>
-                        <th>Created At</th>
+                        <th class="text-nowrap" style="min-width: 120px;">Form Fee</th>
+                        <th class="text-nowrap" style="min-width: 120px;">Created By</th>
+                        <th class="text-nowrap" style="min-width: 120px;">Created At</th>
                      
                     </tr>
                 </thead>
@@ -69,10 +69,10 @@
                     {% for m in page_obj %}
                         <tr>
 
-                            <td>{{ m.member.member.first_name }} {{ m.member.member.last_name }}</td>
+                            <td class="text-nowrap" style="min-width: 120px;">{{ m.member.member.first_name }} {{ m.member.member.last_name }}</td>
                             <td> {{m.form_fee}}</td>
-                            <td> {{m.created_by.first_name}} {{m.created_by.last_name}}</td>
-                            <td> {{m.created_at}}</td>
+                            <td class="text-nowrap" style="min-width: 120px;"> {{m.created_by.first_name}} {{m.created_by.last_name}}</td>
+                            <td class="text-nowrap" style="min-width: 120px;"> {{m.created_at}}</td>
                            
                         </tr>
                     {% endfor %}

@@ -29,7 +29,7 @@
                         </select>
                     </div>
 
-                    <div class="col-md-4 col-lg-3">
+                    {% comment %} <div class="col-md-4 col-lg-3">
                         <label for="user-filter" class="form-label fw-bold">User:</label>
                         <select name="user" id="user-filter" class="form-select">
                             <option value="all" {% if not selected_user or selected_user == 'all' %}selected{% endif %}>All Users</option>
@@ -39,6 +39,10 @@
                                 </option>
                             {% endfor %}
                         </select>
+                    </div> {% endcomment %}
+                    <div class="col-md-4 col-lg-3">
+                        <label for="user-filter" class="form-label fw-bold">User:</label>
+                        <input type="text" name="user" id="user-filter" class="form-control" placeholder="Search by username..." value="{{ selected_user|default:'' }}">
                     </div>
 
                     <div class="col-md-4 col-lg-3">
@@ -70,9 +74,9 @@
                             <thead class="table-primary">
                                 <tr>
                                     <th scope="col">ID</th>
-                                    <th scope="col">User</th>
-                                    <th scope="col">Consumable Type</th>
-                                    <th scope="col">Date Created</th>
+                                    <th scope="col">Member</th>
+                                    <th class="text-nowrap" style="min-width: 120px;">Consumable Type</th>
+                                    <th class="text-nowrap" style="min-width: 120px;">Date Created</th>
                                     <th scope="col">Status</th>
                                     <th scope="col">Actions</th>
                                 </tr>
@@ -81,15 +85,15 @@
                                 {% for request_obj in consumables_list %}
                                     <tr>
                                         <td>#{{ request_obj.id }}</td>
-                                        <td>{{ request_obj.user.get_full_name|default:request_obj.user.username }}</td>
-                                        <td>{{ request_obj.consumable_type.name }}</td>
-                                        <td>{{ request_obj.date_created|date:'M j, Y, P' }}</td>
+                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.user.get_full_name|default:request_obj.user.username }}</td>
+                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.consumable_type.name }}</td>
+                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.date_created|date:'M j, Y, P' }}</td>
                                         <td>
                                            
                                             <span class="status-badge 
                                                 {% if request_obj.status == 'Pending' %}status-pending
                                                 {% elif request_obj.status == 'Approved' %}status-active
-                                                {% elif request_obj.status == 'Itempicked' %}status-info
+                                                {% elif request_obj.status == 'Itempicked' %}status-itempicked
                                                 {% elif request_obj.status == 'FullyPaid' %}status-completed
                                                 {% elif request_obj.status == 'Declined' %}status-cancelled
                                                 {% else %}bg-secondary{% endif %}">
@@ -97,46 +101,49 @@
                                             </span>
                                         </td>
                                        
-                                        <td>
-                                            <div class="d-flex">
-                                            <a href="{% url 'admin_consumable_detail' request_obj.id %}" class="btn btn-sm btn-outline-primary me-1" title="View Details">
-                                                <i class="bi bi-eye"></i> 
+                                       <td>
+                                        <div class="d-flex">
+                                            <a href="{% url 'admin_consumable_detail' request_obj.id %}" class="btn btn-sm btn-outline-primary p-1 me-1" title="View Details">
+                                                <i class="bi bi-eye"></i>
                                             </a>
                                             {% if request_obj.status == 'Pending' %}
-                                                <a href="" class="btn btn-sm btn-success me-1" title="Approve">
-                                                    <i class="bi bi-check-circle"></i> 
+                                                <a href="" class="btn btn-sm btn-success p-1 me-1" title="Approve">
+                                                    <i class="bi bi-check-circle"></i>
                                                 </a>
-                                                {# Decline button now triggers a modal for confirmation #}
-                                              
-                                             <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" 
+                                                <a href="{% url 'admin_edit_consumable_request' request_obj.id %}" class="btn btn-sm btn-pen p-1 me-1" title="Edit">
+                                                    <i class="bi bi-box-pen"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-danger btn-sm p-1" data-bs-toggle="modal" 
                                                         data-bs-target="#declineConfirmModal" 
                                                         data-request-id="{{ request_obj.id }}"
-                                                        data-url="{% url 'admin_request_reject' request_obj.id %}">
-                                                    <i class="fas fa-times"></i> Decline
-                                             </button>
+                                                        data-url="{% url 'admin_request_reject' request_obj.id %}"
+                                                        title="Decline">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
                                             {% elif request_obj.status == 'Approved' %}
-                                                <a href="{% url 'admin_request_taking' request_obj.id %}" class="btn btn-sm btn-info me-1" title="Mark as Item Picked">
-                                                    <i class="bi bi-box-seam"></i> Picked
+                                                <a href="{% url 'admin_request_taking' request_obj.id %}" class="btn btn-sm btn-info p-1 me-1" title="Mark as Item Picked">
+                                                    <i class="bi bi-box-seam"></i>
                                                 </a>
-                                                {# Add Payment button now triggers a modal #}
-                                                <button type="button" class="btn btn-sm btn-warning" title="Add Payment"
+                                                <a href="{% url 'admin_edit_consumable_request' request_obj.id %}" class="btn btn-sm btn-primary p-1 me-1" title="Edit">
+                                                    <i class="bi bi-pen"></i>
+                                                </a>
+                                                {% comment %} <button type="button" class="btn btn-sm btn-warning p-1" title="Add Payment"
                                                         data-bs-toggle="modal" data-bs-target="#addPaymentModal"
                                                         data-request-id="{{ request_obj.id }}"
                                                         data-balance="{{ request_obj.balance|floatformat:2 }}">
-                                                    <i class="bi bi-currency-dollar"></i> Payment
-                                                </button>
+                                                    <i class="bi bi-currency-dollar"></i>
+                                                </button> {% endcomment %}
                                             {% elif request_obj.status == 'Itempicked' %}
-                                                {# Add Payment button now triggers a modal #}
-                                               <button type="button" class="btn btn-sm btn-warning" title="Add Payment"
+                                                <button type="button" class="btn btn-sm btn-warning p-1" title="Add Payment"
                                                         data-bs-toggle="modal" data-bs-target="#addPaymentModal"
                                                         data-request-id="{{ request_obj.id }}"
                                                         data-balance="{{ request_obj.balance|floatformat:2 }}"
                                                         data-url="{% url 'add_payment' request_obj.id %}">
-                                                    <i class="bi bi-currency-dollar"></i> Add Payment
+                                                    <i class="bi bi-currency-dollar"></i>
                                                 </button>
                                             {% endif %}
                                         </div>
-                                        </td>
+                                    </td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

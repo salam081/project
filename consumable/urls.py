@@ -9,6 +9,7 @@ urlpatterns = [
 
     path('admin_consumables_list',views.admin_consumables_list,name='admin_consumables_list'),
     path('consumables/<int:request_id>/', views.admin_consumable_detail, name='admin_consumable_detail'),
+    path('edit-consumable_request/<int:request_id>/', views.admin_edit_consumable_request, name='admin_edit_consumable_request'),
     path('consumables/<int:request_id>/approve/', views.admin_request_approve, name='admin_request_approve'),
     path('consumables/<int:request_id>/reject/', views.admin_request_reject, name='admin_request_reject'),
     path('consumables/<int:request_id>/taking/', views.admin_request_taking, name='admin_request_taking'),

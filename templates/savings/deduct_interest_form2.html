@@ -4,7 +4,7 @@
 <div class="container mt-5 col-md-6">
     <div class="card shardow">
         <div class="card-body">
-            <h4 class="text-center text-primary">Deduct Monthly Admin Fee</h4>
+            <h6 class="text-center text-primary">Deduct Monthly Admin Fee</h6>
             <form method="post" action="{% url 'deduct_interest' year='0' month='0' %}" id="interestForm">
                 {% csrf_token %}
                 <div class="mb-3">

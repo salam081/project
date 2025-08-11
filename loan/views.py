@@ -679,13 +679,7 @@ def upload_loan_payment(request):
 
         return redirect("upload_loan_payment")
 
-    return render(request, "loan/upload_loan_payment.html", {
-        "year_to_loan_types": dict(year_to_loan_types),
-    })
-
-
-
-
+    return render(request, "loan/upload_loan_payment.html", { "year_to_loan_types": dict(year_to_loan_types),})
 
 
 def admin_repayment_tracking(request):

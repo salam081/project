@@ -214,8 +214,7 @@
                             {% endfor %}
                         </div>
                     {% endif %}
-                <h1 class="welcome-text">Welcome Back</h1>
-                <p class="welcome-subtitle">Sign in to your account</p>
+                <p class="welcome-subtitle">Sign in</p>
             </div>
 
             <form method="POST">
@@ -240,15 +239,11 @@
                 <button type="submit" class="btn btn-login" id="loginBtn">
                     <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
                 </button>
-
-                <div class="text-center">
-                    <a href="/forgot-password/">Forgot password?</a>
-                </div>
             </form>
             
-            <div class="signup-link mt-4">
+            {% comment %} <div class="signup-link mt-4">
                 No account? <a href="/signup/">Sign up</a>
-            </div>
+            </div> {% endcomment %}
         </div>
     </div>
 </body>

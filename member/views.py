@@ -315,10 +315,7 @@ def confirm_guarantor_approval(request, pk):
 
 
 def my_loan_requests(request):
-    # Get the Member instance for the current user
     member = request.user.member  
-
-    # Filter LoanRequests for this member
     loan_requests = LoanRequest.objects.filter(member=member).exclude(status='Rejected').order_by('-date_created')
 
     loan_data = []
@@ -329,26 +326,15 @@ def my_loan_requests(request):
         monthly_payment = loan.monthly_payment or 0
 
         loan_data.append({
-            'loan': loan,
-            'approved_amount': approved_amount,
-            'total_paid': total_paid,
-            'balance': balance,
-            'monthly_payment': monthly_payment,
-        })
+            'loan': loan,'approved_amount': approved_amount,'total_paid': total_paid,
+            'balance': balance,'monthly_payment': monthly_payment,})
 
     return render(request, 'member/my_loan_requests.html', {'loan_data': loan_data})
 
 
 @login_required
 def member_loan_request_detail(request, request_id):
-    """
-    View to display details of a specific loan request
-    """
-    loan_request = get_object_or_404(
-        LoanRequest.objects.prefetch_related('repaybacks'),
-        id=request_id,
-        member=request.user.member
-    )
+    loan_request = get_object_or_404(LoanRequest.objects.prefetch_related('repaybacks'),id=request_id, member=request.user.member)
 
     total_paid = sum(repay.amount_paid for repay in loan_request.repaybacks.all())
     approved_amount = loan_request.approved_amount or 0
@@ -357,23 +343,17 @@ def member_loan_request_detail(request, request_id):
 
     context = {
         'loan_request': loan_request,
-        'repaybacks': loan_request.repaybacks.all(),
-        'approved_amount': approved_amount,
-        'total_paid': total_paid,
-        'balance': balance,
-        'monthly_payment': monthly_payment,
-    }
+        'repaybacks': loan_request.repaybacks.all(),'approved_amount': approved_amount,
+        'total_paid': total_paid,'balance': balance,'monthly_payment': monthly_payment,}
 
     return render(request, 'member/loan_request_detail.html', context)
-
-
 
 # ============ consumable =================
 
 @login_required
 def request_consumable(request):
     now = timezone.now()
-    has_paid = ConsumableFormFee.objects.filter( user=request.user, created_at__year=now.year, created_at__month=now.month, ).exists()
+    has_paid = ConsumableFormFee.objects.filter( member=request.user.member, created_at__year=now.year, created_at__month=now.month, ).exists()
     
     if not has_paid:
         messages.error(request, " pay your consumables request form fee and  apply for consumables.")
@@ -519,59 +499,19 @@ def request_detail(request, request_id):
     }
     return render(request, 'member/consumable_request_detail.html', context)
 
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-
 
 @login_required
 def cancel_consumable_request(request, id):
-    """
-    Handles POST requests to delete a pending consumable request.
-    It returns a JSON response to be handled by the front-end JavaScript.
-    This action permanently removes the request from the database.
-    """
-    # Ensure the request is a POST request to prevent accidental deletions
-    if request.method == 'POST':
-        try:
-            # Get the consumable request object, ensuring it belongs to the current user
-            # and that its status is 'Pending'.
-            consumable_request = get_object_or_404(
-                ConsumableRequest,
-                id=id,
-                user=request.user,
-                status='Pending'
-            )
-
-            # Permanently delete the request from the database
+    try:
+        consumable_request = ConsumableRequest.objects.get(id=id, user=request.user)
+        if consumable_request.status != 'Pending':
+            messages.error(request, 'Only pending requests can be deleted.')
+        else:
             consumable_request.delete()
+            messages.success(request, 'Request has been deleted successfully.')
+    except ConsumableRequest.DoesNotExist:
+        messages.error(request, 'Request not found.')
+    except Exception as e:
+        messages.error(request, f'An error occurred: {str(e)}')
 
-            # Return a JSON success response
-            return JsonResponse({'success': True, 'message': 'Request has been deleted successfully.'})
-        except ConsumableRequest.DoesNotExist:
-            # Handle cases where the request does not exist or is not 'Pending'
-            return JsonResponse({'success': False, 'message': 'Request not found or cannot be deleted.'})
-        except Exception as e:
-            # Handle any other unexpected errors
-            return JsonResponse({'success': False, 'message': f'An error occurred: {str(e)}'})
-    else:
-        # If it's not a POST request, return an error
-        return JsonResponse({'success': False, 'message': 'Invalid request method.'})
-
-
-# def request_detail(request, request_id):
-#     consumable_request = get_object_or_404(ConsumableRequest, id=request_id, user=request.user)
-#     details = consumable_request.details.all()
-    
-#     # Calculate balance for display purposes
-#     total_price = consumable_request.calculate_total_price()
-#     total_paid = consumable_request.total_paid()
-#     balance = consumable_request.balance()
-    
-#     context = {
-#         'consumable_request': consumable_request,
-#         'details': details,'total_price': total_price,
-#         'total_paid': total_paid, 'balance': balance,
-#         'total_amount': consumable_request.calculate_total_price(),
-#     }
-#     return render(request, 'member/consumable_request_detail.html', context)
+    return redirect('my_consumablerequests')

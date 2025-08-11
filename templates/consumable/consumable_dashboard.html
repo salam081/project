@@ -60,11 +60,11 @@
                     <h3>Recent Requests</h3>
                     {% if recent_requests %}
                         <div class="table-responsive">
-                            <table class="dashboard-table">
+                            <table class="table ">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>User</th>
+                                        <th>Member</th>
                                         <th>Type</th>
                                         <th>Date</th>
                                         <th>Status</th>
@@ -74,10 +74,10 @@
                                 <tbody>
                                     {% for request_obj in recent_requests %}
                                         <tr>
-                                            <td>#{{ request_obj.id }}</td>
-                                            <td>{{ request_obj.user.get_full_name|default:request_obj.user.username }}</td>
-                                            <td>{{ request_obj.consumable_type.name }}</td>
-                                            <td>{{ request_obj.date_created|date:'M j, Y' }}</td>
+                                            <td>{{ request_obj.id }}</td>
+                                            <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.user.get_full_name|default:request_obj.user.username }}</td>
+                                            <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.consumable_type.name }}</td>
+                                            <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.date_created|date:'M j, Y' }}</td>
                                             <td>
                                                 <span class="status-badge status-{{ request_obj.status }}">
                                                     {{ request_obj.status }}

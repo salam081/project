@@ -16,7 +16,7 @@
             </a>
         </div>
         
-      
+{% comment %}       
         <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#casesSubmenu" aria-expanded="false" aria-controls="casesSubmenu">
                 <i class="bi bi-folder"></i>
@@ -33,7 +33,7 @@
                     <span class="nav-text">Contested</span>
                 </a>
             </div>
-        </div>
+        </div> {% endcomment %}
         
         <!-- Members Dropdown -->
         <div class="nav-item">
@@ -60,20 +60,20 @@
         
         <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#itemSubmenu" aria-expanded="false" aria-controls="itemSubmenu">
-                <i class="bi bi-people"></i>
+                <i class="bi bi-house"></i>  
                 <span class="nav-text">Investment</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="itemSubmenu">
                 {% if user.is_authenticated and user.group.title == 'admin' %}
                 <a href="{% url 'purchase_consumable_dashboard' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
+                   <i class="bi bi-speedometer2"></i>
                     <span class="nav-text">Purchase Dashboard</span>
                 </a>
                 {% endif %}
                  {% if user.is_authenticated and user.group.title == 'staff' %}
                 <a href="{% url 'purchase_request_list' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
+                   <i class="bi bi-plus-circle"></i> 
                     <span class="nav-text">Make Request</span>
                 </a>
                 {% endif %}
@@ -90,41 +90,41 @@
         
         <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#savingsSubmenu" aria-expanded="false" aria-controls="savingsSubmenu">
-                <i class="bi bi-people"></i>
+               <i class="bi bi-house"></i> 
                 <span class="nav-text">Savings</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="savingsSubmenu">
                 <a href="{% url 'upload_savings' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
+                    <i class="bi bi-upload"></i>
                     <span class="nav-text">Upload Savings</span>
                 </a>
                 <a href="{% url 'get_upload_savings' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
+                    <i class="bi bi-file"></i>
                     <span class="nav-text">All Savings</span>
                 </a>
                 <a href="{% url 'interest_form'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-plus"></i>
                     <span class="nav-text">Take Admin Fee</span>
                 </a>
                 <a href="{% url 'get_upload_interest'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-eye"></i>
                     <span class="nav-text">View Admin Fee</span>
                 </a>
                 <a href="{% url 'distribute_savings'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-plus-circle"></i>
                     <span class="nav-text">Distribute Savings</span>
                 </a>
                 <a href="{% url 'loanable_investment_months'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-calendar"></i>
                     <span class="nav-text">Loanable Investment</span>
                 </a>
             </div>
         </div>
         <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#loanSubmenu" aria-expanded="false" aria-controls="loanSubmenu">
-                <i class="bi bi-people"></i>
-                <span class="nav-text">Loan</span>
+                <i class="bi bi-wallet2"></i> 
+                <span class="nav-text">Loan Management</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="loanSubmenu">
@@ -133,85 +133,85 @@
                     <span class="nav-text">Loan fee</span>
                 </a>
                 <a href="{% url 'admin_loan_settings' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
+                    <i class="bi bi-sliders"></i>
                     <span class="nav-text">Loan Settings</span>
                 </a>
                 <a href="{% url 'add_loan_type'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-wallet2"></i>
                     <span class="nav-text">Loan Type Management</span>
                 </a>
                 <a href="{% url 'admin_loan_requests'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-list"></i>
                     <span class="nav-text">Approve Loan</span>
                 </a>
                 <a href="{% url 'loan_years_list'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-sliders"></i>
                     <span class="nav-text">Loan Requests </span>
                 </a>
                 <a href="{% url 'all_reject_loan'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-check-circle"></i>
                     <span class="nav-text">All Reject Loan</span>
                 </a>
                 <a href="{% url 'upload_loan_payment'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-upload"></i>
                     <span class="nav-text">Upload Payment</span>
                 </a>
                 <a href="{% url 'add_single_loan_payment'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-plus"></i>
                     <span class="nav-text">Add Payment Loan</span>
                 </a>
             </div>
         </div>
         <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#consumableSubmenu" aria-expanded="false" aria-controls="consumableSubmenu">
-                <i class="bi bi-people"></i>
+                <i class="bi bi-box"></i>
                 <span class="nav-text">Manage Consumables</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="consumableSubmenu">
                 <a href="{% url 'consumable_dashboard' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
+                    <i class="bi bi-speedometer2"></i>
                     <span class="nav-text">dashboard</span>
                 </a>
                 <a href="{% url 'consumable_fee' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
+                    <i class="bi bi-wallet2"></i> 
                     <span class="nav-text">Consumable Fee</span>
                 </a>
                  <a href="{% url 'consumable_items'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                   <i class="bi bi-check-circle"></i> 
                     <span class="nav-text">Management Items</span>
                 </a>
-                <a href="{% url 'loan_fee' %}" class="nav-link" >
+                {% comment %} <a href="{% url 'loan_fee' %}" class="nav-link" >
                     <i class="bi bi-person"></i>
                     <span class="nav-text">Consumable fee</span>
-                </a>
+                </a> {% endcomment %}
                 <a href="{% url 'admin_consumables_list' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
+                    <i class="bi bi-graph-up"></i> 
                     <span class="nav-text">Consumable Requests</span>
                 </a>
                 <a href="{% url 'consumable_types_with_requests' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
+                    <i class="bi bi-eye"></i> >
                     <span class="nav-text">Requests Type</span>
                 </a>
-                <a href="{% url 'add_loan_type'  %}" class="nav-link" >
+                {% comment %} <a href="{% url 'add_loan_type'  %}" class="nav-link" >
                     <i class="bi bi-person-plus"></i>
                     <span class="nav-text">Loan Type Management</span>
-                </a>
+                </a> {% endcomment %}
                
-                <a href="{% url 'loan_years_list'  %}" class="nav-link" >
+                {% comment %} <a href="{% url 'loan_years_list'  %}" class="nav-link" >
                     <i class="bi bi-person-plus"></i>
                     <span class="nav-text">Loan Requests </span>
-                </a>
-                <a href="{% url 'all_reject_loan'  %}" class="nav-link" >
+                </a> {% endcomment %}
+                {% comment %} <a href="{% url 'all_reject_loan'  %}" class="nav-link" >
                     <i class="bi bi-person-plus"></i>
                     <span class="nav-text">All Reject Loan</span>
-                </a>
+                </a> {% endcomment %}
                 <a href="{% url 'upload_consumable_payment'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-upload"></i>
                     <span class="nav-text">Upload Payment</span>
                 </a>
                 <a href="{% url 'add_single_consumable_payment'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
+                    <i class="bi bi-wallet2"></i>
                     <span class="nav-text">Add Payment </span>
                 </a>
             </div>

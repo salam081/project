@@ -14,11 +14,11 @@
                 <thead class="table-primary">
                     <tr>
                         <th>#</th>
-                        <th>Date Created</th>
-                        <th>Approved Amount (₦)</th>
-                        <th>Total Paid (₦)</th>
+                        <th class="text-nowrap" style="min-width: 120px;">Date Created</th>
+                        <th class="text-nowrap" style="min-width: 120px;">Approved Amount (₦)</th>
+                        <th class="text-nowrap" style="min-width: 120px;">Total Paid (₦)</th>
                         <th>Balance (₦)</th>
-                        <th>Monthly Payment (₦)</th>
+                        <th class="text-nowrap" style="min-width: 120px;">Monthly Payment (₦)</th>
                         <th>Items</th>
                         <th>Acction</th>
                     </tr>
@@ -27,7 +27,7 @@
                     {% for data in consumable_data %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
-                        <td>{{ data.consumable.date_created|date:"M d, Y" }}</td>
+                        <td class="text-nowrap" style="min-width: 120px;">{{ data.consumable.date_created|date:"M d, Y" }}</td>
                         <td>₦{{ data.approved_amount|floatformat:2 }}</td>
                         <td>₦{{ data.total_paid|floatformat:2 }}</td>
                         <td>₦{{ data.balance|floatformat:2 }}</td>
@@ -45,6 +45,7 @@
                         </td>
                         <td>
                             <a href="{% url 'request_detail' data.consumable.id %}" class="btn btn-info btn-sm">View</a>
+
                             <a href="{% url 'cancel_consumable_request' data.consumable.id %}" class="btn btn-danger btn-sm">Cancel</a>
                         </td>
                     </tr>

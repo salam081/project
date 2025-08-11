@@ -213,8 +213,10 @@
             <div class="summary-card grand-total-card shadow">
                 <div class="card-icon"><i class="fas fa-calculator"></i></div>
                 <div class="card-content">
+                    <a href="{% url 'financial_list' %}">
                     <div class="card-label">GRAND TOTAL</div>
                     <div class="card-value">₦{{ grand_total|default:0|floatformat:2|intcomma }}</div>
+                </a>
                 </div>
             </div>
         </div>

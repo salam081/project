@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render,redirect,get_object_or_404
 import calendar
 from decimal import Decimal,DecimalException
 from datetime import datetime
@@ -90,18 +90,18 @@ def admin_dashboard(request):
     try:
         # Get the latest summary from the DB (assuming FinancialSummary model exists)
         # This part will only work if the FinancialSummary model is defined and imported
-        # latest_summary = FinancialSummary.objects.order_by('-created_at').first()
-        # if not latest_summary or latest_summary.grand_total != grand_total:
-        #     # Only save if it's new or changed
-        #     FinancialSummary.objects.create(
-        #         total_savings=total_savings, total_interest=total_interest,
-        #         total_loanable=total_loanable, total_investment=total_investment,
-        #         grand_total=grand_total, user=request.user
-        #     )
-        #     print(f"New FinancialSummary saved. Grand Total: ₦{grand_total}")
-        # else:
-        #     print(f"No change detected. Grand Total (₦{grand_total}) matches the latest saved summary.")
-        # print(f"FinancialSummary snapshot saved automatically for user {request.user.username}")
+        latest_summary = FinancialSummary.objects.order_by('-created_at').first()
+        if not latest_summary or latest_summary.grand_total != grand_total:
+            # Only save if it's new or changed
+            FinancialSummary.objects.create(
+                total_savings=total_savings, total_interest=total_interest,
+                total_loanable=total_loanable, total_investment=total_investment,
+                grand_total=grand_total, user=request.user
+            )
+            print(f"New FinancialSummary saved. Grand Total: ₦{grand_total}")
+        else:
+            print(f"No change detected. Grand Total (₦{grand_total}) matches the latest saved summary.")
+        print(f"FinancialSummary snapshot saved automatically for user {request.user.username}")
         pass
     except Exception as e:
         # print(f"ERROR: Failed to automatically save FinancialSummary snapshot for user {request.user.username}. Error: {e}")
@@ -123,3 +123,23 @@ def admin_dashboard(request):
         'investment_loanable': investment_loanable,
     }
     return render(request, 'admin/admin_dashboad.html', context)
+
+
+def list_financial_summaries(request):
+    summaries = FinancialSummary.objects.select_related('user').all()
+    context = {'summaries': summaries}
+    return render(request, 'main/summary_list.html', context)
+
+
+def delete_financial_summary(request, pk):
+    summary = get_object_or_404(FinancialSummary, pk=pk)
+    if request.method == 'POST':
+        summary.delete()
+        messages.success(request, ' summary deleted successfully.')
+    return redirect('financial_list')  
+
+
+ 
+
+
+

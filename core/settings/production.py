@@ -16,6 +16,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(",")
+ALLOWED_HOSTS = ['project-mow2.onrender.com']
 # ALLOWED_HOSTS = []
 
 

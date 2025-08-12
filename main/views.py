@@ -19,6 +19,7 @@ from accounts.models import *
 from consumable.models import *
 from loan.models import *
 from savings.models import *
+from main.models import Withdrawal
 # from .models import FinancialSummary
 # Create your views here.
 

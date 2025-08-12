@@ -1,0 +1,311 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<title>Upload Management</title>
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h4 class=" fw-bold text-primary">Upload Management</h4>
+    </div>
+
+    <!-- Tabs Container -->
+    <div class="card shadow-lg mb-4">
+        <div class="card-body p-3 p-md-4">
+            <ul class="nav nav-tabs nav-justified" id="uploadTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'savings' or not active_tab %}active{% endif %} d-flex align-items-center justify-content-center" 
+                       href="?tab=savings" role="tab">
+                        <i class="bi bi-piggy-bank me-2"></i>
+                        <span class="d-none d-sm-inline">Savings Months</span>
+                        <span class="d-sm-none">Savings</span>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'loanable_investment' %}active{% endif %} d-flex align-items-center justify-content-center" 
+                       href="?tab=loanable_investment" role="tab">
+                        <i class="bi bi-cash-coin me-2"></i>
+                        <span class="d-none d-sm-inline">Loanable/Investment</span>
+                        <span class="d-sm-none">L/I</span>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if active_tab == 'interest' %}active{% endif %} d-flex align-items-center justify-content-center" 
+                       href="?tab=interest" role="tab">
+                        <i class="bi bi-calculator me-2"></i>
+                        <span class="d-none d-sm-inline">Interest Months</span>
+                        <span class="d-sm-none">Interest</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="uploadTabContent">
+        
+        <!-- Savings Tab -->
+        {% if active_tab == 'savings' or not active_tab %}
+        <div class="tab-pane fade show active">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-piggy-bank me-2"></i>Savings Months
+                    </h5>
+                </div>
+                <div class="card-body p-3 p-md-4">
+                    <!-- Date Filter Form -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <form method="GET" class="row g-3 align-items-end">
+                                <input type="hidden" name="tab" value="savings">
+                                <div class="col-md-4">
+                                    <label for="date_from" class="form-label">Date From</label>
+                                    <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="date_to" class="form-label">Date To</label>
+                                    <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-primary me-2">
+                                        <i class="bi bi-search me-1"></i>Filter
+                                    </button>
+                                    <a href="?tab=savings" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Savings Months Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Month</th>
+                                    <th scope="col">Year</th>
+                                    <th scope="col">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in savings_page_obj %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td class="fw-medium">{{ item.name }}</td>
+                                    <td class="text-muted">{{ item.year }}</td>
+                                    <td>
+                                        <a href="{% url 'get_upload_details' item.num %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye me-1"></i>View Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No savings months found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination for Savings -->
+                    {% if savings_page_obj.has_other_pages %}
+                    <nav aria-label="Savings pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if savings_page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?tab=savings&page={{ savings_page_obj.previous_page_number }}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Previous</a>
+                                </li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Page {{ savings_page_obj.number }} of {{ savings_page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+
+                            {% if savings_page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?tab=savings&page={{ savings_page_obj.next_page_number }}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Loanable/Investment Tab -->
+        {% if active_tab == 'loanable_investment' %}
+        <div class="tab-pane fade show active">
+            <div class="card shadow border-0">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-cash-coin me-2"></i>Loanable & Investment Months
+                    </h5>
+                </div>
+                <div class="card-body p-3 p-md-4">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Month</th>
+                                    <th scope="col">Year</th>
+                                    <th scope="col">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in loanable_investment_page_obj %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td class="fw-medium">{{ item.month }}</td>
+                                    <td class="text-muted">{{ item.year }}</td>
+                                    <td>
+                                        <a href="{% url 'loanable_investment_details' year=item.year month=item.month_num %}" class="btn btn-sm btn-outline-info">
+                                            <i class="bi bi-eye me-1"></i>View Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No loanable/investment months found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination for Loanable/Investment -->
+                    {% if loanable_investment_page_obj.has_other_pages %}
+                    <nav aria-label="Loanable/Investment pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if loanable_investment_page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?tab=loanable_investment&page={{ loanable_investment_page_obj.previous_page_number }}">Previous</a>
+                                </li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Page {{ loanable_investment_page_obj.number }} of {{ loanable_investment_page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+
+                            {% if loanable_investment_page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?tab=loanable_investment&page={{ loanable_investment_page_obj.next_page_number }}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Interest Tab -->
+        {% if active_tab == 'interest' %}
+        <div class="tab-pane fade show active">
+            <div class="card shadow border-0">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-calculator me-2"></i>Interest Months
+                    </h5>
+                </div>
+                <div class="card-body p-3 p-md-4">
+                    <!-- Date Filter Form -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <form method="GET" class="row g-3 align-items-end">
+                                <input type="hidden" name="tab" value="interest">
+                                <div class="col-md-4">
+                                    <label for="date_from" class="form-label">Date From</label>
+                                    <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="date_to" class="form-label">Date To</label>
+                                    <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-warning me-2">
+                                        <i class="bi bi-search me-1"></i>Filter
+                                    </button>
+                                    <a href="?tab=interest" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Interest Months Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Month</th>
+                                    <th scope="col">Year</th>
+                                    <th scope="col">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in interest_page_obj %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td class="fw-medium">{{ item.name }}</td>
+                                    <td class="text-muted">{{ item.year }}</td>
+                                    <td>
+                                        <a href="{% url 'get_upload_interest_details' item.num %}" class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-eye me-1"></i>View Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No interest months found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination for Interest -->
+                    {% if interest_page_obj.has_other_pages %}
+                    <nav aria-label="Interest pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if interest_page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?tab=interest&page={{ interest_page_obj.previous_page_number }}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Previous</a>
+                                </li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Page {{ interest_page_obj.number }} of {{ interest_page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+
+                            {% if interest_page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?tab=interest&page={{ interest_page_obj.next_page_number }}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{% endblock content %}

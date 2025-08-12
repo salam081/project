@@ -159,7 +159,7 @@ def summary_view(request):
         "member_interest": member_interest,
     }
 
-    return render(request, "reports/summary2.html", context)
+    return render(request, "reports/summary.html", context)
 
 
 def admin_loan_reports(request):

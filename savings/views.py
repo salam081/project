@@ -349,97 +349,6 @@ def upload_savings(request):
     return render(request, "savings/upload_savings.html")
 
 
-# def upload_savings(request):
-#     if request.method == "POST" and request.FILES.get("excel_file"):
-#         excel_file = request.FILES["excel_file"]
-#         selected_month = request.POST.get("month")
-
-#         # Validate month selection
-#         if not selected_month:
-#             messages.error(request, "Please select a month before uploading.")
-#             return redirect(request.path)
-
-#         try:
-#             month_date = datetime.strptime(selected_month, "%Y-%m").date().replace(day=1)
-#             # month_date = datetime.strptime(selected_month, "%Y-%m").date().replace(day=1)
-
-#             # Save the uploaded file temporarily
-#             relative_path = default_storage.save(f"upload/{excel_file.name}", ContentFile(excel_file.read()))
-#             absolute_path = os.path.join(settings.MEDIA_ROOT, relative_path)
-
-#             # Read the Excel file using pandas
-#             df = pd.read_excel(absolute_path, engine="openpyxl")
-#             # Delete the temporary file after reading
-#             default_storage.delete(relative_path)
-
-#             if df.empty:
-#                 messages.error(request, "The uploaded file is empty.")
-#                 return redirect(request.path)
-
-#             # Validate necessary columns in the Excel file
-#             required_columns = {"ippis", "amount"}
-#             if not required_columns.issubset(df.columns):
-#                 messages.error(request, "Excel must contain: ippis, amount.")
-#                 return redirect(request.path)
-
-#             total_added = 0
-#             total_updated = 0
-#             total_skipped = 0
-#             # List to hold IPPIS numbers of skipped members
-#             skipped_ippis = []  
-
-#             # Process each row in the Excel file
-#             with transaction.atomic():  # Ensuring atomicity of the operations
-#                 for _, row in df.iterrows():
-#                     ippis = row.get("ippis")
-#                     amount = row.get("amount")
-
-#                     # Skip incomplete rows
-#                     if pd.isna(ippis) or pd.isna(amount):
-#                         total_skipped += 1
-#                         continue
-
-#                     try:
-#                         ippis = int(ippis)
-#                         amount = Decimal(str(amount))
-#                     except ValueError:
-#                         total_skipped += 1
-#                         continue
-
-#                     # Find the member by IPPIS
-#                     member = Member.objects.filter(ippis=ippis).first()
-#                     if not member:
-#                         total_skipped += 1
-#                         continue
-
-#                     # Try to get or create a savings record for the member and the month
-#                     savings, created = Savings.objects.get_or_create(member=member, month=month_date,
-#                         defaults={ "month_saving": amount,"original_amount": amount, })
-
-#                     # If the savings already exist for the month, skip it
-#                     if not created:
-#                         skipped_ippis.append(ippis)  # Add to the skipped list
-#                         total_skipped += 1
-#                     else:
-#                         total_added += 1
-
-#             # Construct the message for skipped IPPIS numbers
-#             if skipped_ippis:
-#                 skipped_ippis_str = ', '.join(map(str, skipped_ippis))
-#                 messages.info(request,f"Skipped IPPIS numbers: {skipped_ippis_str} - Savings already exist for these members for {month_date.strftime('%B %Y')}.")
-
-#             # Provide feedback on the result
-#             messages.success( request,f"{total_added} Savings Upload completed: successful, {total_updated} updated, {total_skipped} skipped." )
-#             return redirect(request.path)
-
-#         except Exception as e:
-#             # Handle any errors during file processing
-#             messages.error(request, f"Error processing file: {str(e)}")
-#             return redirect(request.path)
-
-#     return render(request, "savings/upload_savings.html")
-
-
 
 def get_upload_savings(request):
     date_from = request.GET.get('date_from')
@@ -781,3 +690,151 @@ def delete_interest_saving(request, year, month):
 
     return redirect("get_upload_interest")
 
+
+
+
+
+def combined_upload_view(request):
+    """
+    Combined view for savings months, loanable/investment months, and interest details
+    """
+    # Get the active tab from request
+    active_tab = request.GET.get('tab', 'savings')
+    
+    context = {
+        'active_tab': active_tab,
+    }
+    
+    if active_tab == 'savings':
+        # Savings months logic
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+
+        savings = Savings.objects.all()
+
+        if date_from:
+            try:
+                date_from_parsed = datetime.strptime(date_from, '%Y-%m-%d')
+                savings = savings.filter(month__gte=date_from_parsed)
+            except ValueError:
+                pass
+
+        if date_to:
+            try:
+                date_to_parsed = datetime.strptime(date_to, '%Y-%m-%d')
+                savings = savings.filter(month__lte=date_to_parsed)
+            except ValueError:
+                pass
+
+        months = savings.annotate(
+            month_num=ExtractMonth("month"),
+            year_num=ExtractYear("month")
+        ).values("month_num", "year_num").distinct()
+
+        data = [
+            {"num": m["month_num"], "year": m["year_num"], "name": calendar.month_name[m["month_num"]]}
+            for m in months if m["month_num"]
+        ]
+
+        # Sort by year then month
+        data.sort(key=lambda x: (x["year"], x["num"]))
+
+        # Paginator setup
+        paginator = Paginator(data, 12)  
+        page_number = request.GET.get("page")
+        page_obj = paginator.get_page(page_number)
+
+        context.update({
+            'savings_page_obj': page_obj,
+            'date_from': date_from,
+            'date_to': date_to
+        })
+
+    elif active_tab == 'loanable_investment':
+        # Loanable/Investment months logic
+        # Get distinct months from Loanable
+        loanable_months = Loanable.objects.annotate(
+            year=ExtractYear("month"), month_num=ExtractMonth("month")
+        ).values("year", "month_num").distinct()
+
+        # Get distinct months from Investment
+        investment_months = Investment.objects.annotate(
+            year=ExtractYear("month"), month_num=ExtractMonth("month")
+        ).values("year", "month_num").distinct()
+
+        # Combine and deduplicate months
+        all_months_set = {
+            (item["year"], item["month_num"]) for item in loanable_months
+        } | {
+            (item["year"], item["month_num"]) for item in investment_months
+        }
+
+        # Convert to sorted list of dicts with month names
+        all_months = sorted(
+            [
+                {
+                    "year": year,
+                    "month_num": month,
+                    "month": calendar.month_name[month] if 1 <= month <= 12 else "Invalid"
+                }
+                for year, month in all_months_set
+            ],
+            key=lambda x: (x["year"], x["month_num"]),
+            reverse=True
+        )
+
+        # Add pagination
+        paginator = Paginator(all_months, 12)
+        page_number = request.GET.get("page")
+        page_obj = paginator.get_page(page_number)
+
+        context.update({
+            'loanable_investment_page_obj': page_obj
+        })
+
+    elif active_tab == 'interest':
+        # Interest months logic (similar to savings)
+        date_from = request.GET.get('date_from')
+        date_to = request.GET.get('date_to')
+
+        interest = Interest.objects.all()
+
+        if date_from:
+            try:
+                date_from_parsed = datetime.strptime(date_from, '%Y-%m-%d')
+                interest = interest.filter(month__gte=date_from_parsed)
+            except ValueError:
+                pass
+
+        if date_to:
+            try:
+                date_to_parsed = datetime.strptime(date_to, '%Y-%m-%d')
+                interest = interest.filter(month__lte=date_to_parsed)
+            except ValueError:
+                pass
+
+        months = interest.annotate(
+            month_num=ExtractMonth("month"),
+            year_num=ExtractYear("month")
+        ).values("month_num", "year_num").distinct()
+
+        data = [
+            {"num": m["month_num"], "year": m["year_num"], "name": calendar.month_name[m["month_num"]]}
+            for m in months if m["month_num"]
+        ]
+
+        # Sort by year then month
+        data.sort(key=lambda x: (x["year"], x["num"]))
+
+        # Paginator setup
+        paginator = Paginator(data, 12)  
+        page_number = request.GET.get("page")
+        page_obj = paginator.get_page(page_number)
+
+        context.update({
+            'interest_page_obj': page_obj,
+            'date_from': date_from,
+            'date_to': date_to
+        })
+
+    return render(request, "savings/combined_upload.html", context)

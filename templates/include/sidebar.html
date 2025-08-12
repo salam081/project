@@ -99,26 +99,27 @@
                     <i class="bi bi-upload"></i>
                     <span class="nav-text">Upload Savings</span>
                 </a>
-                <a href="{% url 'get_upload_savings' %}" class="nav-link" >
-                    <i class="bi bi-file"></i>
-                    <span class="nav-text">All Savings</span>
-                </a>
+              
                 <a href="{% url 'interest_form'  %}" class="nav-link" >
                     <i class="bi bi-plus"></i>
                     <span class="nav-text">Take Admin Fee</span>
                 </a>
-                <a href="{% url 'get_upload_interest'  %}" class="nav-link" >
+                {% comment %} <a href="{% url 'get_upload_interest'  %}" class="nav-link" >
                     <i class="bi bi-eye"></i>
                     <span class="nav-text">View Admin Fee</span>
-                </a>
+                </a> {% endcomment %}
                 <a href="{% url 'distribute_savings'  %}" class="nav-link" >
                     <i class="bi bi-plus-circle"></i>
                     <span class="nav-text">Distribute Savings</span>
                 </a>
-                <a href="{% url 'loanable_investment_months'  %}" class="nav-link" >
+                  <a href="{% url 'combined_upload_view' %}" class="nav-link" >
+                    <i class="bi bi-file"></i>
+                    <span class="nav-text"> Management All Savings Upload</span>
+                </a>
+                {% comment %} <a href="{% url 'loanable_investment_months'  %}" class="nav-link" >
                     <i class="bi bi-calendar"></i>
                     <span class="nav-text">Loanable Investment</span>
-                </a>
+                </a> {% endcomment %}
             </div>
         </div>
         <div class="nav-item">

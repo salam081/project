@@ -102,7 +102,7 @@
         <div>
             <span class="badge status-badge status-{{ consumable_request.status|lower|cut:' ' }}">
                 <i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i>
-                {{ consumable_request.status|title }}
+                {{ consumable_request.status}}
             </span>
         </div>
     </div>
@@ -122,36 +122,36 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label text-muted mb-1">Request ID</label>
+                                <label class="form-label mb-1">Request ID</label>
                                 <b class="fw-bold">#{{ consumable_request.id }}</b>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-muted mb-1">Application Date</label>
+                                <label class="form-label  mb-1">Application Date</label>
                                 <b class="fw-bold">{{ consumable_request.date_created|date:"M d, Y" }}</b>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-muted mb-1">Status</label>
+                                <label class="form-label  mb-1">Status</label>
                                 <b>
-                                    <span class="badge status-{{ consumable_request.status|lower|cut:' ' }}">
-                                        {{ consumable_request.status|title }}
-                                    </span>
+                                    {% comment %} <span class="badge status-{{ consumable_request.status|lower|cut:' ' }}"> {% endcomment %}
+                                        {{ consumable_request.status }}
+                                    {% comment %} </span> {% endcomment %}
                                 </b>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label text-muted mb-1">Consumable Type</label>
+                                <label class="form-label  mb-1">Consumable Type</label>
                                 <b class="fw-bold">{{ consumable_request.consumable_type.name }}</b>
                             </div>
                             {% if consumable_request.approved_by %}
                             <div class="mb-3">
-                                <label class="form-label text-muted mb-1">Approved By</label>
+                                <label class="form-label mb-1">Approved By</label>
                                 <b class="fw-2">{{ consumable_request.approved_by.get_full_name|default:consumable_request.approved_by.username }}</b>
                             </div>
                             {% endif %}
                             {% if consumable_request.file_payslpt %}
                             <div class="mb-3">
-                                <label class="form-label text-muted mb-1">Payslip</label><br>
+                                <label class="form-label mb-1">Payslip</label><br>
                                 <a href="{{ consumable_request.file_payslpt.url }}" class="btn btn-sm btn-outline-primary action-button">
                                   <i class="fas fa-download me-1"></i> View Payslip
                                 </a>

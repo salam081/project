@@ -7,19 +7,20 @@
 {% comment %} <div class="alert alert-info">
     <strong>Total Remaining Balance:</strong> ₦{{ total_remaining|floatformat:2 }}
 </div> {% endcomment %}
-<div class="content-card mt-4 shadow">
+<div class="content-card mt-4 col-md-122 shadow">
     {% if consumable_data %}
         <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle mt-2">
                 <thead class="table-primary">
                     <tr>
-                        <th>#</th>
+                        <th>S/N</th>
+                        <th class="text-nowrap" style="min-width: 120px;">Full Name</th>
                         <th class="text-nowrap" style="min-width: 120px;">Date Created</th>
                         <th class="text-nowrap" style="min-width: 120px;">Approved Amount (₦)</th>
                         <th class="text-nowrap" style="min-width: 120px;">Total Paid (₦)</th>
                         <th>Balance (₦)</th>
                         <th class="text-nowrap" style="min-width: 120px;">Monthly Payment (₦)</th>
-                        <th>Items</th>
+                        {% comment %} <th>Items</th> {% endcomment %}
                         <th>Acction</th>
                     </tr>
                 </thead>
@@ -27,12 +28,13 @@
                     {% for data in consumable_data %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
+                        <td class="text-nowrap" style="min-width: 120px;">{{ data.user.first_name }}</td>
                         <td class="text-nowrap" style="min-width: 120px;">{{ data.consumable.date_created|date:"M d, Y" }}</td>
                         <td>₦{{ data.approved_amount|floatformat:2 }}</td>
                         <td>₦{{ data.total_paid|floatformat:2 }}</td>
                         <td>₦{{ data.balance|floatformat:2 }}</td>
                         <td>₦{{ data.monthly_payment|floatformat:2 }}</td>
-                        <td>
+                        {% comment %} <td>
                             {% if data.consumable.details.exists %}
                                 <ul class="list-unstyled mb-0">
                                     {% for detail in data.consumable.details.all %}
@@ -42,11 +44,13 @@
                             {% else %}
                                 <em>No items</em>
                             {% endif %}
-                        </td>
+                        </td> {% endcomment %}
                         <td>
+                            <div class="d-flex gap-2">
                             <a href="{% url 'request_detail' data.consumable.id %}" class="btn btn-info btn-sm">View</a>
 
                             <a href="{% url 'cancel_consumable_request' data.consumable.id %}" class="btn btn-danger btn-sm">Cancel</a>
+                       </div>
                         </td>
                     </tr>
                     {% endfor %}

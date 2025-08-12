@@ -28,27 +28,26 @@ from datetime import datetime
 from decimal import Decimal
 from django.db.models import Sum
 from django.db.models.functions import ExtractMonth, ExtractYear
+from accounts.utils import get_cooperative_withdrawal_stats, get_members_eligible_for_withdrawal
+
 from django.shortcuts import render
 
 
 
 def admin_dashboard(request):
-    """
-    Renders the admin dashboard with real-time financial and operational data,
-    now filtered to show loans and consumables for the current year only.
-    """
-    
     # Get the current year
     current_year = datetime.now().year
     
     # Data retrieval for the current year
     total_members = Member.objects.count()
+    total_members_withdrawal = Withdrawal.objects.count()
     total_loans = LoanRequest.objects.filter(date_created__year=current_year).count()
     pending_loans = LoanRequest.objects.filter(status='pending', date_created__year=current_year).count()
     rejected_loans = LoanRequest.objects.filter(status='rejected', date_created__year=current_year).count()
     loan_types = LoanType.objects.all()
     total_consumable = ConsumableRequest.objects.filter(date_created__year=current_year).count()
     pending_consumable = ConsumableRequest.objects.filter(status='Pending', date_created__year=current_year).count()
+    rejected_consumable = ConsumableRequest.objects.filter(status='Declined', date_created__year=current_year).count()
     
     def get_monthly_totals(queryset, value_field):
         return (
@@ -109,11 +108,13 @@ def admin_dashboard(request):
 
     context = {
         'total_members': total_members,
+        'total_members_withdrawal':total_members_withdrawal,
         'total_loans': total_loans,
         'pending_loans': pending_loans,
         'rejected_loans': rejected_loans,
         'total_consumable': total_consumable,
         'pending_consumable': pending_consumable,
+        'rejected_consumable': rejected_consumable,
         
         "total_savings": total_savings,
         "total_interest": total_interest,
@@ -139,7 +140,69 @@ def delete_financial_summary(request, pk):
     return redirect('financial_list')  
 
 
+def is_admin(user):
+    return user.is_staff or user.is_superuser
+
+
+@login_required
+def list_withdrawal_requests(request):
+    requests = Withdrawal.objects.select_related('member', 'approved_by').all()
+    stats = get_cooperative_withdrawal_stats()
+    return render(request, 'main/list_withdrawal_requests.html', {'requests': requests, 'stats': stats, })
+
+
+
+@login_required
+def approve_withdrawal_request(request, pk):
+    withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
+    withdrawal_request.approve(request.user)
+    messages.success(request, f"Request by {withdrawal_request.member} approved.")
+    return redirect('list_withdrawal_requests')
+
+
+@login_required
+def decline_withdrawal_request(request, pk):
+    withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '')
+        withdrawal_request.status = 'Declined'
+        withdrawal_request.date_approved = timezone.now()
+        withdrawal_request.approved_by = request.user
+        withdrawal_request.save()
+
+        messages.warning(request, f"Request by {withdrawal_request.member} declined.")
+        return redirect('list_withdrawal_requests')
+
+    return render(request, 'main/decline_withdrawal_request.html', {'request_obj': withdrawal_request})
+
+
+
+@login_required
+
+def eligible_members_view(request):
+    eligible_members = get_members_eligible_for_withdrawal()
+    return render(request, 'withdrawal/members/eligible_members.html', {
+        'eligible_members': eligible_members,
+    })
+
+
+def cooperative_summary(request):
+    summary_totals = FinancialSummary.objects.aggregate(
+        total_savings=Sum('total_savings'),
+        total_interest=Sum('total_interest'),
+        total_investment=Sum('total_investment'),
+        total_loanable=Sum('total_loanable'),
+        grand_total=Sum('grand_total'),
+       )
+   
+    context = {
+        "total_savings": summary_totals['total_savings'] or Decimal('0.00'),
+        "total_investment": summary_totals['total_investment'] or Decimal('0.00'),
+        "total_loanable": summary_totals['total_loanable'] or Decimal('0.00'),
+        "grand_total": summary_totals['grand_total'] or Decimal('0.00'),
+        
+    }
+    return render(request, "widower/admin/coop_summary.html", context)
+
  
-
-
-

@@ -9,11 +9,11 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card bg-primary text-white">
-                <div class="card-body text-center py-4">
-                    <h1 class="card-title mb-3">
+                <div class="card-body text-center py-1">
+                    <h5 class="card-title mb-3">
                         <i class="fas fa-clipboard-list me-3"></i>
                         Consumable Request Report
-                    </h1>
+                    </h5>
                     <h6 class="card-subtitle mb-0">Monitor and track all consumable requests across your organization</h6>
                 </div>
             </div>
@@ -108,7 +108,7 @@
         </div>
         <div class="stat-content">
             <h3>₦{{ summary.total_paid|floatformat:2|intcomma }}</h3>
-            <p>Total Paid</p>
+            <p>Total Payment Recived</p>
         </div>
     </div>
     
@@ -148,7 +148,7 @@
         </div>
         <div class="stat-content">
             <h3>{{ summary.paid_count }}</h3>
-            <p>Paid</p>
+            <p>Fully Paid</p>
         </div>
     </div>
     
@@ -187,10 +187,10 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Member</th>
-                                    <th>Date Created</th>
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Date Created</th>
                                     <th>Status</th>
-                                    <th>Total Price</th>
-                                    <th>Total Paid</th>
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Price</th>
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Paid</th>
                                     <th>Balance</th>
                                     <th>Items</th>
                                 </tr>
@@ -198,9 +198,9 @@
                             <tbody>
                                 {% for req in requests %}
                                 <tr>
-                                    <td><strong>#{{ req.id }}</strong></td>
-                                    <td>{{ req.user.get_full_name|default:req.user.username }}</td>
-                                    <td>{{ req.date_created|date:"Y-m-d H:i" }}</td>
+                                    <td><strong>{{ req.id }}</strong></td>
+                                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.user.get_full_name|default:req.user.username }}</td>
+                                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.date_created|date:"Y-m-d H:i" }}</td>
                                     <td>
                                         <span class="status-badge 
                                             {% if req.status == 'Pending' %}status-pending

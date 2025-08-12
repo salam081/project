@@ -3,7 +3,7 @@
 
 {% block content %}
 
-<div class="container py-4 d-flex flex-column align-items-center text-center">
+
     <!-- Header -->
     <div class="row ">
         <div class="col-12">
@@ -12,9 +12,9 @@
     </div>
 
     <!-- Savings Section -->
-    <div class="row col-9 mb-3">
+    <div class="row col-12 mb-3">
         <div class="col-12">
-            <div class="card shadow border-0">
+            <div class="content-card shadow border-0">
                 <div class="card-header bg-primary text-white col-12">
                     <h3 class="mb-0"><i class="bi bi-piggy-bank me-2"></i>Savings</h3>
                 </div>
@@ -89,9 +89,9 @@
     </div>
 
     <!-- Admin Fee Section -->
-    <div class="row col-9 mb-3">
+    <div class="row col-12 mb-3">
         <div class="col-md-12">
-            <div class="card shadow border-0">
+            <div class="content-card shadow border-0">
                 <div class="card-header bg-warning text-dark">
                     <h3 class="mb-0"><i class="bi bi-calculator me-2"></i>Admin Fee</h3>
                 </div>
@@ -166,9 +166,9 @@
     </div>
 
     <!-- Loanable Section -->
-   <div class="row col-9 mb-3">
+   <div class="row col-12 mb-3">
         <div class="col-md-12">
-            <div class="card shadow border-0">
+            <div class="content-card shadow border-0">
                 <div class="card-header bg-info text-white">
                     <h3 class="mb-0"><i class="bi bi-cash-coin me-2"></i>Loanable</h3>
                 </div>
@@ -243,9 +243,9 @@
     </div>
 
     <!-- Investment Section -->
-  <div class="row col-9 mb-3">
+  <div class="row col-12 mb-3">
         <div class="col-md-12">
-            <div class="card shadow border-0">
+            <div class="content-card shadow border-0">
                 <div class="card-header bg-secondary text-white">
                     <h3 class="mb-0 text-white"><i class="bi bi-graph-up me-2"></i>Investment</h3>
                 </div>
@@ -314,9 +314,9 @@
     </div>
 
     <!-- Summary Cards Section -->
-  <div class="row col-12 mb-3">
-        <div class="col-6 mb-6">
-            <div class="card border-0 shadow-lg bg-primary text-white">
+  <div class="row">
+        <div class="col-md-6 mb-6">
+            <div class="content-card border-0 shadow-lg bg-primary text-white">
                 <div class="card-body text-center py-1">
                    
                     <h5 class="card-title mb-3 fw-semibold">Grand Total For All Members Savings</h5>
@@ -325,8 +325,8 @@
             </div>
         </div>
         
-        <div class="col-6 ">
-            <div class="card border-0 shadow bg-success text-white">
+        <div class="col-md-6 ">
+            <div class="content-card border-0 shadow bg-success text-white">
                 <div class="card-body text-center py-1">
                     <h5 class="card-title mb-3 fw-semibold">Grand Total Of Savings And Admin Fee</h5>
                     <h4 class=" fw-bold mb-0">₦{{ grand_total|floatformat:2|intcomma }}</h4>
@@ -334,6 +334,6 @@
             </div>
         </div>
     </div>
-</div>
+
 
 {% endblock content %}

@@ -7,7 +7,7 @@
                 <i class="bi bi-list"></i>
             </button>
               
-            <a href="{% url 'home' %}" class="navbar-brand">
+            <a href="{% url 'admin_dashboard' %}" class="navbar-brand">
                 <i class="bi bi-shield-check"></i> Admin Dashboard
             </a>
             <!-- Desktop toggle - only shows on desktop -->
@@ -15,8 +15,10 @@
                 <i class="bi bi-list" id="toggleIcon"></i>
                 <i class="bi bi-list" id="toggleIcon"></i>
             </button>
+              {% if user.is_authenticated and user.group.title == 'admin' or user.group.title == 'staff' %}
            <a href="#" class="text-white" data-bs-toggle="modal" data-bs-target="#inputPopupModal">
-        <i class="fa fa-search me-lg-2"></i>
+            <i class="fa fa-search me-lg-2"></i>
+            {% endif %}
         <span class="d-none d-lg-inline-flex"></span>
     </a>
         </div>

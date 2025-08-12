@@ -18,6 +18,7 @@ urlpatterns = [
     path('my_consumablerequests', views.my_consumable_requests, name='my_consumablerequests'),
     path('request_detail/<int:request_id>/', views.request_detail, name='request_detail'),
     path('cancel_consumable_request/<int:id>/', views.cancel_consumable_request, name='cancel_consumable_request'),
+    path('member-withdrawal/', views.member_withdrawal_request, name='member_withdrawal_request'),
 
     
 ]

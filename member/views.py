@@ -515,3 +515,21 @@ def cancel_consumable_request(request, id):
         messages.error(request, f'An error occurred: {str(e)}')
 
     return redirect('my_consumablerequests')
+
+
+@login_required
+def member_withdrawal_request(request):
+    member = get_object_or_404(Member, member=request.user)
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '')
+        if Withdrawal.objects.filter(member=member, status='Pending').exists():
+            messages.warning(request, "You already have a pending request.")
+        elif member.total_savings <= 0:
+            messages.warning(request, "You are not eligible for withdrawal.")
+        else:
+            Withdrawal.objects.create(member=member, reason=reason)
+            messages.success(request, "Withdrawal request submitted successfully.")
+        return redirect('member_withdrawal_request')
+
+    return render(request, 'member/withdrawal_request_form.html', {'member': member,})
+

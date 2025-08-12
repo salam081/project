@@ -170,6 +170,24 @@
                 <p>Pending Consumables</p>
             </div>
         </div>
+        <div class="stat-card shadow">
+            <div class="stat-icon" style="background: #dc3545;">
+                 <i class="bi bi-x-circle"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ rejected_consumable|default:0|intcomma }}</h3>
+                <p>Rejected Consumables</p>
+            </div>
+        </div>
+        <div class="stat-card shadow">
+            <div class="stat-icon" style="background: #88178eff;">
+                <i class="bi bi-people"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ total_members_withdrawal|default:0|intcomma }}</h3>
+                <p>Total Withdraw Members</p>
+            </div>
+        </div>
     </div>
     
     <div class="content-card">
@@ -213,7 +231,7 @@
             <div class="summary-card grand-total-card shadow">
                 <div class="card-icon"><i class="fas fa-calculator"></i></div>
                 <div class="card-content">
-                    <a href="{% url 'financial_list' %}">
+                    <a href="{% url 'financial_list' %}" style="text-decoration: none;">
                     <div class="card-label">GRAND TOTAL</div>
                     <div class="card-value">₦{{ grand_total|default:0|floatformat:2|intcomma }}</div>
                 </a>

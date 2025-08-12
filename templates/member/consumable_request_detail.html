@@ -5,6 +5,11 @@
 {% block content %}
 
 <style>
+    /* Prevent horizontal scrolling on the main page body */
+    body {
+        overflow-x: hidden;
+    }
+
     .status-badge {
         font-size: 0.9rem;
         padding: 0.5rem 1rem;
@@ -99,12 +104,7 @@
                 </ol>
             </nav>
         </div>
-        <div>
-            <span class="badge status-badge status-{{ consumable_request.status|lower|cut:' ' }}">
-                <i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i>
-                {{ consumable_request.status}}
-            </span>
-        </div>
+       
     </div>
 
     <div class="row">
@@ -133,7 +133,7 @@
                                 <label class="form-label  mb-1">Status</label>
                                 <b>
                                     {% comment %} <span class="badge status-{{ consumable_request.status|lower|cut:' ' }}"> {% endcomment %}
-                                        {{ consumable_request.status }}
+                                    {{ consumable_request.status }}
                                     {% comment %} </span> {% endcomment %}
                                 </b>
                             </div>
@@ -153,7 +153,7 @@
                             <div class="mb-3">
                                 <label class="form-label mb-1">Payslip</label><br>
                                 <a href="{{ consumable_request.file_payslpt.url }}" class="btn btn-sm btn-outline-primary action-button">
-                                  <i class="fas fa-download me-1"></i> View Payslip
+                                    <i class="fas fa-download me-1"></i> View Payslip
                                 </a>
                             </div>
                             {% endif %}
@@ -185,13 +185,13 @@
                             </thead>
                             <tbody>
                                 {% for detail in details %}
-                                    <tr>
-                                        <td>{{ detail.item.title }}</td>
-                                        <td class="text-center">{{ detail.quantity }}</td>
-                                        <td>₦{{ detail.item_price|floatformat:2 }}</td>
-                                        <td>₦{{ detail.total_price|floatformat:2 }}</td>
-                                        <td class="text-center">{{ detail.loan_term_months }}</td>
-                                    </tr>
+                                <tr>
+                                    <td>{{ detail.item.title }}</td>
+                                    <td class="text-center">{{ detail.quantity }}</td>
+                                    <td>₦{{ detail.item_price|floatformat:2 }}</td>
+                                    <td>₦{{ detail.total_price|floatformat:2 }}</td>
+                                    <td class="text-center">{{ detail.loan_term_months }}</td>
+                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -205,7 +205,7 @@
             </div>
 
             <!-- Repayment History Card -->
-           
+            
         </div>
 
         <!-- Sidebar -->
@@ -258,7 +258,7 @@
             </div>
 
 
-             <div class="card mb-4 shadow-sm">
+            <div class="card mb-4 shadow-sm">
                 <div class="card-header bg-light">
                     <h5 class="mb-0">
                         <i class="fas fa-history me-2 text-primary"></i>
@@ -269,16 +269,16 @@
                     {% if repayments %}
                         <div class="repayment-timeline">
                             {% for payment in repayments %}
-                               
+                                
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="">
                                             <span class="mb-1">{{ payment.repayment_date|date:"M d, Y" }}</span>
                                             <span class=" mb-0  text-success ">
-                                               Amount Paid: ₦{{ payment.amount_paid|floatformat:2 }}
+                                                Amount Paid: ₦{{ payment.amount_paid|floatformat:2 }}
                                             </span>
                                         </div>
                                     </div>
-                               
+                                
                             {% endfor %}
                         </div>
                     {% else %}

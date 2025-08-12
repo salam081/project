@@ -36,9 +36,9 @@
             line-height: 1.6;
             
             /* Full-screen and no-scrolling styles */
-            min-height: 100vh;
-            height: 100vh; /* Set a fixed height */
-            overflow: hidden; /* Prevent scrolling */
+           min-height: 100vh;
+            height: auto; /* allow content to grow */
+            overflow-y: auto;
         }
 
         .login-container {
@@ -48,9 +48,10 @@
             padding: 1rem;
             position: relative;
             
-            /* Make the container fill the entire screen */
+             height: auto;
             min-height: 100vh;
-            height: 100vh;
+            padding: 1rem;
+            /* Make the container fill the entire screen */
             overflow: hidden; /* Ensure no scrolling within the container */
         }
 
@@ -63,14 +64,15 @@
             backdrop-filter: blur(15px);
             border-radius: 15px;
             box-shadow: var(--shadow-md);
-            padding: 1rem;
+            max-width: 100%;
             width: 100%;
-            max-width: 300px;
+            padding: 1.5rem;
+            margin: auto;
             position: relative;
             z-index: 10;
             transform: translateY(0);
             transition: all 0.3s ease;
-            margin-bottom: 80px;
+            
         }
 
         .login-card::before {

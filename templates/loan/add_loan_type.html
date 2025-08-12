@@ -97,17 +97,11 @@
                                                     {% endif %}
                                                 </td> -->
                                                 <td>
-                                                    {% if loan_type.available %}
-                                                        <span class="badge bg-success">
-                                                            <i class="fas fa-check me-1"></i>
-                                                            Available
-                                                        </span>
-                                                    {% else %}
-                                                        <span class="badge bg-danger">
-                                                            <i class="fas fa-times me-1"></i>
-                                                            Unavailable
-                                                        </span>
-                                                    {% endif %}
+                                                     <span class="status-badge 
+                                                        {% if loan_type.available %}status-active
+                                                        {% else %}status-cancelled{% endif %}">
+                                                        {% if loan_type.available %}Available{% else %}Unavailable{% endif %}
+                                                    </span>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">

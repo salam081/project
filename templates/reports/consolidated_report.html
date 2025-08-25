@@ -1,0 +1,358 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% block title %}Consolidated Report{% endblock %}
+
+{% block content %}
+ <style>
+        .header-section {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .header-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+     <div class="header-section">
+            <div class="header-content">
+                <p class=" fw-bold mb-2">
+                    <i class="bi bi-graph-up-arrow me-3"></i>
+                    Consolidated Financial Report
+                </p>
+                <p class="lead mb-0">Complete overview of income and expenditure</p>
+            </div>
+        </div>
+
+    <div class="container">
+        <div class="card shadow border-0 mb-4 rounded-3">
+            <div class="card-body p-4">
+                <form method="GET" id="filterForm">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="date_from" class="form-label fw-semibold">Start Date</label>
+                            <input type="date" class="form-control" id="date_from" name="date_from"
+                                   value="{{ date_from|default:'' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="date_to" class="form-label fw-semibold">End Date</label>
+                            <input type="date" class="form-control" id="date_to" name="date_to"
+                                   value="{{ date_to|default:'' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1" id="generateBtn">
+                                    Generate Report
+                                </button>
+                                <a href="{% url 'consolidated_report' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                <strong>Error:</strong> {{ error }}
+            </div>
+        {% endif %}
+
+        {% if filters_applied %}
+            <div class="alert alert-info" role="alert">
+                <strong>Report Period:</strong>
+                {% if date_from and date_to %}
+                    From {{ date_from }} to {{ date_to }}
+                {% elif date_from %}
+                    From {{ date_from }} onwards
+                {% elif date_to %}
+                    Up to {{ date_to }}
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if not error %}
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card  shadow   text-center" style="border-top: 2px solid green;">
+                        <div class="card-body p-4">
+                            <div class="text-uppercase fw-semibold text-muted small">Total Income</div>
+                            <div class="stat-value fs-5 fw-bold text-success" data-value="{{ total_income|default:'0' }}">
+                                ₦{{ total_income|floatformat:2|intcomma|default:"0.00" }}
+                            </div>
+                            <div class="small text-muted">Money received</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card  shadow   text-center" style="border-top: 2px solid red;">
+                        <div class="card-body p-4">
+                            <div class="text-uppercase fw-semibold text-muted small">Total Expenditure</div>
+                            <div class="stat-value fs-5 fw-bold text-danger" data-value="{{ total_expenditure|default:'0' }}">
+                                ₦{{ total_expenditure|floatformat:2|intcomma|default:"0.00" }}
+                            </div>
+                            <div class="small text-muted">Money spent</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card  shadow  border-4 text-center" style="border-top: 2px solid green;">
+                    
+                        <div class="card-body p-4">
+                            <div class="text-uppercase fw-semibold text-muted small">Net Position</div>
+                            <div class="stat-value fs-5 fw-bold text-success" data-value="{{ net_position|default:'0' }}">
+                                ₦{{ net_position|floatformat:2|default:"0.00" }}
+                            </div>
+                            <div class="small text-muted">
+                                {% if net_position > 0 %}Profit
+                                {% elif net_position < 0 %}Loss
+                                {% else %}Break-even
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+    <div class="col-12">
+        <div class="card shadow border-0 rounded-3 overflow-hidden">
+            <div class="card-header bg-success-subtle text-success fw-bold">
+                <i class="bi bi-plus-circle me-2"></i>Income Breakdown
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow  rounded-3 text-center" style="border-left: 2px solid green;" >
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-piggy-bank"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Savings</span>
+                </div>
+                <span class="fw-bold text-success fs-5">₦{{ saving_income|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow  rounded-3 text-center" style="border-left: 2px solid green;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-gear"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Admin Fees</span>
+                </div>
+                <span class="fw-bold text-success fs-5">₦{{ admin_fee_income|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+     <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow rounded-3 text-center" style="border-left: 2px solid green;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-file-text"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Form Fees</span>
+                </div>
+                <span class="fw-bold text-success fs-5">₦{{ form_fee_income|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow  rounded-3 text-center" style="border-left: 2px solid green;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-arrow-return-left"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Consumable Paybacks</span>
+                </div>
+                <span class="fw-bold text-success fs-5">₦{{ consumable_payback_income|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow  rounded-3 text-center" style="border-left: 2px solid green;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-credit-card"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Finance Paybacks</span>
+                </div>
+                <span class="fw-bold text-success fs-5">₦{{ finance_payback_income|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+   
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow rounded-3 text-center" style="border-left: 2px solid green;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-bank"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Loan Paybacks</span>
+                </div>
+                <span class="fw-bold text-success fs-5">₦{{ loan_payback_income|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow  rounded-3 text-center" style="border-left: 2px solid green;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-success text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Loan Form Fees</span>
+                </div>
+                <span class="fw-bold text-success fs-5">₦{{ loan_form_fee_income|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card shadow border-0 rounded-3 overflow-hidden">
+            <div class="card-header bg-danger-subtle text-danger fw-bold">
+                <i class="bi bi-dash-circle me-2"></i>Expenditure Breakdown
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow  rounded-3 text-center" style="border-left: 2px solid red;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-danger text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-person-workspace"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Staff Purchases</span>
+                </div>
+                <span class="fw-bold text-danger fs-5">₦{{ staff_purchases|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow  rounded-3 text-center" style="border-left: 2px solid red;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-danger text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Member Consumables</span>
+                </div>
+                <span class="fw-bold text-danger fs-5">₦{{ member_consumable_cost|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow  rounded-3 text-center" style="border-left: 2px solid red;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-danger text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-briefcase"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Member Finance Loans</span>
+                </div>
+                <span class="fw-bold text-danger fs-5">₦{{ member_finance_loans|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow  rounded-3 text-center" style="border-left: 2px solid red;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="bg-danger text-white p-2 rounded-2 me-3" style="width: 26px; height: 26px;">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                    <span class="fw-semibold text-dark">Loan Disbursements</span>
+                </div>
+                <span class="fw-bold text-danger fs-5">₦{{ loan_disbursements|floatformat:2|intcomma|default:"0.00" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Form submission loading state
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            const btn = document.getElementById('generateBtn');
+            const original = btn.innerHTML;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading...`;
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.disabled = false;
+            }, 8000);
+        });
+
+        // Date validation
+        const dateFrom = document.getElementById('date_from');
+        const dateTo = document.getElementById('date_to');
+        
+        function validateDates() {
+            if (dateFrom.value && dateTo.value && dateFrom.value > dateTo.value) {
+                dateTo.setCustomValidity('End date must be after start date');
+            } else {
+                dateTo.setCustomValidity('');
+            }
+        }
+        
+        dateFrom.addEventListener('change', validateDates);
+        dateTo.addEventListener('change', validateDates);
+
+        // Animate numbers
+        function animateValue(el, start, end, duration) {
+            let startTime = null;
+            const step = (currentTime) => {
+                if (!startTime) startTime = currentTime;
+                const progress = Math.min((currentTime - startTime) / duration, 1);
+                const value = progress * (end - start) + start;
+                el.textContent = '₦' + value.toLocaleString('en-NG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                if (progress < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        }
+
+        // Start animations on load
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.stat-value').forEach(el => {
+                const value = parseFloat(el.dataset.value || 0);
+                if (!isNaN(value)) {
+                    el.textContent = '₦0.00';
+                    setTimeout(() => animateValue(el, 0, value, 1500), 300);
+                }
+            });
+        });
+
+        // No need for custom CSS for fade-in animations, since we removed the custom classes.
+        // If you still want a similar effect, you would need to use a library like AOS or write custom JS to add/remove classes.
+    </script>
+{% endblock %}

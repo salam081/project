@@ -15,9 +15,9 @@
         color: #343a40; /* Dark text */
         font-weight: 600;
         border-bottom: 2px solid var(--primary-color);
-        padding-bottom: 0.5rem;
-        display: inline-block; /* Makes border-bottom only as wide as text */
-        font-size: 1.75rem; /* Adjust font size */
+        padding-bottom: 0.1rem;
+        display: inline-flex; /* Makes border-bottom only as wide as text */
+        font-size: 1.5rem; /* Adjust font size */
     }
 
    
@@ -50,16 +50,15 @@
    
 </style>
 
-<div class="container py-4 col-md-10 mx-auto"> {# Using py-4 for vertical padding, mx-auto for centering #}
+<div class="content-card py-4 col-md-12 mx-auto"> {# Using py-4 for vertical padding, mx-auto for centering #}
     {% if results %}
-    <h4 class="mb-4 text-center search-results-header">Search Results for Members</h4>
-    <div class="card shadow-sm border-0 rounded-3 overflow-hidden"> {# Bootstrap shadows, no border, rounded corners #}
-        <div class="card-body p-4"> {# Bootstrap padding #}
+    <h5 class="mb-4 text-center search-results-header">Search Results </h5>
+   
             <div class="table-responsive">
                 <table class="table table-striped table-hover">
                     <thead class="">
                         <tr>
-                            <th>Full Name</th>
+                            <th class="text-nowrap" style="min-width: 120px;">Full Name</th>
                             <th>IPPIS</th>
                             <th>Action</th>
                         </tr>
@@ -67,7 +66,7 @@
                     <tbody>
                         {% for member in results %}
                         <tr>
-                            <td><span class="fw-bold text-dark">{{ member.member.first_name }} {{ member.member.last_name }}</span></td>
+                            <td class="text-nowrap" style="min-width: 120px;"><span class="fw-bold text-dark">{{ member.member.first_name }} {{ member.member.last_name }}</span></td>
                             <td><span class="fw-bold text-dark">{{ member.ippis }}</span></td>
                             <td>
                                 <div class="d-flex justify-content-center align-items-center gap-2"> {# Bootstrap flexbox for button spacing #}

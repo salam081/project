@@ -82,19 +82,22 @@
                                 {% for request in page_obj %}
                                 <tr>
                                     <td class="text-nowrap" style="min-width: 120px;">{{ request.date_requested|date:"M d, Y" }}</td>
-                                    <td>{{ request.requested_by.username }}</td>
+                                    <td>{{ request.requested_by.first_name }} {{ request.requested_by.last_name }}</td>
                                     <td>{{ request.item }}</td>
                                     <td class="text-nowrap" style="min-width: 120px;">{{ request.purpose|truncatechars:40 }}</td>
                                     <td>₦{{ request.amount_requested|floatformat:2 }}</td>
                                     <td class="text-nowrap" style="min-width: 120px;">₦{{ request.approved_amount|floatformat:2 }}</td>
                                     <td>
-                                        {% if request.status == 'pending' %}
-                                            <span class="badge bg-warning">Pending</span>
-                                        {% elif request.status == 'approved' %}
-                                            <span class="badge bg-info">Approved</span>
-                                        {% elif request.status == 'accounted' %}
-                                            <span class="badge bg-success">Accounted</span>
-                                        {% endif %}
+                                         <span class="status-badge 
+                                        {% if request.status == 'pending' %}status-pending
+                                        {% elif request.status == 'approved' %}status-active
+                                        
+                                        {% elif request.status == 'accounted' %}status-completed
+                                        
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ request.status }}
+                                    </span>
+                                       
                                     </td>
                                     <td>
                                         {% if request.status != 'pending' %}

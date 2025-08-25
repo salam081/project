@@ -2,30 +2,30 @@
 {% load humanize %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="content-card mt-4 shadow">
    
             
            
-<h4 class="text-center text-primary">{{ loan_type.name }} -</h4>
+<h4 class="text-center text-dark">{{ loan_type.name }}</h4>
             
  <form method="get" class="row g-2 align-items-end mb-4 mt-3">
     <!-- Status Filter -->
-    <div class="col-3 col-sm-6 col-md-3">
+    <div class="col-3 col-sm-8 col-md-3 shadow">
         <select name="status" id="status" class="form-select">
             <option value="">Select Status</option>
             <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
             <option value="approved" {% if selected_status == 'approved' %}selected{% endif %}>Approved</option>
-            <option value="paid" {% if selected_status == 'paid' %}selected{% endif %}>Paid</option>
+            <option value="paid" {% if selected_status == 'Fullpaid' %}selected{% endif %}>Fullpaid</option>
         </select>
     </div>
 
     <!-- Search Button -->
-    <div class="col-3 col-sm-6 col-md-2">
+    <div class="col-3 col-sm-8 col-md-2 shadow">
         <button type="submit" class="btn btn-primary w-100">Search</button>
     </div>
  {% if loanobj %}
    <!-- Wrap the download buttons in a row -->
-<div class="col-6 col-md-3 ms-auto d-flex justify-content-end gap-2">
+<div class="col-6 col-md-3 ms-auto d-flex justify-content-end gap-2 shadow">
     <!-- Download Excel -->
     <div class="flex-grow-1">
         <a href="{% url 'loans_by_year' year=year loan_type_filter=loan_type.name %}?download=excel{% if selected_status %}&status={{ selected_status }}{% endif %}"
@@ -48,9 +48,9 @@
 </form>
 
 
-            <div class="table-responsive mt-3">
+            <div class="table-responsive mt-3 ">
                 <table class="table table-bordered table-hover table-striped">
-                    <thead class="table-primary">
+                    <thead class="table-info">
                         <tr class="border-bottom">
                             <th class="text-nowrap" style="min-width: 100px;">M/ID</th>
                             <th class="text-nowrap" style="min-width: 150px;">Full Name</th>

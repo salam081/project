@@ -3,6 +3,7 @@ from django.utils import timezone
 from accounts.models import *
 from main.models import *
 from django.conf import settings
+from django.db.models import Sum
 # Create your models here.
 
 
@@ -50,7 +51,7 @@ class LoanRequest(models.Model):
     loan_term_months = models.PositiveIntegerField()
     application_date = models.DateField(default=today_date)
     approval_date = models.DateField(null=True, blank=True) 
-    status = models.CharField(max_length=20,choices=[ ("pending", "Pending"),("approved", "Approved"),("rejected", "Rejected"),  ("paid", "paid") ], default="pending",)
+    status = models.CharField(max_length=20,choices=[ ("pending", "Pending"),("approved", "Approved"),("rejected", "Rejected"),  ("Fullpaid", "Fullpaid") ], default="pending",)
     rejection_reason = models.TextField(blank=True, null=True)
     file_one = models.ImageField(upload_to='file_one', blank=True, null=True)
     bank_name = models.ForeignKey(BankName,on_delete=models.CASCADE)
@@ -60,20 +61,36 @@ class LoanRequest(models.Model):
     guarantor_accepted = models.BooleanField(default=False)
     created_by = models.ForeignKey(User,on_delete=models.CASCADE)
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_loan')
-
     date_created = models.DateTimeField(auto_now_add=True)
     
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(approved_amount__lte=models.F('amount')),
+                name='approved_amount_not_greater_than_requested'
+            ),
+        ]
+        
     @property
     def monthly_payment(self):
         if self.approved_amount and self.loan_term_months > 0:
-            # Calculate the monthly payment based on the approved amount and loan term
-            # Still assuming no interest for simplicity here
             total_payment = self.approved_amount
             return total_payment / self.loan_term_months
-        return None  # Or handle the case where approved_amount or loan_term_months is not set
-
+        return None 
+    
     def __str__(self):
         return f"Loan Request for {self.member} - Amount: {self.amount} - Approved Amount: {self.approved_amount if self.approved_amount else 'Pending'}"
+    
+    @property
+    def total_repaid(self):
+        return self.repaybacks.aggregate(total=Sum("amount_paid"))["total"] or 0
+
+    @property
+    def balance(self):
+        if self.approved_amount:
+            return self.approved_amount - self.total_repaid
+        return self.amount 
 
 
 class LoanRepayback(models.Model):
@@ -96,4 +113,4 @@ class LoanRequestFee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Loan Fee - {self.member.member.first_name} with  ({self.member.ippis})"
+       return f"Loan Fee - {self.member.member.first_name} with  ({self.member.ippis})"

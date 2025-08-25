@@ -1,0 +1,194 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="content-card mt-4">
+    <h3 class="mb-4 text-primary">Upload Project Finance Payments</h3>
+
+    <!-- Upload Form -->
+    <form method="POST" enctype="multipart/form-data" class="card p-4 shadow">
+        {% csrf_token %}
+
+        <!-- File Upload -->
+        <div class="mb-3">
+            <label for="file" class="form-label"><strong>Upload Excel File</strong></label>
+            <input type="file" name="file" id="file" accept=".xlsx,.xls" class="form-control" required>
+            <div class="form-text">
+                <strong>Required Excel Columns (case-insensitive):</strong>
+                <ul class="mt-2 mb-0">
+                    <li><strong>IPPIS</strong> - Employee IPPIS number</li>
+                    <li><strong>Amount Paid</strong> - Payment amount (numbers only, no ₦ symbol)</li>
+                    <li><strong>Month</strong> - Payment month/date (e.g., 2024-01-01 or January 2024)</li>
+                </ul>
+                <small class="text-muted">Supported formats: .xlsx, .xls</small>
+            </div>
+        </div>
+
+        <!-- Example Format -->
+        <div class="mb-3">
+            <details>
+                <summary class="btn btn-outline-info btn-sm">Show Excel Format Example</summary>
+                <div class="mt-2 p-3 bg-light rounded">
+                    <strong>Excel should look like this:</strong>
+                    <table class="table table-sm table-bordered mt-2">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>IPPIS</th>
+                                <th>Amount Paid</th>
+                                <th>Month</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>123456</td>
+                                <td>50000</td>
+                                <td>2024-01-01</td>
+                            </tr>
+                            <tr>
+                                <td>789012</td>
+                                <td>75000</td>
+                                <td>2024-01-01</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary w-100" id="uploadBtn">
+            <i class="fas fa-upload me-2"></i>Upload Payments
+        </button>
+    </form>
+
+    <!-- Skipped Payments -->
+    {% if skipped_payments %}
+        <div class="card mt-4 shadow">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Skipped Payments ({{ skipped_payments|length }} total)</strong>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">The following payments were skipped due to errors:</p>
+                
+                <!-- Enhanced table with better styling -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                {% if skipped_payments.0.row %}
+                                    <th style="width: 80px;">Row #</th>
+                                {% endif %}
+                                <th style="width: 120px;">IPPIS</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for skipped in skipped_payments %}
+                                <tr>
+                                    {% if skipped.row %}
+                                        <td class="text-center">{{ skipped.row }}</td>
+                                    {% endif %}
+                                    <td><code>{{ skipped.ippis }}</code></td>
+                                    <td>
+                                        <span class="text-danger">
+                                            <i class="fas fa-times-circle me-1"></i>
+                                            {{ skipped.reason }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Download Template Button -->
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        <strong>Tip:</strong> Fix the issues above and re-upload your file.
+                    </small>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+   
+</div>
+
+<!-- Optional: Add some custom styling -->
+<style>
+    .content-card {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    details summary {
+        cursor: pointer;
+    }
+    
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.9em;
+    }
+    
+    .table th {
+        font-weight: 600;
+    }
+    
+    .alert {
+        border-left: 4px solid;
+    }
+    
+    .alert-success {
+        border-left-color: #28a745;
+    }
+    
+    .alert-error {
+        border-left-color: #dc3545;
+    }
+    
+    .alert-warning {
+        border-left-color: #ffc107;
+    }
+</style>
+
+<script>
+// Prevent form resubmission on page reload
+let formSubmitted = false;
+
+document.querySelector('form').addEventListener('submit', function(e) {
+    const uploadBtn = document.getElementById('uploadBtn');
+    
+    if (formSubmitted) {
+        e.preventDefault();
+        return false;
+    }
+    
+    formSubmitted = true;
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+});
+
+// Reset on page load
+window.addEventListener('load', function() {
+    formSubmitted = false;
+    const uploadBtn = document.getElementById('uploadBtn');
+    uploadBtn.disabled = false;
+    uploadBtn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload Payments';
+});
+
+// Prevent back button resubmission
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        formSubmitted = false;
+        const uploadBtn = document.getElementById('uploadBtn');
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload Payments';
+    }
+});
+</script>
+
+{% endblock %}

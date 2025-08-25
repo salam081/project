@@ -4,23 +4,15 @@
 {% block title %}Loan Request Status Report{% endblock %}
 
 {% block content %}
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner"></div>
-</div>
 
-<div class="container animate-fade-in">
-    <div class="header-section">
-        <div class="header-content">
-            <h5 class="page-title">
+
+<div class="container">        
+            <h6 class="page-title text-center">
                 <i class="fas fa-clipboard-list me-3"></i>
                 Loan Request Report
-            </h5>
-            <h6 class="page-subtitle text-primary">Monitor and track all Loan requests across your organization</h6>
-        </div>
-    </div>
-
+            </h6>
+            <h6 class="page-subtitle text-dark text-center">Monitor and track all Loan requests across your organization</h6>
      <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow">
@@ -91,83 +83,83 @@
             </div>
         </div>
     </div>
-        <div class="stats-grid shadow">
-            <div class="stat-card shadow">
+        <div class="stats-grid m-3">
+            <div class="stat-card shadow" style="border-top: 2px solid blue;">
                 <div class="stat-icon bg-primary">
                     <i class="fas fa-list-ul"></i> 
                 </div>
                 <div class="stat-content">
-                    <h3>{{ summary.total_requests }}</h3>
+                    <h4>{{ summary.total_requests }}</h4>
                     <p>Total Requests</p>
                 </div>
             </div>
             
-            <div class="stat-card shadow">
+            <div class="stat-card shadow" style="border-top: 2px solid green;">
                 <div class="stat-icon bg-success">
                     <i class="fas fa-money-bill-wave"></i> 
                 </div>
                 <div class="stat-content">
-                    <h3>₦{{ summary.total_value|floatformat:2|intcomma }}</h3>
+                    <h4>₦{{ summary.total_value|floatformat:2|intcomma }}</h4>
                     <p>Total Approved Value</p>
                 </div>
             </div>
             
-            <div class="stat-card shadow">
+            <div class="stat-card shadow"style="border-top: 2px solid cyan;">
                 <div class="stat-icon bg-info">
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>₦{{ summary.total_paid|floatformat:2|intcomma }}</h3>
+                    <h4>₦{{ summary.total_paid|floatformat:2|intcomma }}</h4>
                     <p>Total Repaid</p>
                 </div>
             </div>
             
-            <div class="stat-card shadow">
+            <div class="stat-card shadow" style="border-top: 2px solid orange;">
                 <div class="stat-icon bg-warning">
                     <i class="fas fa-clock"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>₦{{ summary.total_balance|floatformat:2|intcomma }}</h3>
+                    <h4>₦{{ summary.total_balance|floatformat:2|intcomma }}</h4>
                     <p>Balance Remaining</p>
                 </div>
             </div>
             
-            <div class="stat-card shadow">
+            <div class="stat-card shadow" style="border-top: 2px solid purple;">
                 <div class="stat-icon bg-warning">
                     <i class="fas fa-hourglass-half"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ summary.pending_count }}</h3>
+                    <h4>{{ summary.pending_count }}</h4>
                     <p>Pending</p>
                 </div>
             </div>
             
-            <div class="stat-card shadow">
+            <div class="stat-card shadow"style="border-top: 2px solid green;">
                 <div class="stat-icon bg-primary">
                     <i class="fas fa-thumbs-up"></i> 
                 </div>
                 <div class="stat-content">
-                    <h3>{{ summary.approved_count }}</h3>
+                    <h4>{{ summary.approved_count }}</h4>
                     <p>Approved</p>
                 </div>
             </div>
             
-            <div class="stat-card shadow">
-                <div class="stat-icon bg-success">
+            <div class="stat-card shadow" style="border-top: 2px solid lightgreen;">
+                <div class="stat-icon bg-success" >
                     <i class="fas fa-wallet"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ summary.paid_count }}</h3>
-                    <p>Paid</p>
+                    <h4>{{ summary.paid_count }}</h4>
+                    <p>Fully Paid</p>
                 </div>
             </div>
             
-            <div class="stat-card shadow">
+            <div class="stat-card shadow" style="border-top: 2px solid red;">
                 <div class="stat-icon bg-danger">
                     <i class="fas fa-times-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ summary.declined_count }}</h3>
+                    <h4>{{ summary.declined_count }}</h4>
                     <p>Rejected</p>
                 </div>
             </div>
@@ -175,10 +167,10 @@
 
         <div class="table-container">
             <div class="table-responsive">
-                <table class="table text-center">
+                <table class="table table-hover">
                     <thead class="table-info">
                         <tr>
-                            <th>ID</th>
+                            {% comment %} <th>ID</th> {% endcomment %}
                             <th>Member</th>
                             <th class="text-nowrap text-truncate" style="max-width: 270px;">Loan Type</th>
                             <th class="text-nowrap text-truncate" style="max-width: 270px;">Requested Amount</th>
@@ -194,7 +186,7 @@
                         {% for req in requests %}
                        
                         <tr>
-                            <td><strong>#{{ req.id }}</strong></td>
+                            {% comment %} <td><strong>#{{ req.id }}</strong></td> {% endcomment %}
                             <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.member.member.first_name }} {{ req.member.member.last_name }} {{ req.member.ippis }}</td>
                             <td class="text-nowrap text-truncate text-primary" style="max-width: 270px;">{{ req.loan_type.name|default:"N/A" }}</td>
                             <td>₦{{ req.amount|floatformat:2|intcomma }}</td>
@@ -206,7 +198,7 @@
                                 </span>
                             </td>
                             <td>₦{{ req.total_paid|floatformat:2|intcomma }}</td>
-                            <td>₦{{ req.balance|floatformat:2|intcomma }}</td>
+                            <td>₦{{ req.balance_value |floatformat:2|intcomma }}</td>
                             <td>
                                 {% if req.monthly_payment %}
                                     ₦{{ req.monthly_payment|floatformat:2|intcomma }}

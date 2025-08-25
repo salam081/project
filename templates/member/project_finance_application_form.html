@@ -1,0 +1,24 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  <div class="content-card mt-5">
+   
+      <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-body p-4 p-md-5">
+          <div class="bg-light p-4 rounded-3 border mb-5">
+            <h2 class="h5 fw-bold text-dark mb-3">Submit a New Application Letter</h2>
+            <form method="post">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="application_letter" class="form-label text-secondary">Application Letter</label>
+                <textarea name="application_letter" id="application_letter" rows="6" class="form-control rounded-3" placeholder="Write your detailed application letter here..." required></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary w-100 fw-bold py-2 rounded-3 shadow-sm">Submit Application</button>
+            </form>
+          </div>
+
+         
+        </div>
+      </div>
+  </div>
+{% endblock %}

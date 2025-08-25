@@ -38,7 +38,7 @@
                                 </th>
                                 <th width="60">S/N</th>
                                 <th>Full Name</th>
-                                <th>Savings</th>
+                                {% comment %} <th>Savings</th> {% endcomment %}
                                 <th>Phone</th>
                                 <th>D O B</th>
                                 <th>Department</th>
@@ -56,7 +56,7 @@
                                     <div class="serial-number">{{ forloop.counter }}</div>
                                 </td>
                                 <td class="text-nowrap text-truncate" style="max-width: 270px;"><span class="user-name">{{ m.first_name }} {{ m.last_name }}</span></td>
-                                <td class="savings-amount">₦{{ m.savings|default:"0"|floatformat:2 }}</td> {# Accessing savings via m.member #}
+                                {% comment %} <td class="savings-amount">₦{{ m.savings|default:"0"|floatformat:2 }}</td> {# Accessing savings via m.member #} {% endcomment %}
                                 <td>{{ m.phone1 }}</td>
                                 <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.date_of_birth }}</td>
                                 <td>{{ m.department|default:"Not Set" }}</td>

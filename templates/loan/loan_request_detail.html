@@ -258,7 +258,7 @@
 <body>
     <!-- Page Header -->
     <div class="page-header">
-        <div class="container">
+        <div class="content-card">
             <div class="row align-items-center">
                 {% comment %} <div class="col">
                     <p class="mb-0 mt-1 opacity-75">Complete loan request details and repayment history</p>
@@ -331,13 +331,13 @@
             <div class="col-lg-8">
                 <!-- Member Information -->
                 <div class="custom-card animate-fade-in">
-                    <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="card-header bg-transparent border-0 p-4 pb-0">
                         <h5 class="fw-bold">
                             <i class="fas fa-user me-2" style="color: #667eea;"></i>
                             Member Information
                         </h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="info-item">
@@ -365,13 +365,13 @@
 
                 <!-- Financial Information -->
                 <div class="custom-card animate-fade-in">
-                    <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="card-header bg-transparent border-0 p-4 pb-0">
                         <h5 class="fw-bold">
                             <i class="fas fa-calculator me-2" style="color: #28a745;"></i>
                             Financial Details
                         </h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="info-item text-center">
@@ -423,13 +423,13 @@
 
                 <!-- Bank Information -->
                 <div class="custom-card animate-fade-in">
-                    <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="card-header bg-transparent border-0 p-4 pb-0">
                         <h5 class="fw-bold">
                             <i class="fas fa-university me-2" style="color: #ffc107;"></i>
                             Bank Information
                         </h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="info-item">
@@ -455,13 +455,13 @@
 
                 <!-- Guarantor Information -->
                 <div class="custom-card animate-fade-in">
-                    <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="card-header bg-transparent border-0 p-4 pb-0">
                         <h5 class="fw-bold">
                             <i class="fas fa-handshake me-2" style="color: #dc3545;"></i>
                             Guarantor Information
                         </h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="info-item">
@@ -488,13 +488,13 @@
                 <!-- Documents -->
                 {% if loan_request.file_one %}
                 <div class="custom-card animate-fade-in">
-                    <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="card-header bg-transparent border-0 p-4 pb-0">
                         <h5 class="fw-bold">
                             <i class="fas fa-paperclip me-2" style="color: #6f42c1;"></i>
-                            Supporting Documents
+                              Payslip {% comment %} Supporting Documents  {% endcomment %}
                         </h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div class="text-center">
                             <img src="{{ loan_request.file_one.url }}" alt="Supporting Document" class="file-preview img-fluid">
                             <div class="mt-2">
@@ -513,13 +513,13 @@
                 <!-- Repayment Summary -->
                 {% if loan_request.approved_amount %}
                 <div class="custom-card animate-fade-in">
-                    <div class="card-header bg-transparent border-0 pb-0">
-                        <h5 class="fw-bold">
+                    <div class="card-header bg-transparent border-0 p-4 pb-0">
+                        <p class="fw-bold">
                             <i class="fas fa-chart-pie me-2" style="color: #28a745;"></i>
                             Repayment Summary
-                        </h5>
+                        </p>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <div class="text-center mb-3">
                             <small class="text-muted">Total Paid</small>
                             <div class="amount-display">₦{{ total_paid|floatformat:2 }}</div>

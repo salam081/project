@@ -34,7 +34,7 @@
         }
     </style>
 
-    <div class="container mt-4">
+    <div class="content-card mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h2><i class="fas fa-hand-holding-usd me-2"></i>My Loan Requests</h2>
@@ -58,8 +58,8 @@
             <div class="card shadow col-md-12">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
+                        <table class="table table">
+                             <thead class="table-info">
                                 <tr>
                                     {% comment %} <th>Loan ID</th> {% endcomment %}
                                     {% comment %} <th class="text-nowrap" style="min-width: 120px;">Date Created</th> {% endcomment %}
@@ -86,10 +86,17 @@
                                         </td> {% endcomment %}
                                         <td class="text-nowrap" style="min-width: 120px;">{{ loan.loan_type.name }}</td>
                                         <td>{{ loan.loan_term_months }} Months</td>
-                                        <td>
-                                            <span class="badge status-badge status-{{ loan.status|lower }}">
-                                                {{ loan.status|title }}
+                                        <td class="text-nowrap" style="min-width: 120px;">
+                                             <span class="status-badge text-white
+                                                {% if req.status == 'Pending' %}status-pending
+                                                {% elif req.status == 'Approved' %}status-active
+                                                {% elif req.status == 'Itempicked' %}status-itempicked
+                                                {% elif req.status == 'FullyPaid' %}status-completed
+                                                {% elif req.status == 'Declined' %}status-cancelled
+                                                {% else %}bg-secondary{% endif %}">
+                                                 {{ loan.status|title }}
                                             </span>
+                                           
                                         </td>
                                         <td>
                                             <strong>₦{{ entry.approved_amount|floatformat:2 }}</strong>

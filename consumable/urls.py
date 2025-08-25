@@ -18,4 +18,6 @@ urlpatterns = [
     path('consumable_types_with_requests/',views.consumable_types_with_requests,name='consumable_types_with_requests'),
     path('add_single_consumable_payment/', views.add_single_consumable_payment, name='add_single_consumable_payment'),
     path('upload_consumable_payment/', views.upload_consumable_payment, name='upload_consumable_payment'),
+    
+
 ]

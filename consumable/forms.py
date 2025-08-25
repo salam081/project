@@ -53,3 +53,24 @@ class AdminUpdateConsumableRequestForm(forms.Form):
         widget=forms.HiddenInput(),
         required=True
     )
+
+
+# class ProjectFinanceRequestForm(forms.ModelForm):
+#     # Field to accept the guarantor's IPPIS number
+#     guarantor_ippis = forms.CharField(
+#         max_length=50, 
+#         label="Guarantor's IPPIS Number", 
+#         help_text="Enter the IPPIS number of the member who will be your guarantor."
+#     )
+
+#     class Meta:
+#         model = ProjectFinanceRequest
+#         fields = ['product', 'requested_amount','guarantor']
+#         widgets = {
+#             'product': forms.TextInput(attrs={'class': 'form-control'}),
+#             'requested_amount': forms.NumberInput(attrs={'class': 'form-control'}),
+#             'guarantor': forms.NumberInput(attrs={'class': 'form-control'}),
+#         }
+# forms.py
+
+

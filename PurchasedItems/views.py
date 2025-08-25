@@ -20,48 +20,58 @@ from consumable.models import *
 from main.models import *
 from member.models import *
 from .models import *
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+from .models import ConsumablePurchasedRequest, PurchasedItem
+
 
 
 @login_required
 def purchase_consumable_dashboard(request):
-    if  request.user.is_staff:
+    if request.user.is_staff:
+        # For staff, we consider all requests
         requests = ConsumablePurchasedRequest.objects.all()
     else:
+        # For regular users, we filter by the user
         requests = ConsumablePurchasedRequest.objects.filter(requested_by=request.user)
 
-    # Stats
-    total_requests = requests.count()
-    pending_requests = requests.filter(status='pending').count()
-    approved_requests = requests.filter(status='approved').count()
-    accounted_requests = requests.filter(status='accounted').count()
+    # Use a separate queryset for approved requests to ensure accurate financial calculations
+    approved_requests = requests.filter(status='approved')
 
-    # Total approved amount
-    total_requested = requests.aggregate(
-        total=Sum('approved_amount')
-    )['total'] or 0
-
-    # Total spent (items + expenditure)
-    total_spent = PurchasedItem.objects.filter(
-        consumable_purchased_request__in=requests
-    ).aggregate(
-        total=Sum(
+    # --- Financial Calculations (optimized) ---
+    # Annotate the approved requests with the total spent for each request
+    approved_requests_annotated = approved_requests.annotate(
+        total_spent_per_request=Sum(
             ExpressionWrapper(
-                F('quantity') * F('unit_price') + F('expenditure_amount'),
+                F('items__quantity') * F('items__unit_price') + F('items__expenditure_amount'),
                 output_field=DecimalField()
             )
         )
-    )['total'] or 0
+    )
 
-    # Remaining balance
+    # Aggregate the total approved amount and total spent from the annotated queryset
+    financial_summary = approved_requests_annotated.aggregate(
+        total_requested=Sum('approved_amount'),
+        total_spent=Sum('total_spent_per_request')
+    )
+
+    # Handle cases where there are no approved requests
+    total_requested = financial_summary['total_requested'] or 0
+    total_spent = financial_summary['total_spent'] or 0
     balance_remaining = total_requested - total_spent
 
-    # Recent requests
+    # --- Statistics (unchanged) ---
+    total_requests = requests.count()
+    pending_requests = requests.filter(status='pending').count()
+    approved_requests_count = approved_requests.count()
+    accounted_requests = requests.filter(status='accounted').count()
+
+    # --- Recent Requests (unchanged) ---
     recent_requests = requests.order_by('-date_requested')[:10]
 
     context = {
         'total_requests': total_requests,
         'pending_requests': pending_requests,
-        'approved_requests': approved_requests,
+        'approved_requests': approved_requests_count,
         'accounted_requests': accounted_requests,
         'total_requested': total_requested,
         'total_spent': total_spent,
@@ -70,6 +80,53 @@ def purchase_consumable_dashboard(request):
     }
 
     return render(request, 'consumable/purchase_consumable_dashboard.html', context)
+# def purchase_consumable_dashboard(request):
+#     if  request.user.is_staff:
+#         requests = ConsumablePurchasedRequest.objects.all()
+#     else:
+#         requests = ConsumablePurchasedRequest.objects.filter(requested_by=request.user)
+
+#     # Stats
+#     total_requests = requests.count()
+#     pending_requests = requests.filter(status='pending').count()
+#     approved_requests = requests.filter(status='approved').count()
+#     accounted_requests = requests.filter(status='accounted').count()
+
+#     # Total approved amount
+#     total_requested = requests.aggregate(
+#         total=Sum('approved_amount')
+#     )['total'] or 0
+
+#     # Total spent (items + expenditure)
+#     total_spent = PurchasedItem.objects.filter(
+#         consumable_purchased_request__in=requests
+#     ).aggregate(
+#         total=Sum(
+#             ExpressionWrapper(
+#                 F('quantity') * F('unit_price') + F('expenditure_amount'),
+#                 output_field=DecimalField()
+#             )
+#         )
+#     )['total'] or 0
+#     print(f"Total Spent: {total_spent}")
+#     # Remaining balance
+#     balance_remaining = total_requested - total_spent
+
+#     # Recent requests
+#     recent_requests = requests.order_by('-date_requested')[:10]
+
+#     context = {
+#         'total_requests': total_requests,
+#         'pending_requests': pending_requests,
+#         'approved_requests': approved_requests,
+#         'accounted_requests': accounted_requests,
+#         'total_requested': total_requested,
+#         'total_spent': total_spent,
+#         'balance_remaining': balance_remaining,
+#         'recent_requests': recent_requests,
+#     }
+
+#     return render(request, 'consumable/purchase_consumable_dashboard.html', context)
 
 # API Views for AJAX calls
 @login_required
@@ -578,3 +635,60 @@ def selling_plan_delete(request, pk):
     return redirect('consumable_purchase_request_detail', pk=consumable_request.pk)
 
 
+# In your views.py
+
+# from django.shortcuts import render, redirect, get_object_or_404
+# from django.contrib.auth.decorators import login_required
+# from django.contrib import messages
+# from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+# from django.db import transaction
+# from .models import ConsumablePurchasedRequest, PurchasedItem
+
+# # Your existing purchase_consumable_dashboard view remains unchanged.
+# # ... (your existing view code here) ...
+
+@login_required
+@transaction.atomic
+def refund_and_account_request(request, pk):
+    request_obj = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
+
+    # Security check: Ensure only the original requester or a staff member can perform this action.
+    if (not (request.user.group and request.user.group.title == 'admin' or request.user.group.title == 'staff') and request_obj.requested_by != request.user):
+        messages.error(request, "You are not authorized to perform this action.")
+        return redirect('consumable_purchase_request_detail', pk=pk)
+    
+    # Only allow this action if the request is in the 'approved' state.
+    if request_obj.status != 'approved':
+        messages.warning(request, "This request is not in the 'Approved' state and cannot be accounted for.")
+        return redirect('consumable_purchase_request_detail', pk=pk)
+
+    # Use the same efficient database calculation from the dashboard view
+    # to get the total spent for this specific request.
+    total_spent_summary = request_obj.items.aggregate(
+        total_spent=Sum(
+            ExpressionWrapper(
+                F('quantity') * F('unit_price') + F('expenditure_amount'),
+                output_field=DecimalField()
+            )
+        )
+    )
+    
+    total_spent = total_spent_summary['total_spent'] or 0
+
+    # The new approved amount is the total amount spent.
+    new_approved_amount = total_spent
+
+    # Check for a balance remaining.
+    if new_approved_amount >= request_obj.approved_amount:
+        messages.warning(request, "No balance to refund. The spent amount is greater than or equal to the approved amount.")
+        return redirect('consumable_purchase_request_detail', pk=pk)
+
+    # Update the request object.
+    request_obj.approved_amount = new_approved_amount
+    request_obj.status = 'accounted'
+    request_obj.remarks = f"{request_obj.remarks or ''}\n\n- Member refunded the balance. Approved amount updated to ₦{new_approved_amount:.2f} to reflect actual expenditure."
+    request_obj.save()
+
+    messages.success(request, f"Request successfully accounted for. Approved amount changed to ₦{new_approved_amount:.2f}.")
+
+    return redirect('consumable_purchase_request_detail', pk=pk)

@@ -22,8 +22,15 @@
         <div class="card-header">
             <h6 class="text-center text-white">Deduct Monthly Admin Fee</h6>
         </div>
-       
-            <form method="post" action="{% url 'deduct_interest' %}">
+        <div id="spinner-container" class="my-3" style="display: none;">
+        <button class="btn btn-primary" type="button" disabled>
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span role="status">Deducting...</span>
+        </button>
+    </div>
+    
+            <form id="uploadForm" method="POST" action="{% url 'deduct_interest' %}" enctype="multipart/form-data" class="border p-4 shadow-sm bg-light">
+
                 {% csrf_token %}
                 <div class="mb-3">
                     <label for="month" class="form-label">Select Month:</label>
@@ -33,9 +40,15 @@
                     <label for="deduction_amount" class="form-label">Amount to Deduct (₦):</label>
                     <input type="number" class="form-control" id="deduction_amount" name="deduction_amount" placeholder="Enter Amount" step="0.01" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Deduct</button>
+                <button type="submit" id="uploadBtn" class="btn btn-primary">Deduct</button>
             </form>
     
 </div>
+<script>
+    document.getElementById('uploadForm').addEventListener('submit', function () {
+        document.getElementById('uploadBtn').style.display = 'none';
+        document.getElementById('spinner-container').style.display = 'block';
+    });
+</script>
 
 {% endblock content %}

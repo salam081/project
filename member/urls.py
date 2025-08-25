@@ -20,5 +20,11 @@ urlpatterns = [
     path('cancel_consumable_request/<int:id>/', views.cancel_consumable_request, name='cancel_consumable_request'),
     path('member-withdrawal/', views.member_withdrawal_request, name='member_withdrawal_request'),
 
+    path('project-finance-list/',views.project_finance_application_list,name='project_finance_application_list'),
+    path('project-finance-update/<int:id>/',views.update_project_finance_application,name='update_project_finance_application'),
+    path('project_finance',views.project_finance_application,name='project_finance_application'),
+    path('create_project_finance/<int:id>/',views.create_project_finance_request,name='create_project_finance_request'),
+    path('approve_guarantor_request/<int:id>/',views.approve_guarantor_request,name='approve_guarantor_request'),
+
     
 ]

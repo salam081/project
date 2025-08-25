@@ -45,7 +45,10 @@
                 
             </div>
         </div>
-        {{total_approved_amount}}
+        <div class="alert alert-info">
+
+        <strong>All Approved Amount</strong> <b class="text-success fs-5">₦{{total_approved_amount}}</b>  
+        </div>
         <!-- Loan Requests Table -->
         <div class="card shadow">
             <div class="card-body">
@@ -57,7 +60,7 @@
                                 <th>Member</th>
                                 <th>IPPIS</th>
                                 <th class="text-nowrap" style="min-width: 120px;">Loan Type</th>
-                                <th>Amount</th>
+                                <th class="text-nowrap" style="min-width: 120px;">Requests Amount</th>
                                 <th class="text-nowrap" style="min-width: 120px;">Approved Amount</th>
                                 <th>Status</th>
                                 <!-- <th>Date Applied</th> -->
@@ -80,8 +83,8 @@
                                     </div>
                                 </td>
                                 <td>{{ request.member.ippis }}</td>
-                                <td>
-                                    <span class="badge bg-info">{{ request.loan_type.name }}</span>
+                                <td class="text-nowrap" style="min-width: 120px;">
+                                    <span >{{ request.loan_type.name }}</span>
                                 </td>
                                 <td>₦{{ request.amount|floatformat:2 }}</td>
                                 <td>
@@ -92,24 +95,14 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                {% if request.status == 'pending' %}
-                                    <span class="badge  text-warning">
-                                        <i class="fas fa-clock me-1"></i>Pending
-                                    </span>
-                                        {% elif request.status == 'approved' %}
-                                            <span class="badge bg-primary">
-                                                <i class="fas fa-check me-1"></i>Approved
-                                            </span>
-                                        {% elif request.status == 'rejected' %}
-                                            <span class="badge bg-danger">
-                                                <i class="fas fa-times me-1"></i>Rejected
-                                            </span>
-                                        {% elif request.status == 'paid' %}
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-check me-1"></i>Paid
-                                            </span>
-                                        {% endif %}
-
+                                <span class="status-badge 
+                                    {% if request.status == 'Pending' %}status-pending
+                                    {% elif request.status == 'approved' %}status-active
+                                    {% elif request.status == 'Fullpaid' %}status-completed
+                                    {% elif request.status == 'rejected' %}status-cancelled
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ request.status }}
+                                </span>
                                 </td>
                                 <!-- <td>
                                     <div>{{ request.application_date|date:"M d, Y" }}</div>
@@ -143,7 +136,7 @@
                                             <a href="{% url 'reject_loan_request' request.id %}" class="btn btn-sm btn-outline-danger" title="Rejecte Requests">
                                                 <i class="fas fa-times "></i>
                                             </a>
-                                           {% elif  request.status == 'paid' %} 
+                                           {% elif  request.status == 'Fullpaid' %} 
                                                 <a href="{% url 'loan_request_detail' request.id %}" class="btn btn-sm btn-outline-info" title="View Details">
                                             <i class="fas fa-book "></i>
                                             </a> 

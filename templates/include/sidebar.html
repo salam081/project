@@ -16,24 +16,32 @@
             </a>
         </div>
         
-{% comment %}       
+      
         <div class="nav-item">
-            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#casesSubmenu" aria-expanded="false" aria-controls="casesSubmenu">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#FinanceSubmenu" aria-expanded="false" aria-controls="casesSubmenu">
                 <i class="bi bi-folder"></i>
-                <span class="nav-text">Cases</span>
+                <span class="nav-text">Project Finance</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
-            <div class="collapse submenu" id="casesSubmenu">
-                <a href="#all-cases" class="nav-link" data-section="all-cases">
+            <div class="collapse submenu" id="FinanceSubmenu">
+                <a href="{% url 'application_list'  %}" class="nav-link" >
                     <i class="bi bi-folder2-open"></i>
-                    <span class="nav-text">All Cases</span>
+                    <span class="nav-text">APPlications List</span>
                 </a>
-                <a href="#contested" class="nav-link" data-section="contested">
+                <a href="{% url 'admin_project_finance_requests'  %}" class="nav-link" >
+                    <i class="bi bi-folder2-open"></i>
+                    <span class="nav-text">Requests List</span>
+                </a>
+                <a href="{% url 'upload_project_finance_payment' %}" class="nav-link" >
                     <i class="bi bi-exclamation-triangle"></i>
-                    <span class="nav-text">Contested</span>
+                    <span class="nav-text">Upload Payment</span>
+                </a>
+                <a href="{% url 'project_finance_report' %}" class="nav-link" >
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span class="nav-text">Report</span>
                 </a>
             </div>
-        </div> {% endcomment %}
+        </div> 
         
         <!-- Members Dropdown -->
         <div class="nav-item">
@@ -100,26 +108,30 @@
                     <span class="nav-text">Upload Savings</span>
                 </a>
               
+                <a href="{% url 'get_upload_savings'  %}" class="nav-link" >
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">View Savings</span>
+                </a>
                 <a href="{% url 'interest_form'  %}" class="nav-link" >
                     <i class="bi bi-plus"></i>
                     <span class="nav-text">Take Admin Fee</span>
                 </a>
-                {% comment %} <a href="{% url 'get_upload_interest'  %}" class="nav-link" >
+                <a href="{% url 'get_upload_interest'  %}" class="nav-link" >
                     <i class="bi bi-eye"></i>
                     <span class="nav-text">View Admin Fee</span>
-                </a> {% endcomment %}
+                </a> 
                 <a href="{% url 'distribute_savings'  %}" class="nav-link" >
                     <i class="bi bi-plus-circle"></i>
                     <span class="nav-text">Distribute Savings</span>
                 </a>
-                  <a href="{% url 'combined_upload_view' %}" class="nav-link" >
+                  {% comment %} <a href="{% url 'combined_upload_view' %}" class="nav-link" >
                     <i class="bi bi-file"></i>
                     <span class="nav-text"> Management All Savings Upload</span>
-                </a>
-                {% comment %} <a href="{% url 'loanable_investment_months'  %}" class="nav-link" >
+                </a> {% endcomment %}
+                <a href="{% url 'loanable_investment_months'  %}" class="nav-link" >
                     <i class="bi bi-calendar"></i>
                     <span class="nav-text">Loanable Investment</span>
-                </a> {% endcomment %}
+                </a>
             </div>
         </div>
         <div class="nav-item">
@@ -257,9 +269,9 @@
                     <i class="fas fa-file-invoice me-2"></i>
                     <span class="nav-text">Consumable Payment Report</span>
                 </a>
-                <a href="{% url 'all_income' %}" class="nav-link">
+                <a href="{% url 'consolidated_report' %}" class="nav-link">
                     <i class="fas fa-coins me-2"></i>
-                    <span class="nav-text">All Income Report</span>
+                    <span class="nav-text">Income & Expenditure</span>
                 </a>
             </div>
         </div>
@@ -310,6 +322,12 @@
             <a href="{% url 'my_consumablerequests' %}" class="nav-link">
                 <i class="bi bi-cart4"></i>
                 <span class="nav-text">Consumable</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'project_finance_application_list' %}" class="nav-link">
+                <i class="bi bi-cart4"></i>
+                <span class="nav-text">Project Finance</span>
             </a>
         </div>
         <div class="nav-item">

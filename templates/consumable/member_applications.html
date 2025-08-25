@@ -1,0 +1,53 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h1 class="card-title mb-0">
+                            <i class="fas fa-user-circle me-2"></i>
+                            Applications by {{ member.member.first_name }} {{ member.member.last_name }}
+                        </h1>
+                        <a href="{% url 'admin_project_finance_application' %}" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i>Back to List
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if applications %}
+                            {% for application in applications %}
+                                <div class="card mb-4 border-start border-primary border-3">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar-alt me-1"></i>
+                                            Submitted: {{ application.created_at|date:"F d, Y g:i A" }}
+                                        </small>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <p class="card-text">{{ application.application_letter }}</p>
+                                        </div>
+                                        {% if application.application_letter|wordcount > 30 %}
+                                            <a href="{% url 'application_detail' application.id %}" 
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye me-1"></i>View Full Application
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                                <p class="text-muted fs-5">No applications found for this member.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+    

@@ -8,7 +8,7 @@ urlpatterns = [
     path('loan_request_detail/<str:id>/',views.loan_request_detail, name='loan_request_detail'),
     path('add_single_loan_payment', views.add_single_loan_payment, name='add_single_loan_payment'),
     path("ajax/get-loan-types/", views.get_loan_types_for_year, name="get_loan_types_for_year"),
-    path('upload_loan_payment/', views.upload_loan_payment, name='upload_loan_payment'),
+    path('upload_loan_payment/', views.upload_loan_repayment, name='upload_loan_payment'),
     # path('requested_loan',views.get_all_requested_loan, name='requested_loan'),
     path('payslip_img_details/<str:id>',views.payslip_img_details, name='payslip_img_details'),
     path('edit_requested_loan/<str:id>/',views.edit_requested_loan,name='edit_requested_loan'),
@@ -21,5 +21,6 @@ urlpatterns = [
     path('loans_by_year/<int:year>/<str:loan_type_filter>/', views.loans_by_year, name='loans_by_year'),
     path('loan_fee',views.loan_fee,name="loan_fee"),
    path('loan/repayments/', views.admin_repayment_tracking, name='admin_repayment_tracking'),
-    
+
+
 ]

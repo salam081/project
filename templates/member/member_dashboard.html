@@ -10,10 +10,49 @@
         <h1>Dashboard Overview</h1>
         <p>Welcome to your admin dashboard. Here's a quick overview of your system.</p>
     </div>
-
+ {% if pending_guarantor_requests %}
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-secondary text-nowrap">Borrower</th>
+                                    <th class="text-secondary text-nowrap">Amount</th>
+                                    <th class="text-secondary text-nowrap">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for loan in pending_guarantor_requests %}
+                                    <tr>
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                                            <span class="fw-bold text-dark">{{ loan.application.member.member.first_name }} {{ loan.application.member.member.last_name }}</span>
+                                        </td>
+                                        <td class="text-nowrap">
+                                            <span class="text-success fw-bold">₦{{ loan.requested_amount|floatformat:2 }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <form method="post" action="{% url 'approve_guarantor_request' loan.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-success">
+                                                        <i class="bi bi-check-lg"></i> Approve
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+       
+        {% endif %}
 {% if pending_guarantor_loans %}        
  
-       <div class="content-card">
+    <div class="content-card">
         <h3>Loan Guarantee Requests</h3>
         <div class="table-responsive">
             <table class="table table-hover">
@@ -48,9 +87,9 @@
                    
                 </tbody>
             </table>
-        </div>
-        {% endif %}
-    </div>
+  </div>
+{% endif %}
+</div>
 
 
        <div class="stats-grid">

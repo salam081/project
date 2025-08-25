@@ -5,6 +5,7 @@ from .import views
 
 urlpatterns = [
    path('all_income',views.all_income,name='all_income'),
+   path('consolidated_report',views.consolidated_report,name='consolidated_report'),
    path('summary/',views.summary_view,name='summary'),
    path('loan/reports/', views.admin_loan_reports, name='admin_loan_reports'),
    path('loan_request_report', views.loan_request_report, name='loan_request_report'),
@@ -15,4 +16,7 @@ urlpatterns = [
     path('user_spending_report',views.user_spending_report,name='user_spending_report'),
     path('payment_analysis_report',views.payment_analysis_report,name='payment_analysis_report'),
     path('approval_workflow_report',views.approval_workflow_report,name='approval_workflow_report'),
+
+
+   
 ]

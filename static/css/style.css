@@ -564,10 +564,10 @@ body {
     font-weight: 600;
 }
 
-.status-pending { background-color: #fff3cd; color: #856404; }
-.status-active { background-color: #d4edda; color: #155724; }
-.status-completed { background-color: #cce5ff; color: #004085; }
-.status-cancelled { background-color: #f8d7da; color: #721c24; }
+.status-pending { background-color: #edbf27; color: #ffffff; }
+.status-active { background-color: #069c17; color: #ffffff; }
+.status-completed { background-color: #210591; color: #ffffff; }
+.status-cancelled { background-color: #dd1111; color: #ffffff; }
 
 /* Form sections */
 .form-section {

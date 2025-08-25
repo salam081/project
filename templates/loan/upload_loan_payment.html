@@ -2,91 +2,63 @@
 {% load static %}
 {% block content %}
 <style>
-    .card-header{
-       
-        background: linear-gradient(135deg, #36a2baff, #2c8fabff););
+    .card-header {
+        background: linear-gradient(135deg, #36a2baff, #2c8fabff);
         color: white;
-        font-size: 2.1rem;
+        font-size: 1.1rem;
         text-align: center;
         font-weight: 500;
-        padding: 1rem 1.5rem;
+        padding: 1rem 1rem;
         border-top-left-radius: 12px;
         border-top-right-radius: 12px;
     }
-    .btn-primary{
-      background: linear-gradient(135deg, #36a2baff, #2c8fabff);
+    .btn-primary {
+        background: linear-gradient(135deg, #36a2baff, #2c8fabff);
+        border: none;
     }
 </style>
-<div class="container mt-4 col-md-8" >
-   <div class="alert alert-info">
-                        <h5><i class="fas fa-info-circle me-2"></i>Upload Instructions</h5>
-                        <ul class="mb-0">
-                            <li>Excel file must contain columns: <strong>IPPIS</strong>, <strong>Amount Paid</strong>, <strong>Repayment Date</strong></li>
-                            <li>Select the month when the consumable requests were created</li>
-                            <li>Repayment Date should be in DD/MM/YYYY or similar format</li>
-                            <li>Duplicate payments for the same month will be skipped</li>
-                        </ul>
-                    </div>
+
+<div class="container shadow mt-4 col-md-8">
+    <div class="alert alert-info">
+        <h5><i class="fas fa-info-circle me-2"></i>Upload Instructions</h5>
+        <ul class="mb-0">
+            <li>Excel file must contain columns: <strong>IPPIS</strong> and <strong>Amount</strong></li>
+            <li>Select the <strong>Loan Type</strong> (only loans with outstanding balance are shown)</li>
+            <li>Provide the <strong>Repayment Date</strong> using the date picker</li>
+            <li>Duplicate repayments for the same month will be skipped</li>
+        </ul>
+    </div>
+
     <div class="card">
-        <div class="card-header">Upload Monthly Loan Payments</div>
+        <div class="card-header">Upload Monthly Loan Repayments</div>
         <div class="card-body">
-    <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <label>Loan Year:</label>
-   <label>Loan Year:</label>
-<select name="selected_year" id="year-select" class="form-control" required>
-    <option value="">Select Year</option>
-    {% for year in year_to_loan_types.keys %}
-    <option value="{{ year }}">{{ year }}</option>
-    {% endfor %}
-</select>
+            <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="selected_type" class="form-label">Loan Type</label>
+                                    <select class="form-control" id="selected_type" name="selected_type" required>
+                                        <option value="">Select a Loan Type</option>
+                                        {% for loan_type, requests in grouped_list %}
+                                            <option value="{{ loan_type.id }}">{{ loan_type.name }} ({{ requests|length }} outstanding loans)</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="repayment_date" class="form-label">Repayment Date</label>
+                                    <input type="date" class="form-control" id="repayment_date" name="repayment_date" required>
+                                </div>
+                            </div>
 
-<label>Loan Type:</label>
-<select name="selected_type" id="type-select" class="form-control" required>
-    <option value="">Select Loan Type</option>
-</select>
+                            <div class="mb-3">
+                                <label for="excel_file" class="form-label">Excel File (Must contain 'IPPIS' and 'Amount Paid' columns)</label>
+                                <input class="form-control" type="file" id="excel_file" name="excel_file" accept=".xls,.xlsx" required>
+                            </div>
 
-
-    <label>Upload Excel File:</label>
-    <input type="file" name="excel_file" class="form-control" accept=".xls,.xlsx" required>
-<div class="d-grid">
-
-    <button type="submit" class="btn btn-primary mt-3">Upload Repayments</button>
+                            <button type="submit" class="btn btn-primary">Upload Payments</button>
+                        </form>
+        </div>
+    </div>
 </div>
-</form>
-
-</div>
-</div>
-   
-</div>
-
-<script>
-document.getElementById("year-select").addEventListener("change", function() {
-    const year = this.value;
-    const typeSelect = document.getElementById("type-select");
-
-    typeSelect.innerHTML = '<option value="">Loading...</option>';
-
-    fetch(`/ajax/get-loan-types/?year=${year}`)
-        .then(response => response.json())
-        .then(data => {
-            typeSelect.innerHTML = '<option value="">Select Loan Type</option>';
-            if (data.loan_types) {
-                data.loan_types.forEach(type => {
-                    const option = document.createElement("option");
-                    option.value = type;
-                    option.textContent = type;
-                    typeSelect.appendChild(option);
-                });
-            } else {
-                typeSelect.innerHTML = '<option value="">No Loan Types</option>';
-            }
-        })
-        .catch(error => {
-            typeSelect.innerHTML = '<option value="">Error loading</option>';
-            console.error(error);
-        });
-});
-</script>
-
 {% endblock %}

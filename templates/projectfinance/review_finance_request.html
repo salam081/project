@@ -1,0 +1,78 @@
+{% extends 'base/base.html' %}
+{% block content %}
+  <div class="container my-5">
+        <div class="card shadow-lg border-0 rounded-4 mx-auto" style="max-width: 600px;">
+            <div class="card-body p-4 p-md-5">
+                <h1 class="h3 fw-bold text-center mb-4 text-dark">Review Project Finance Request</h1>
+                
+                {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} rounded-3" role="alert">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="mb-4">
+                    <h5 class="fw-semibold text-dark">Request Details</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-secondary">Request ID:</span>
+                            <span class="fw-bold">{{ project_request.id }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-secondary">Applicant:</span>
+                            <span class="fw-bold">{{ project_request.application.member.member.first_name }} {{ project_request.application.member.member.last_name }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-secondary">Product:</span>
+                            <span class="fw-bold">{{ project_request.product }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-secondary">Requested Amount:</span>
+                            <span class="fw-bold">₦{{ project_request.requested_amount }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-secondary">Guarantor's IPPIS:</span>
+                            <span class="fw-bold">{{ project_request.guarantor.ippis }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-secondary">Guarantor Status:</span>
+                            <span class="fw-bold">{{ project_request.guarantor_status }}</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    <h5 class="fw-semibold text-dark mb-3">Admin Actions</h5>
+                    
+                    {% if project_request.guarantor_status != 'Approved' %}
+                    <div class="alert alert-warning rounded-3" role="alert">
+                        The guarantor has not yet approved this request. Please set the guarantor's status to 'Approved' before changing the main request status.
+                    </div>
+                    {% endif %}
+
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label text-secondary">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="form-text text-muted">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2 rounded-3 mt-4">
+                        Update Request
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

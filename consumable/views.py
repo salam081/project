@@ -18,7 +18,7 @@ from decimal import Decimal
 from django.db.models import Count
 from collections import defaultdict
 from django.utils import timezone
-
+import requests
 from loan.models import *
 from .models import *
 from .forms import *
@@ -26,7 +26,6 @@ from accounts.models import *
 from accounts.models import *
 from accounts.models import *
 from main.models import *
-
 
 
 
@@ -52,47 +51,59 @@ def consumable_dashboard(request):
     context = {
         'total_requests': total_requests, 'pending_approvals': pending_approvals,
         'pending_count': pending_count,'approved_count': approved_count,
-        'completed_count': completed_count, 'recent_requests': recent_requests,
-       
-    }
+        'completed_count': completed_count, 'recent_requests': recent_requests,}
     
     return render(request, 'consumable/consumable_dashboard.html', context)
 
+
+def process_item_pickup(request_id):
+    try:
+        request = ConsumableRequest.objects.get(id=request_id)
+        if request.status == 'Itempicked':
+            # Check if this deduction has already been made
+            # You might need a flag to prevent multiple deductions for the same request
+
+            details = ConsumableRequestDetail.objects.filter(request=request)
+            for detail in details:
+                item = detail.item
+                requested_quantity = detail.quantity
+
+                if item.quantity_in_stock >= requested_quantity:
+                    item.quantity_in_stock -= requested_quantity  # Deduct stock
+                    item.save()
+                    print(f"Deducted {requested_quantity} of {item.title} from stock.")
+                else:
+                    print(f"Not enough stock for {item.title}. Available: {item.quantity_in_stock}")
+                    # Handle this error (e.g., prevent the status change)
+    except ConsumableRequest.DoesNotExist:
+        print("Request not found.")
+
+@login_required
 # @group_required(['admin'])
 def consumable_fee(request):
     if request.method == 'POST':
         member_ippis = request.POST.get('member_ippis')
         form_fee = request.POST.get('form_fee')
-
+        
         # Get Member instance using IPPIS number
         member = get_object_or_404(Member, ippis=member_ippis)
-
-        ConsumableFormFee.objects.create(
-            member=member,
-            form_fee=form_fee,
-            created_by=request.user
-        )
+        ConsumableFormFee.objects.create( member=member, form_fee=form_fee,created_by=request.user)
         messages.success(request, 'Payment recorded successfully')
         return redirect('consumable_fee')
 
-    # Aggregates
-    
     fee = ConsumableFormFee.objects.aggregate(total=Sum('form_fee'))['total'] or 0
     consumable_req_form = ConsumableFormFee.objects.count()
-
     members = ConsumableFormFee.objects.select_related('member')
 
     page_number = request.GET.get('page')
     paginator = Paginator(members, 1)  
 
     try:
-        # Get the Page object for the requested page number
+       
         page_obj = paginator.get_page(page_number)
     except PageNotAnInteger:
-        # If the page is not an integer, deliver the first page.
         page_obj = paginator.page(1)
     except EmptyPage:
-        # If the page is out of range, deliver the last page.
         page_obj = paginator.page(paginator.num_pages)
 
     context = {"fee": fee,"consumable_req_form": consumable_req_form,'members':members, 'page_obj': page_obj}
@@ -101,7 +112,6 @@ def consumable_fee(request):
 @login_required
 def add_consumable_type(request):
     consumable_types = ConsumableType.objects.all()
-
     if request.method == 'POST':
         name = request.POST.get('name')
         description = request.POST.get('description')
@@ -129,21 +139,15 @@ def add_consumable_type(request):
                 return redirect('consumable_type')
 
         else:
-            ConsumableType.objects.create(
-                name=name,
-                description=description,
-                max_amount=max_amount,
-                max_loan_term_months=max_loan_term_months,
-                available=True,
-                created_by=request.user
-            )
+            ConsumableType.objects.create(name=name,description=description, max_amount=max_amount,
+                max_loan_term_months=max_loan_term_months,available=True,created_by=request.user)
             messages.success(request, 'Consumable type created successfully.')
             return redirect('consumable_type')
 
     context = {'consumable_types': consumable_types}
     return render(request, 'consumables/add_consumable_type.html', context)
 
-
+@login_required
 def consumable_items(request):
     consumables = Item.objects.all()
     
@@ -181,7 +185,7 @@ def consumable_items(request):
     context = {'consumables': consumables}
     return render(request, "consumable/consumable_items.html", context)
 
-
+@login_required
 def delete_item(request,id):
     itemObj = get_object_or_404(Item, id=id)
     itemObj.delete()
@@ -221,68 +225,19 @@ def admin_consumables_list(request):
         'consumables_list': consumables_list,
         'all_consumable_types': all_consumable_types,
         'status_choices': ConsumableRequest.STATUS_CHOICES,
-        'selected_status': status_filter,
-        'selected_user': user_filter,
-        'selected_consumable_type': consumable_type_filter,
-    }
+        'selected_status': status_filter, 'selected_user': user_filter,
+        'selected_consumable_type': consumable_type_filter,}
     return render(request, 'consumable/consumables_list.html', context)
-# @login_required
-# def admin_consumables_list(request):
-#     consumables_list = ConsumableRequest.objects.select_related('user', 'consumable_type').order_by('-date_created')
 
-#     # Apply filters based on GET parameters
-#     status_filter = request.GET.get('status')
-#     user_filter = request.GET.get('user')
-#     consumable_type_filter = request.GET.get('consumable_type')
-
-#     if status_filter and status_filter != 'all':
-#         consumables_list = consumables_list.filter(status=status_filter)
-    
-#     if user_filter and user_filter != 'all':
-#         try:
-#             user_filter_id = int(user_filter)
-#             consumables_list = consumables_list.filter(user_id=user_filter_id)
-#         except ValueError:
-#             # Handle invalid user_id gracefully (e.g., ignore filter or show error)
-#             pass 
-
-#     if consumable_type_filter and consumable_type_filter != 'all':
-#         try:
-#             consumable_type_filter_id = int(consumable_type_filter)
-#             consumables_list = consumables_list.filter(consumable_type_id=consumable_type_filter_id)
-#         except ValueError:
-#             # Handle invalid consumable_type_id gracefully
-#             pass
-
-#     # Get all available consumable types and users for filter dropdowns
-#     all_consumable_types = ConsumableType.objects.filter(available=True).order_by('name')
-#     all_users = User.objects.all().order_by('username') # Or filter for specific user types if needed
-
-#     context = {
-#         'consumables_list': consumables_list,
-#         'all_consumable_types': all_consumable_types,
-#         'all_users': all_users,
-#         'status_choices': ConsumableRequest.STATUS_CHOICES, # Pass status choices for dropdown
-#         'selected_status': status_filter,
-#         'selected_user': user_filter,
-#         'selected_consumable_type': consumable_type_filter,
-#     }
-#     return render(request, 'consumable/consumables_list.html', context)
-
-
+@login_required
 def admin_consumable_detail(request, request_id):
-    consumable_request = get_object_or_404(
-        ConsumableRequest.objects.select_related('user', 'consumable_type')
-                                 .prefetch_related('details__item'),
-        id=request_id
-    )
+    consumable_request = get_object_or_404( ConsumableRequest.objects.select_related('user', 'consumable_type')
+                                 .prefetch_related('details__item'),id=request_id )
     total_paid = consumable_request.total_paid()
     balance = consumable_request.balance()
 
     context = {'request': consumable_request,'total_paid':total_paid,'balance':balance}
     return render(request, 'consumable/consumables_detail.html', context)
-
-
 
 
 @require_POST
@@ -291,10 +246,10 @@ def admin_request_approve(request, request_id):
     if consumable_request.status == 'Pending':
         consumable_request.status = 'Approved'
         consumable_request.approved_by = request.user
-        consumable_request.date_created = timezone.now()
         consumable_request.save()
         messages.success(request, f"Request #{request_id} has been approved.")
     return redirect('admin_consumable_detail', request_id=request_id)
+
 
 @require_POST
 def admin_request_reject(request, request_id):
@@ -302,27 +257,88 @@ def admin_request_reject(request, request_id):
     if consumable_request.status == 'Pending':
         consumable_request.status = 'Declined'
         consumable_request.approved_by = request.user
-        consumable_request.date_created = timezone.now()
         consumable_request.save()
         messages.error(request, f"Request #{request_id} has been declined.")
     return redirect('admin_consumable_detail', request_id=request_id)
 
-
+# 🆕 This view is updated to handle stock deduction and date stamping.
+@login_required
 def admin_request_taking(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
-    if consumable_request.status == 'Approved':
-        consumable_request.status = 'Itempicked'
-        consumable_request.approved_by = request.user
-        consumable_request.date_created = timezone.now()
-        consumable_request.save()
-        messages.success(request, f"Request #{request_id} has been marked as Itempicked.")
+
+    with transaction.atomic():
+        if consumable_request.status == 'Approved':
+            # Get all the details for the request
+            request_details = ConsumableRequestDetail.objects.filter(request=consumable_request)
+
+            for detail in request_details:
+                item = detail.item
+                requested_quantity = detail.quantity
+
+                # Check if enough stock is available before deducting
+                if item.quantity_in_stock < requested_quantity:
+                    messages.error(request, f"Insufficient stock for {item.title}. Cannot process request.")
+                    # Rollback the transaction by raising an exception
+                    raise Exception("Insufficient stock")
+
+                item.quantity_in_stock -= requested_quantity
+                item.save()
+
+                detail.approval_date = timezone.now().date()
+                detail.save()
+
+            # Update the main request status only after all details have been processed
+            consumable_request.status = 'Itempicked'
+            consumable_request.approved_by = request.user
+            consumable_request.save()
+
+            messages.success(request, f"Request #{request_id} has been marked as 'Itempicked' and stock has been reduced.")
+        
+        elif consumable_request.status == 'Itempicked':
+            messages.info(request, f"Request #{request_id} has already been marked as 'Itempicked'.")
+        else:
+            messages.error(request, f"Cannot mark request #{request_id} as 'Itempicked' because its status is '{consumable_request.status}'.")
+
     return redirect('admin_consumable_detail', request_id=request_id)
 
 
+# @require_POST
+# def admin_request_approve(request, request_id):
+#     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
+#     if consumable_request.status == 'Pending':
+#         consumable_request.status = 'Approved'
+#         consumable_request.approved_by = request.user
+#         consumable_request.date_created = timezone.now()
+#         consumable_request.save()
+#         messages.success(request, f"Request #{request_id} has been approved.")
+#     return redirect('admin_consumable_detail', request_id=request_id)
+
+# @require_POST
+# def admin_request_reject(request, request_id):
+#     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
+#     if consumable_request.status == 'Pending':
+#         consumable_request.status = 'Declined'
+#         consumable_request.approved_by = request.user
+#         consumable_request.date_created = timezone.now()
+#         consumable_request.save()
+#         messages.error(request, f"Request #{request_id} has been declined.")
+#     return redirect('admin_consumable_detail', request_id=request_id)
+
+# @login_required
+# def admin_request_taking(request, request_id):
+#     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
+#     if consumable_request.status == 'Approved':
+#         consumable_request.status = 'Itempicked'
+#         consumable_request.approved_by = request.user
+#         consumable_request.date_created = timezone.now()
+#         consumable_request.save()
+#         messages.success(request, f"Request #{request_id} has been marked as Itempicked.")
+#     return redirect('admin_consumable_detail', request_id=request_id)
+
+@login_required
 def consumable_types_with_requests(request):
     # grouped by status.
-    requested_types = ConsumableType.objects.filter(
-        consumables_type__isnull=False
+    requested_types = ConsumableType.objects.filter( consumables_type__isnull=False
     ).annotate(
         pending_count=Count('consumables_type', filter=models.Q(consumables_type__status='Pending')),
         approved_count=Count('consumables_type', filter=models.Q(consumables_type__status='Approved')),
@@ -332,14 +348,12 @@ def consumable_types_with_requests(request):
         # Add other statuses as needed
     ).distinct()
 
-    context = {
-        'requested_types': requested_types
-    }
+    context = {'requested_types': requested_types}
     return render(request, 'consumable/requested_types_list.html', context)
 
 
 
-
+@login_required
 def members_by_consumable_type(request, id):
     consumable_type = get_object_or_404(ConsumableType, id=id)
     requests = ConsumableRequest.objects.filter( consumable_type=consumable_type
@@ -382,52 +396,7 @@ def members_by_consumable_type(request, id):
         'total_requests_amount': formatted_total_requests_amount,'total_remaining_balance': formatted_total_remaining_balance,'total_paid': formatted_total_paid,}
     return render(request, 'consumable/members_by_type.html', context)
 
-# def members_by_consumable_type(request, id):
-#     consumable_type = get_object_or_404(ConsumableType, id=id)
-#     requests = ConsumableRequest.objects.filter(
-#         consumable_type=consumable_type
-#     ).select_related('user').prefetch_related('details', 'repayments').order_by('-date_created')
-
-#     requests_with_amounts = requests.annotate(
-#         total_price=Sum(F('details__item_price') * F('details__quantity'))
-#     )
-
-#     paginator = Paginator(requests_with_amounts, 10)
-#     page_number = request.GET.get('page')
-#     try:
-#         page_obj = paginator.get_page(page_number)
-#     except PageNotAnInteger:
-#         page_obj = paginator.get_page(1)
-#     except EmptyPage:
-#         page_obj = paginator.get_page(paginator.num_pages)
-
-#     # Calculate the total of all requested amounts from the annotated queryset.
-#     total_requests_amount = requests_with_amounts.aggregate(
-#         total_requested=Sum('total_price')
-#     )['total_requested'] or 0
-
-#     # Calculate total paid using a single aggregation query.
-#     total_paid = requests.aggregate(
-#         total_paid=Sum('repayments__amount_paid')
-#     )['total_paid'] or 0
-    
-#     total_remaining_balance = total_requests_amount - total_paid
-
-#     # Get a set of unique members from the original queryset.
-#     members = {req.user for req in requests}
-
-#     context = {
-#         'consumable_type': consumable_type,
-#         'page_obj': page_obj,
-#         'requests': requests_with_amounts, 
-#         'members': members,
-#         'total_requests_amount': total_requests_amount,
-#         'total_remaining_balance': total_remaining_balance,
-#         'total_paid': total_paid,
-#     }
-#     return render(request, 'consumable/members_by_type.html', context)
-
-
+@login_required
 def add_payment(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
     if request.method == 'POST':
@@ -473,7 +442,7 @@ def add_payment(request, request_id):
     
     return redirect('admin_consumable_detail', request_id=request_id)
 
-
+@login_required
 def admin_edit_consumable_request(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
     details = consumable_request.details.all()
@@ -512,7 +481,7 @@ def admin_edit_consumable_request(request, request_id):
     context = {'request_obj': consumable_request,'details': details, 'form': AdminUpdateConsumableRequestForm()}
     return render(request, 'consumable/admin_edit_request.html', context)
 
-
+@login_required
 def add_single_consumable_payment(request):
    
     requests = []

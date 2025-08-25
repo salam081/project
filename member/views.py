@@ -1,4 +1,5 @@
 
+from email.mime import application
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -6,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from datetime import date
 # from accounts.decorator import group_required
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
+from django.db.models import Sum, DecimalField, F, Q
 from django.db import transaction
 from decimal import Decimal
 from django.urls import reverse 
@@ -17,11 +18,13 @@ import datetime
 from django.http import JsonResponse
 from datetime import date
 from datetime import datetime
+from projectfinance.forms import ProjectFinanceRequestForm
 from main.models import *
 from loan.models import *
 from accounts.models import *
 from consumable.models import *
 from consumable.models import *
+from projectfinance.models import *
 from .models import *
 
 
@@ -32,6 +35,13 @@ def member_dashboard(request):
     except Member.DoesNotExist:
         return redirect('login')
     
+
+    pending_guarantor_requests = ProjectFinanceRequest.objects.filter(
+        guarantor=member,
+        guarantor_status='Pending'
+    ).order_by('-created_at').select_related('application__member__member')
+
+
     pending_guarantor_loans = LoanRequest.objects.filter(
         guarantor=member,
         guarantor_accepted=False,
@@ -132,7 +142,8 @@ def member_dashboard(request):
         'investment_total': investment_total,
         'approved_consumable': consumable_data,
         'total_remaining': total_remaining,
-        "pending_guarantor_loans": pending_guarantor_loans
+        "pending_guarantor_loans": pending_guarantor_loans,
+        'pending_guarantor_requests':pending_guarantor_requests
     }
 
     return render(request, 'member/member_dashboard.html', context)
@@ -533,3 +544,104 @@ def member_withdrawal_request(request):
 
     return render(request, 'member/withdrawal_request_form.html', {'member': member,})
 
+#==============project_finance_application===================
+
+@login_required
+def project_finance_application(request):
+    if request.method == "POST":
+       application_letter = request.POST.get("application_letter")
+       if application_letter:
+           application = ProjectFinanceApplication(
+               member=request.user.member,
+               application_letter=application_letter
+           )
+           application.save()
+           messages.success(request, "Application submitted successfully.")
+           return redirect("project_finance_application")
+       else:
+           messages.error(request, "Please provide an application letter.")
+
+  
+    return render(request, 'member/project_finance_application_form.html',)
+
+@login_required
+def project_finance_application_list(request):
+    member = request.user.member  
+    applications = ProjectFinanceApplication.objects.filter(member=member).prefetch_related('requests').order_by("-created_at")
+    requests = ProjectFinanceRequest.objects.filter(application__member=member).select_related('application__member__member')
+      # Get member's requests
+    member_requests = ProjectFinanceRequest.objects.filter(
+            application__member=member,
+            status__in=['Reviewed', 'Completed', 'FullyPaid']
+        )
+        
+        # Calculate expenditure for this member
+    member_expenditure = member_requests.aggregate(
+            total=Sum('requested_amount', default=Decimal('0.00'))
+        )['total'] or Decimal('0.00')
+    
+    markup_expenditure = member_requests.aggregate(
+        total_markup=Sum(F('requested_amount') * F('markup_rate') / 100, output_field=DecimalField())
+    )['total_markup'] or Decimal('0.00')
+    print("markup_expenditure",markup_expenditure)
+    context = {'applications':applications,'requests':requests,'member_expenditure':member_expenditure,'markup_expenditure':markup_expenditure}
+    return render(request, 'member/project_finance_application_list.html', context)
+
+def update_project_finance_application(request,id):
+    application = ProjectFinanceApplication.objects.get(id=id, member=request.user.member)
+    if request.method == 'POST':
+        application_letter = request.POST.get("application_letter")
+        if application_letter:
+            application.application_letter = application_letter
+            application.save()
+            messages.success(request, "Application updated successfully.")
+            return redirect("project_finance_application_list")
+        else:
+            messages.error(request, "Please provide an application letter.")
+
+    return render(request, 'member/update_project_finance_application.html', {'application': application})
+
+@login_required
+def create_project_finance_request(request, id):
+    application = get_object_or_404(ProjectFinanceApplication, pk=id, member=request.user.member)
+
+   # Get all requests for this application that are NOT fully paid
+    unpaid_requests = ProjectFinanceRequest.objects.filter(application=application).exclude(status='FullyPaid')
+    if unpaid_requests.exists():
+        messages.warning(request, "You cannot create a new request until your existing one is fully paid.")
+        return redirect('project_finance_application_list')
+
+
+    if request.method == 'POST':
+        form = ProjectFinanceRequestForm(request.POST)
+        if form.is_valid():
+            guarantor_ippis = form.cleaned_data.get('guarantor_ippis')
+            try:
+                guarantor = Member.objects.get(ippis=guarantor_ippis)
+            except Member.DoesNotExist:
+                messages.error(request, "The IPPIS number provided does not belong to an existing member.")
+                return redirect('create_project_finance_request', id=id)
+
+            project_finance_request = form.save(commit=False)
+            project_finance_request.application = application
+            project_finance_request.guarantor = guarantor
+            project_finance_request.status = 'Pending'
+            project_finance_request.guarantor_status = 'Pending'
+            project_finance_request.save()
+
+            messages.success(request, "Your project finance request has been submitted successfully.")
+            return redirect('project_finance_application_list')
+    else:
+        form = ProjectFinanceRequestForm()
+
+    context = {'form': form, 'application': application}
+    return render(request, 'member/create_project_finance_request.html', context)
+
+
+def approve_guarantor_request(request, id):
+    if request.method == 'POST':
+        project_request = get_object_or_404( ProjectFinanceRequest,  pk=id, guarantor=request.user.member,guarantor_status='Pending')
+        project_request.guarantor_status = 'Approved'
+        project_request.save()
+        messages.success(request, f"You have successfully approved the request for {project_request.application.member.member.first_name}.")
+    return redirect('member_dashboard')

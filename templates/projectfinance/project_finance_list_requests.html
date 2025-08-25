@@ -1,0 +1,89 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% block content %}
+<h2 class="mt-4">Project Finance Requests</h2>
+<div class="content-card shadow col-md-12">
+   
+    <div class="table-responsive">
+        {% if requests %}
+        
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">Member Name</th>
+                    <th scope="col">Request Details</th>
+                    <th scope="col">Mark Up</th>
+                    <th scope="col">Payback</th>
+                    <th scope="col">Guarantor Status</th>
+                    <th scope="col">Request Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td>
+                        <p class="mb-1 fw-bold text-dark">
+                            {{ req.application.member.member.first_name }} {{ req.application.member.member.last_name }}
+                        </p>
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            Request for **{{ req.product }}**<br>
+                            Requested Amount: ₦{{ req.requested_amount|intcomma }}
+                        </small>
+                    </td>
+                    <td>
+                       <small class="text-dark">
+                           {{ req.markup_rate|floatformat:0 }}%
+                        </small>
+                    </td>
+                    <td>
+                       <small class="text-dark">
+                           {{ req.total_repayment_amount|floatformat:2|intcomma }}
+                        </small>
+                    </td>
+                    <td>
+                        <small class="{% if req.guarantor_status == 'Approved' %}text-success{% elif req.guarantor_status == 'Declined' %}text-danger{% else %}text-warning{% endif %}">
+                            {{ req.guarantor_status }}
+                        </small>
+                    </td>
+                    <td>
+                        <span class="status-badge text-white
+                        {% if req.status == 'Pending' %}status-pending
+                        {% elif req.status == 'Reviewed' %}status-active
+                        {% elif req.status == 'Itempicked' %}status-itempicked
+                        {% elif req.status == 'FullyPaid' %}status-completed
+                        {% elif req.status == 'Declined' %}status-cancelled
+                        {% else %}bg-secondary{% endif %}">
+                        {{ req.status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if req.status == 'Reviewed' %}
+                            <a href="#" class="btn btn-sm btn-primary disabled">Reviewed</a>
+                        {% else %}
+                            {% if req.guarantor_status == 'Approved' %}
+                                <a href="{% url 'project_finance_approved' req.id %}" class="btn btn-sm btn-primary">
+                                    Review
+                                </a>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled title="Guarantor has not approved yet">
+                                    Review
+                                </button>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+               
+            </tbody>
+        </table>
+        {% else %}
+        <div class="alert alert-info text-center rounded-3" role="alert">
+            No new requests for review.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

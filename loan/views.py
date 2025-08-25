@@ -7,7 +7,7 @@ from django.utils.dateparse import parse_date
 from django.template.loader import render_to_string
 from datetime import date
 # from accounts.decorator import group_required
-from django.db.models import Sum,Count, Q , Prefetch
+from django.db.models import Sum,Count, Q , Prefetch,F
 from django.contrib import messages
 from django.utils import timezone
 from django.http import HttpResponse
@@ -36,7 +36,6 @@ from consumable.models import *
 
 @login_required
 def admin_loan_settings(request):
-    """Manage loan settings"""
     try:
         settings = LoanSettings.objects.latest('id')
     except LoanSettings.DoesNotExist:
@@ -52,15 +51,10 @@ def admin_loan_settings(request):
             return redirect('admin_loan_settings')
     else:
         form = LoanSettingsForm(instance=settings)
-    
     # Loan types management
     loan_types = LoanType.objects.all()
     
-    context = {
-        'form': form,
-        'settings': settings,
-        'loan_types': loan_types,
-    }
+    context = {'form': form,'settings': settings,'loan_types': loan_types,}
     return render(request, 'loan/settings.html', context)
 
 @login_required
@@ -94,37 +88,44 @@ def add_loan_type(request):
                 return redirect('add_loan_type')
 
         else:
-            LoanType.objects.create(
-                name=name,
-                description=description,
-                max_amount=max_amount,
-                max_loan_term_months=max_loan_term_months,
-                available=True,
-                created_by=request.user
-            )
+            LoanType.objects.create(name=name,description=description, max_amount=max_amount,
+                max_loan_term_months=max_loan_term_months,available=True, created_by=request.user)
             messages.success(request, 'Loan type created successfully.')
             return redirect('add_loan_type')
 
     context = {'loan_types': loan_types}
     return render(request, 'loan/add_loan_type.html', context)
 
-# @group_required(['admin'])
+
+
 def loan_fee(request):
     if request.method == 'POST':
-        member_ippis = request.POST.get('member_ippis')
+        ippis = request.POST.get('ippis')
         form_fee = request.POST.get('form_fee')
         loan_amount = request.POST.get('loan_amount')
 
-        # Get Member instance using IPPIS number
-        member = get_object_or_404(Member, ippis=member_ippis)
+        # Validate IPPIS input
+        if not ippis or not ippis.isdigit():
+            messages.error(request, "Please enter a valid IPPIS number.")
+            return redirect('loan_fee')
 
+        ippis = int(ippis)  # Convert to integer
+
+        try:
+            member = Member.objects.get(ippis=ippis)
+        except Member.DoesNotExist:
+            messages.error(request, f"No member found with IPPIS {ippis}.")
+            return redirect('loan_fee')
+
+        # Create the loan request fee record
         LoanRequestFee.objects.create(
             member=member,
             form_fee=form_fee,
             loan_amount=loan_amount,
             created_by=request.user
         )
-        messages.success(request, 'Payment recorded successfully')
+
+        messages.success(request, "Payment recorded successfully.")
         return redirect('loan_fee')
 
     # Aggregates
@@ -132,29 +133,28 @@ def loan_fee(request):
     fee = LoanRequestFee.objects.aggregate(total=Sum('form_fee'))['total'] or 0
     loan_req_form = LoanRequestFee.objects.count()
 
+    # Fetch all loan request fees with member details
     members = LoanRequestFee.objects.select_related('member')
-    
-    page_number = request.GET.get('page')
-    paginator = Paginator(members, 1)  
 
-    try:
-        # Get the Page object for the requested page number
-        page_obj = paginator.get_page(page_number)
-    except PageNotAnInteger:
-        # If the page is not an integer, deliver the first page.
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        # If the page is out of range, deliver the last page.
-        page_obj = paginator.page(paginator.num_pages)
-    context = {"fee": fee,"loan": loan,"loan_req_form": loan_req_form,'members':members,'page_obj':page_obj}
+    # Pagination
+    page_number = request.GET.get('page')
+    paginator = Paginator(members, 100)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "fee": fee,
+        "loan": loan,
+        "loan_req_form": loan_req_form,
+        "members": members,
+        "page_obj": page_obj,
+    }
     return render(request, "loan/loan_fee.html", context)
+
 
 
 #  =========list of Pending Loans and others ==========
 def admin_loan_requests_list(request):
-    """List all loan requests with filtering"""
     requests_list = LoanRequest.objects.select_related('member', 'loan_type', 'bank_name').order_by('-date_created')
-    
     # Filtering
     status_filter = request.GET.get('status')
     loan_type_filter = request.GET.get('loan_type')
@@ -175,19 +175,14 @@ def admin_loan_requests_list(request):
         )
     else:
          results_queryset = requests_list
-
     results_queryset = results_queryset.order_by('status')
-
     total_approved_amount = results_queryset.aggregate(total=Sum('approved_amount'))['total'] or 0
-
     totals_by_status = dict(
         results_queryset.values('status')
         .annotate(total=Sum('amount'))
         .values_list('status', 'total')
     )
-
     total_repaid = LoanRepayback.objects.filter(loan_request__in=results_queryset).aggregate(total=Sum('amount_paid'))['total'] or 0
-
     total_amont_loan_request = totals_by_status.get('approved', 0)
     total_pending = totals_by_status.get('pending', 0)
 
@@ -201,11 +196,9 @@ def admin_loan_requests_list(request):
     paginator = Paginator(requests_list, 100)
     page_number = request.GET.get('page')
     requests = paginator.get_page(page_number)
-    
     # Filter options
     loan_types = LoanType.objects.all()
     status_choices = LoanRequest._meta.get_field('status').choices
-    
     context = {
         'requests': requests,'loan_types': loan_types,
         'status_choices': status_choices,'current_status': status_filter,
@@ -220,7 +213,6 @@ def admin_loan_requests_list(request):
 
 
 def loan_request_detail(request, id):
-    """View loan request details"""
     loan_request = get_object_or_404(LoanRequest, id=id)
     repayments = loan_request.repaybacks.all().order_by('-repayment_date')
     monthly_payment = monthly_payment = loan_request.monthly_payment or 0
@@ -228,16 +220,9 @@ def loan_request_detail(request, id):
     total_paid = repayments.aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
     balance = (loan_request.approved_amount or 0) - total_paid
     
-    context = {
-        'loan_request': loan_request,
-        'repayments': repayments,
-        'total_paid': total_paid,
-        'balance': balance,
-        'monthly_payment': monthly_payment,
-        'title': f'Loan Request #{loan_request.id}'
-    }
+    context = {'loan_request': loan_request, 'repayments': repayments,'total_paid': total_paid, 'balance': balance,
+        'monthly_payment': monthly_payment,'title': f'Loan Request #{loan_request.id}'}
     return render(request, 'loan/loan_request_detail.html', context)
-
 
 def is_admin(user):
     return user.is_staff
@@ -323,13 +308,7 @@ def edit_requested_loan(request, id):
         amount = request.POST['amount']
         loan_term_months = request.POST['loan_term_months']
 
-        LoanRequest.objects.filter(id=id).update(
-            member=member,
-            loan_type_id=loan_type,
-            amount=amount,
-            loan_term_months=loan_term_months,
-            approved_amount=0,
-        )
+        LoanRequest.objects.filter(id=id).update( member=member, loan_type_id=loan_type, amount=amount,loan_term_months=loan_term_months, approved_amount=0,)
         return redirect('admin_loan_requests')
 
     context = {'loanobj': loanobj, 'loan_types': loan_types}
@@ -434,7 +413,7 @@ def loans_by_year(request, year, loan_type_filter):
         ws = wb.active
         ws.title = "Loan Data"
 
-        headers = ['ID', 'Applicant', 'Amount', 'Approved Amount', 'Account Number', 'Bank Name', 'Bank Code', ]#'Status', 'Date Created'
+        headers = ['ID', 'Full Name', 'Amount', 'Approved Amount', 'Account Number', 'Bank Name', 'Bank Code', ]#'Status', 'Date Created'
         ws.append(headers)
 
         for loan in loanobj:
@@ -561,7 +540,7 @@ def add_single_loan_payment(request):
             )
 
             if new_total_paid >= loan_request.approved_amount:
-                loan_request.status = 'paid'
+                loan_request.status = 'Fullpaid'
                 loan_request.save()
 
         messages.success(request, f"Repayment of ₦{amount_paid} added for {member}.")
@@ -584,102 +563,123 @@ def get_loan_types_for_year(request):
     return JsonResponse({"loan_types": list(loan_types)})
 
 
-@login_required
-def upload_loan_payment(request):
-    # Group by year and loan type
-    loans = LoanRequest.objects.annotate(year=ExtractYear('application_date')) \
-        .values('year', 'loan_type__name').distinct().order_by('-year', 'loan_type__name')
-    
-    year_to_loan_types = defaultdict(list)
-    for loan in loans:
-        year_to_loan_types[loan['year']].append(loan['loan_type__name'])
+def upload_loan_repayment(request):
+    # 1 — Group by LoanType
+    available_loans = LoanRequest.objects.filter(status="approved").select_related(
+        "member", "loan_type"
+    )
 
+    grouped_by_type = defaultdict(list)
+    for req in available_loans:
+        if req.balance > 0:  # Use the model method
+            grouped_by_type[req.loan_type].append(req)
+
+    grouped_list = sorted(grouped_by_type.items(), key=lambda x: x[0].name)
+
+    # 2 — Handle upload
     if request.method == "POST":
-        selected_year = request.POST.get("selected_year")
-        selected_type = request.POST.get("selected_type")
+        selected_type_id = request.POST.get("selected_type")
+        repayment_date_str = request.POST.get("repayment_date")
         file = request.FILES.get("excel_file")
 
-        if not selected_year or not selected_type or not file:
-            messages.error(request, "Please select year, loan type, and upload a file.")
+        if not selected_type_id or not repayment_date_str or not file:
+            messages.error(request, "All fields are required.")
             return redirect("upload_loan_payment")
 
         try:
-            selected_year = int(selected_year)
+            selected_type = LoanType.objects.get(id=selected_type_id)
+        except LoanType.DoesNotExist:
+            messages.error(request, "Invalid loan type.")
+            return redirect("upload_loan_payment")
+
+        try:
+            repayment_date = datetime.strptime(repayment_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            messages.error(request, "Invalid repayment date format.")
+            return redirect("upload_loan_payment")
+
+        try:
             df = pd.read_excel(file)
         except Exception as e:
-            messages.error(request, f"Error processing file: {e}")
+            messages.error(request, f"Error reading Excel file: {e}")
             return redirect("upload_loan_payment")
 
-        required_cols = {"IPPIS", "Amount Paid", "Repayment Date"}
+        required_cols = {"IPPIS", "Amount Paid"}
         if not required_cols.issubset(df.columns):
-            messages.error(request, "Excel must include 'IPPIS', 'Amount Paid', and 'Repayment Date'")
+            messages.error(request, "Excel must contain 'IPPIS' and 'Amount Paid' columns.")
             return redirect("upload_loan_payment")
-
-        # Fetch all loan requests for year and type
-        loan_requests = LoanRequest.objects.filter(
-            application_date__year=selected_year,
-            loan_type__name=selected_type
-        ).select_related("member")
-
-        ippis_to_request = {
-            str(lr.member.ippis): lr
-            for lr in loan_requests
-            if lr.member and lr.member.ippis
+        
+        # Map IPPIS to requests for the selected type
+        type_requests = grouped_by_type.get(selected_type, [])
+        ippis_map = {
+            str(req.member.ippis).strip(): req
+            for req in type_requests
+            if req.member and req.member.ippis
         }
 
-        # Fetch all existing repayments for these loans (to avoid duplicate entries)
-        existing_repayments = LoanRepayback.objects.filter(
-            loan_request__in=loan_requests
-        ).values_list('loan_request_id', 'repayment_date')
-
-        existing_keys = set((lr_id, repayment_date.replace(day=1)) for lr_id, repayment_date in existing_repayments)
-
-        repayments_to_create = []
+        repaybacks_to_create = []
         skipped = []
         uploaded = 0
 
-        for _, row in df.iterrows():
-            ippis = str(row["IPPIS"]).strip()
-            try:
-                repayment_date = pd.to_datetime(row["Repayment Date"]).date().replace(day=1)
-                current_payment = Decimal(row["Amount Paid"])
-            except Exception:
-                skipped.append(ippis)
-                continue
+        with transaction.atomic():
+            for _, row in df.iterrows():
+                # ✅ Force IPPIS to string and remove ".0" if Excel made it float
+                ippis_raw = row["IPPIS"]
+                ippis = str(int(ippis_raw)) if isinstance(ippis_raw, (int, float)) else str(ippis_raw).strip()
 
-            loan_request = ippis_to_request.get(ippis)
-            if not loan_request:
-                skipped.append(ippis)
-                continue
+                try:
+                    amount = Decimal(str(row["Amount Paid"])).quantize(Decimal("0.00"))
+                except Exception:
+                    skipped.append(f"{ippis} (invalid amount)")
+                    continue
 
-            if (loan_request.id, repayment_date) in existing_keys:
-                skipped.append(ippis)
-                continue
+                req = ippis_map.get(ippis)
+                if not req:
+                    skipped.append(str(ippis))
+                    continue
 
-            # Get total paid so far
-            total_paid = LoanRepayback.objects.filter(loan_request=loan_request) \
-                .aggregate(total=Sum("amount_paid"))["total"] or Decimal("0.00")
+                # Skip duplicates
+                if LoanRepayback.objects.filter(
+                    loan_request=req,
+                    repayment_date=repayment_date
+                ).exists():
+                    skipped.append(f"{ippis} (duplicate entry)")
+                    continue
 
-            approved_amount = loan_request.approved_amount or Decimal("0.00")
-            balance = max(Decimal("0.00"), approved_amount - (total_paid + current_payment))
+                # Calculate balance_remaining before bulk_create
+                total_repaid_so_far = req.repaybacks.aggregate(total=Sum("amount_paid"))["total"] or Decimal(0)
+                balance = req.approved_amount - (total_repaid_so_far + amount)
 
-            repayments_to_create.append(LoanRepayback(loan_request=loan_request,amount_paid=current_payment,
-                repayment_date=repayment_date, balance_remaining=balance,created_by=request.user
-            ))
+                repaybacks_to_create.append(
+                    LoanRepayback(
+                        loan_request=req,
+                        amount_paid=amount,
+                        repayment_date=repayment_date,
+                        balance_remaining=balance,
+                        created_by=request.user
+                    )
+                )
+                uploaded += 1
 
-            uploaded += 1
+            if repaybacks_to_create:
+                LoanRepayback.objects.bulk_create(repaybacks_to_create)
 
-        if repayments_to_create:
-            with transaction.atomic():
-                LoanRepayback.objects.bulk_create(repayments_to_create, batch_size=100)
+                # ✅ Update statuses after creating repayments
+                request_ids = {repay.loan_request_id for repay in repaybacks_to_create}
+                for req in LoanRequest.objects.filter(id__in=request_ids):
+                    if req.balance <= 0:
+                        req.status = 'Fullpaid'
+                        req.save()
 
-        messages.success(request, f"{uploaded} loan repayment(s) uploaded.")
-        if skipped:
-            messages.warning(request, f"Skipped IPPIS: {', '.join(skipped)}")
+            # ✅ Fix join issue (everything is string now)
+            messages.success(request, f"{uploaded} payment(s) uploaded successfully.")
+            if skipped:
+                messages.warning(request, f"Skipped IPPIS: {', '.join(map(str, skipped))}")
 
-        return redirect("upload_loan_payment")
+            return redirect("upload_loan_payment")
 
-    return render(request, "loan/upload_loan_payment.html", { "year_to_loan_types": dict(year_to_loan_types),})
+    context = {"grouped_list": grouped_list}
+    return render(request, "loan/upload_loan_payment.html", context)
 
 
 def admin_repayment_tracking(request):
@@ -703,7 +703,7 @@ def admin_repayment_tracking(request):
         repayments_list = repayments_list.filter(repayment_date__lte=date_to)
     
     # Pagination
-    paginator = Paginator(repayments_list, 25)
+    paginator = Paginator(repayments_list, 100)
     page_number = request.GET.get('page')
     repayments = paginator.get_page(page_number)
     

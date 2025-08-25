@@ -20,5 +20,6 @@ urlpatterns = [
     path('selling_plan_detail/<int:pk>/', views.selling_plan_detail, name='selling_plan_detail'),
     path('selling_plan_update/<int:pk>/', views.selling_plan_update, name='selling_plan_update'),
     path('selling_plan_delete/<int:pk>/', views.selling_plan_delete, name='selling_plan_delete'),
+    path('requests/account/<int:pk>/', views.refund_and_account_request, name='refund_and_account_request'),
 
 ]

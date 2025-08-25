@@ -1,0 +1,542 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% block title %}Consolidated Report{% endblock %}
+
+{% block content %}
+    <style>
+        .header-section {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .header-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .filter-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 1.5rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+            border: none;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            position: relative;
+           
+        }
+
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #007bff, #28a745, #ffc107);
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .income-icon {
+            color: #28a745;
+        }
+
+        .expenditure-icon {
+            color: #dc3545;
+        }
+
+        .net-icon {
+            color: #6c757d;
+        }
+
+        .net-positive {
+            color: #28a745 !important;
+        }
+
+        .net-negative {
+            color: #dc3545 !important;
+        }
+
+        .amount-display {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .amount-income {
+            color: #28a745;
+        }
+
+        .amount-expenditure {
+            color: #dc3545;
+        }
+
+        .details-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+            border: none;
+            overflow: hidden;
+        }
+
+        .details-card .card-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 1px solid #dee2e6;
+            font-weight: 600;
+            padding: 1.25rem;
+        }
+
+        .income-header {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+        }
+
+        .expenditure-header {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+        }
+
+        .list-group-item {
+            border: none;
+            border-bottom: 1px solid #f1f3f4;
+            padding: 1rem 1.25rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .list-group-item:hover {
+            background-color: rgba(0, 123, 255, 0.02);
+        }
+
+        .list-group-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-amount {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .btn-animated {
+            transition: all 0.3s ease;
+        }
+
+        .btn-animated:hover {
+            transform: translateY(-2px);
+        }
+
+        .filter-info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #b8daff 100%);
+            border: 1px solid #b8daff;
+            border-radius: 10px;
+            color: #004085;
+        }
+
+        .error-alert {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 1px solid #f5c6cb;
+            border-left: 4px solid #dc3545;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.1);
+        }
+
+        .no-data-section {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6c757d;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .amount-display {
+                font-size: 1.5rem;
+            }
+            
+            .header-section h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+
+    <div class="content-card">
+        <!-- Header Section -->
+        <div class="header-section">
+            <div class="header-content">
+                <p class=" fw-bold mb-2">
+                    <i class="bi bi-graph-up-arrow me-3"></i>
+                    Consolidated Financial Report
+                </p>
+                <p class="lead mb-0">Complete overview of income and expenditure</p>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <form method="GET" id="filterForm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="date_from" class="form-label fw-semibold">
+                            <i class="bi bi-calendar-event me-1"></i>Start Date
+                        </label>
+                        <input type="date" class="form-control" id="date_from" name="date_from" 
+                               value="{{ date_from|default:'' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="date_to" class="form-label fw-semibold">
+                            <i class="bi bi-calendar-check me-1"></i>End Date
+                        </label>
+                        <input type="date" class="form-control" id="date_to" name="date_to" 
+                               value="{{ date_to|default:'' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button type="submit" class="btn btn-primary btn-animated flex-fill" id="generateBtn">
+                                <i class="bi bi-file-earmark-bar-graph me-2"></i>Generate Report
+                            </button>
+                            <a href="{% url 'consolidated_report' %}" class="btn btn-outline-secondary btn-animated">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Content Section -->
+        <div class="content-card p-4">
+            <!-- Error Message -->
+            {% if error %}
+                <div class="alert error-alert alert-dismissible fade show mb-4" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Error:</strong> {{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+
+            <!-- Filter Info -->
+            {% if filters_applied %}
+                <div class="alert filter-info fade-in mb-4" role="alert">
+                    <i class="bi bi-calendar-range me-2"></i>
+                    <strong>Report Period:</strong>
+                    {% if date_from and date_to %}
+                        From {{ date_from }} to {{ date_to }}
+                    {% elif date_from %}
+                        From {{ date_from }} onwards
+                    {% elif date_to %}
+                        Up to {{ date_to }}
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if not error %}
+                <!-- Summary Cards -->
+                <div class="row g-4 mb-5">
+                    <div class="col-lg-4">
+                        <div class="card shadow summary-card h-100 fade-in">
+                            <div class="card-body text-center p-4">
+                                <div class="card-icon income-icon">
+                                    {% comment %} <i class="bi bi-cash-coin"></i> {% endcomment %}
+                                </div>
+                                <p class="card-title text-uppercase fw-bold text-muted mb-3">Total Income</p>
+                                <div class="amount-display amount-income" data-value="{{ total_income|default:'0' }}">
+                                    ₦{{ total_income|floatformat:2|default:"0.00" }}
+                                </div>
+                                <p class="text-muted mb-0">Money received</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="card shadow summary-card h-100 fade-in">
+                            <div class="card-body text-center p-4">
+                                <div class="card-icon expenditure-icon">
+                                    {% comment %} <i class="bi bi-wallet2"></i> {% endcomment %}
+                                </div>
+                                <p class="card-title text-uppercase fw-bold text-muted mb-3">Total Expenditure</p>
+                                <div class="amount-display amount-expenditure" data-value="{{ total_expenditure|default:'0' }}">
+                                    ₦{{ total_expenditure|floatformat:2|default:"0.00" }}
+                                </div>
+                                <p class="text-muted mb-0">Money spent</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="card shadow summary-card h-100 fade-in">
+                            <div class="card-body text-center p-4">
+                                <div class="card-icon net-icon {% if net_position > 0 %}net-positive{% elif net_position < 0 %}net-negative{% endif %}">
+                                    {% comment %} <i class="bi bi-{% if net_position > 0 %}graph-up{% elif net_position < 0 %}graph-down{% else %}dash{% endif %}"></i> {% endcomment %}
+                                </div>
+                                <p class="card-title text-uppercase fw-bold text-muted mb-3">Net Position</p>
+                                <div class="amount-display {% if net_position > 0 %}net-positive{% elif net_position < 0 %}net-negative{% else %}text-muted{% endif %}" 
+                                     data-value="{{ net_position|default:'0' }}">
+                                    ₦{{ net_position|floatformat:2|default:"0.00" }}
+                                </div>
+                                <p class="text-muted mb-0">
+                                    {% if net_position > 0 %}
+                                        <i class="bi bi-arrow-up-circle-fill text-success me-1"></i>Profit
+                                    {% elif net_position < 0 %}
+                                        <i class="bi bi-arrow-down-circle-fill text-danger me-1"></i>Loss
+                                    {% else %}
+                                        <i class="bi bi-dash-circle-fill text-muted me-1"></i>Break-even
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Details Section -->
+                <div class="row g-4">
+                    <!-- Income Breakdown -->
+                    <div class="col-lg-6">
+                        <div class="card details-card fade-in">
+                            <div class="card-header income-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-plus-circle-fill me-2"></i>
+                                    Income Breakdown
+                                </h5>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-piggy-bank me-2 text-success"></i>
+                                        <span class="fw-medium">Savings</span>
+                                    </div>
+                                    <span class="detail-amount text-success">₦{{ saving_income|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-gear-fill me-2 text-success"></i>
+                                        <span class="fw-medium">Admin Fees</span>
+                                    </div>
+                                    <span class="detail-amount text-success">₦{{ admin_fee_income|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-arrow-return-left me-2 text-success"></i>
+                                        <span class="fw-medium">Consumable Paybacks</span>
+                                    </div>
+                                    <span class="detail-amount text-success">₦{{ consumable_payback_income|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-credit-card me-2 text-success"></i>
+                                        <span class="fw-medium">Finance Paybacks</span>
+                                    </div>
+                                    <span class="detail-amount text-success">₦{{ finance_payback_income|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-file-earmark-text me-2 text-success"></i>
+                                        <span class="fw-medium">Form Fees</span>
+                                    </div>
+                                    <span class="detail-amount text-success">₦{{ form_fee_income|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-bank me-2 text-success"></i>
+                                        <span class="fw-medium">Loan Paybacks</span>
+                                    </div>
+                                    <span class="detail-amount text-success">₦{{ loan_payback_income|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-receipt me-2 text-success"></i>
+                                        <span class="fw-medium">Loan Form Fees</span>
+                                    </div>
+                                    <span class="detail-amount text-success">₦{{ loan_form_fee_income|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expenditure Breakdown -->
+                    <div class="col-lg-6">
+                        <div class="card details-card fade-in">
+                            <div class="card-header expenditure-header">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-dash-circle-fill me-2"></i>
+                                    Expenditure Breakdown
+                                </h5>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-person-workspace me-2 text-danger"></i>
+                                        <span class="fw-medium">Staff Purchases</span>
+                                    </div>
+                                    <span class="detail-amount text-danger">₦{{ staff_purchases|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-box-seam me-2 text-danger"></i>
+                                        <span class="fw-medium">Member Consumables</span>
+                                    </div>
+                                    <span class="detail-amount text-danger">₦{{ member_consumable_cost|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-briefcase me-2 text-danger"></i>
+                                        <span class="fw-medium">Member Finance Loans</span>
+                                    </div>
+                                    <span class="detail-amount text-danger">₦{{ member_finance_loans|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-cash-stack me-2 text-danger"></i>
+                                        <span class="fw-medium">Loan Disbursements</span>
+                                    </div>
+                                    <span class="detail-amount text-danger">₦{{ loan_disbursements|floatformat:2|default:"0.00" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Data Message -->
+                {% if not filters_applied %}
+                    <div class="no-data-section mt-5">
+                        <i class="bi bi-graph-up display-1 text-muted mb-3"></i>
+                        <h3 class="text-muted">All Time Financial Summary</h3>
+                        <p class="text-muted">This report shows your complete financial overview. Use the date filters above to view specific periods.</p>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+   
+    <script>
+        // Form submission handling
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            const generateBtn = document.getElementById('generateBtn');
+            const originalHTML = generateBtn.innerHTML;
+            
+            generateBtn.innerHTML = '<span class="loading-spinner me-2"></span>Generating...';
+            generateBtn.disabled = true;
+            
+            // Re-enable after 10 seconds as fallback
+            setTimeout(() => {
+                generateBtn.innerHTML = originalHTML;
+                generateBtn.disabled = false;
+            }, 10000);
+        });
+
+        // Date validation
+        const dateFrom = document.getElementById('date_from');
+        const dateTo = document.getElementById('date_to');
+        
+        function validateDates() {
+            if (dateFrom.value && dateTo.value && dateFrom.value > dateTo.value) {
+                dateTo.setCustomValidity('End date must be after start date');
+                dateTo.classList.add('is-invalid');
+            } else {
+                dateTo.setCustomValidity('');
+                dateTo.classList.remove('is-invalid');
+            }
+        }
+        
+        dateFrom.addEventListener('change', validateDates);
+        dateTo.addEventListener('change', validateDates);
+
+        // Number animation function
+        function animateValue(element, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const value = progress * (end - start) + start;
+                element.textContent = '₦' + value.toLocaleString('en-NG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // Animate amounts on page load
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.amount-display').forEach(el => {
+                const value = parseFloat(el.dataset.value || 0);
+                if (!isNaN(value)) {
+                    el.textContent = '₦0.00';
+                    setTimeout(() => {
+                        animateValue(el, 0, value, 1500);
+                    }, 300);
+                }
+            });
+        });
+
+        // Add staggered animation to cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.fade-in');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+            });
+        });
+
+        // Tooltip initialization
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    </script>
+
+{% endblock %}

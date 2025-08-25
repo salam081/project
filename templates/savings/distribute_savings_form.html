@@ -16,7 +16,7 @@
        background: linear-gradient(135deg, #36a2baff, #2c8fabff);
     }
 </style>
-<div class="container mt-5 col-md-6">
+<div class="container mt-5 col-md-8">
     <div class="card-header"> Distribute Monthly Savings</div>
        <!-- Progress Bar -->
     <div id="progressContainer" class="progress mt-3" style="display: none; height: 25px;">
@@ -26,14 +26,20 @@
 </div>
     <div class="card col-md-12">
         <div class="card-body">
-            <form method="post" class="border p-4 shadow-sm bg-light" id="savingsForm">
+        <div id="spinner-container" class="my-3" style="display: none;">
+                <button class="btn btn-primary" type="button" disabled>
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <span role="status">Distributing...</span>
+                </button>
+            </div>
+            <form method="post" id="uploadForm" class="border p-4 shadow-sm bg-light" id="savingsForm">
                 {% csrf_token %}
                 <div class="mb-3">
                     <label for="month" class="form-label">Select Month</label>
                     <input type="month" name="month" id="month" class="form-control" required>
                 </div>
                 <div class="d-grid">
-                    <button type="submit" class="btn btn-primary">Distribute Savings Equally</button>
+                    <button type="submit" id="uploadBtn" class="btn btn-primary">Distribute Savings Equally</button>
                 </div>
             </form>
 
@@ -42,5 +48,11 @@
         </div>
     </div>
 </div>
+<script>
+    document.getElementById('uploadForm').addEventListener('submit', function () {
+        document.getElementById('uploadBtn').style.display = 'none';
+        document.getElementById('spinner-container').style.display = 'block';
+    });
+</script>
 {% endblock content %}
 

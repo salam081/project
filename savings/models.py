@@ -32,7 +32,6 @@ class Interest(models.Model):
     month = models.DateField(db_index=True)  
     amount_deducted = models.DecimalField(max_digits=10, decimal_places=2, default=400.00)
     date_deducted = models.DateField(auto_now_add=True)
-    
     class Meta:
         unique_together = ("member", "month")  # Prevent duplicate deductions
 
@@ -45,7 +44,7 @@ class Loanable(models.Model):
     month = models.DateField(db_index=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
-    
+    date_created = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
         return f"{self.member} - {self.amount} -  {self.month.strftime('%B %Y')}"
@@ -55,7 +54,7 @@ class Investment(models.Model):
     month = models.DateField(db_index=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    
+    date_created = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return f"{self.member} - {self.amount} - {self.month.strftime('%B %Y')}"
 

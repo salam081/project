@@ -15,6 +15,7 @@ from django.db import transaction
 from decimal import Decimal
 from django.contrib import messages
 import json
+import logging
 from consumable.models import *
 from accounts.models import User
 import csv
@@ -23,14 +24,19 @@ from savings.models import *
 from main.models import *
 from PurchasedItems.models import *
 from member.models import *
+from projectfinance.models import *
 # from accounts.decorator import group_required
 
 from datetime import date
 
-# Create your views here.
+
+@login_required
 def all_income(request):
+    """
+    Calculates and displays all sources of income based on user-selected date filters.
+    Requires the user to be logged in to view.
+    """
     # Get filter parameters from GET request
-  
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
 
@@ -40,26 +46,27 @@ def all_income(request):
     consumable_payback_filter = Q()
     loan_fee_filter = Q()
     interest_filter = Q()
+    item_purchase_filter = Q()
     total_consumable_form_fee_filter = Q()
 
-    # Filter by year and month
-  
+    # Filter by date range
     if date_from:
         savings_filter &= Q(month__gte=date_from)
         loanrepayback_filter &= Q(repayment_date__gte=date_from)
         consumable_payback_filter &= Q(repayment_date__gte=date_from)
-        loan_fee_filter &= Q(created_at__gte=date_from)  # fixed
+        loan_fee_filter &= Q(created_at__gte=date_from)
         interest_filter &= Q(month__gte=date_from)
-        total_consumable_form_fee_filter &= Q(created_at__gte=date_from)  
+        item_purchase_filter &= Q(date_created__gte=date_from)  # Use 'date_created' for filtering
+        total_consumable_form_fee_filter &= Q(created_at__gte=date_from)
 
     if date_to:
         savings_filter &= Q(month__lte=date_to)
         loanrepayback_filter &= Q(repayment_date__lte=date_to)
         consumable_payback_filter &= Q(repayment_date__lte=date_to)
-        loan_fee_filter &= Q(created_at__lte=date_to)  # fixed
+        loan_fee_filter &= Q(created_at__lte=date_to)
         interest_filter &= Q(month__lte=date_to)
-        total_consumable_form_fee_filter &= Q(created_at__lte=date_to)  # fixed
-
+        item_purchase_filter &= Q(date_created__lte=date_to)  # Use 'date_created' for filtering
+        total_consumable_form_fee_filter &= Q(created_at__lte=date_to)
 
     # Aggregations with filters
     total_loans_fee = LoanRequestFee.objects.filter(loan_fee_filter).aggregate(total=Sum('form_fee'))['total'] or 0
@@ -69,10 +76,13 @@ def all_income(request):
     payback_loans = LoanRepayback.objects.filter(loanrepayback_filter).aggregate(total=Sum('amount_paid'))['total'] or 0
     total_consumable_payback = PaybackConsumable.objects.filter(consumable_payback_filter).aggregate(total=Sum('amount_paid'))['total'] or 0
 
-    income = sum([total_loans_fee,total_savings,deducted_amount, payback_loans, total_consumable_payback,total_consumable_form_fee])
+    # CORRECTED: Use 'expenditure_amount' instead of 'total_price' and filter by 'date_added'
+    total_item_purchase = SellingPlan.objects.filter(item_purchase_filter).aggregate(total=Sum('profit'))['total'] or 0
     
+    # Calculate total income
+    income = sum([total_loans_fee, total_savings, deducted_amount, payback_loans, total_consumable_payback, total_consumable_form_fee, total_item_purchase])
 
-    filters_applied = any([ date_from, date_to])
+    filters_applied = any([date_from, date_to])
     context = {
         'total_loans_fee': total_loans_fee,
         'total_consumable_form_fee': total_consumable_form_fee,
@@ -83,7 +93,8 @@ def all_income(request):
         'income': income,
         'date_from': date_from,
         'date_to': date_to,
-        'filters_applied':filters_applied
+        'filters_applied': filters_applied,
+        'total_item_purchase': total_item_purchase
     }
     return render(request, "reports/all_income.html", context)
 
@@ -248,27 +259,25 @@ def loan_request_report(request):
     if filters['loan_type']: # If a loan type is selected
         loan_requests = loan_requests.filter(loan_type__name=filters['loan_type'])
 
-
-    # Annotate loan requests with total paid and balance
-    # Coalesce handles cases where there are no repayments yet (sum would be None)
     loan_requests = loan_requests.annotate(
-        total_paid=Coalesce(Sum('repaybacks__amount_paid'), 0.00, output_field=DecimalField()),
-        balance=ExpressionWrapper(
-            F('approved_amount') - Coalesce(Sum('repaybacks__amount_paid'), 0.00),
-            output_field=DecimalField()
-        ),
-        total_price=Coalesce(F('approved_amount'), F('amount'), output_field=DecimalField())
+    total_paid=Coalesce(Sum('repaybacks__amount_paid'), 0.00, output_field=DecimalField()),
+    balance_value=ExpressionWrapper(
+        F('approved_amount') - Coalesce(Sum('repaybacks__amount_paid'), 0.00),
+        output_field=DecimalField()
+    ),
+    total_price=Coalesce(F('approved_amount'), F('amount'), output_field=DecimalField())
     )
+
 
     # Calculate summary statistics
     summary = {
         'total_requests': loan_requests.count(),
         'total_value': loan_requests.aggregate(total_approved=Coalesce(Sum('approved_amount'), 0.00, output_field=DecimalField()))['total_approved'],
         'total_paid': loan_requests.aggregate(total_repaid=Coalesce(Sum('repaybacks__amount_paid'), 0.00, output_field=DecimalField()))['total_repaid'],
-        'total_balance': loan_requests.aggregate(total_outstanding=Coalesce(Sum('balance'), 0.00, output_field=DecimalField()))['total_outstanding'],
+        'total_balance': loan_requests.aggregate(total_outstanding=Coalesce(Sum('balance_value'), 0.00, output_field=DecimalField()))['total_outstanding'],
         'pending_count': loan_requests.filter(status='pending').count(),
         'approved_count': loan_requests.filter(status='approved').count(),
-        'paid_count': loan_requests.filter(status='paid').count(),
+        'paid_count': loan_requests.filter(status='Fullpaid').count(),
         'declined_count': loan_requests.filter(status='rejected').count(),
     }
 
@@ -293,6 +302,7 @@ def loan_request_report(request):
     page_obj = paginator.get_page(page_number)
 
     context = {
+        # 'requests': requests,
         'requests': page_obj,
         'summary': summary,
         'filters': filters,
@@ -681,7 +691,7 @@ def user_spending_report(request):
                 'outstanding_balance': outstanding_balance,
                 'pending_requests': user_requests.filter(status='Pending').count(),
                 'approved_requests': user_requests.filter(status='Approved').count(),
-                'paid_requests': user_requests.filter(status='Paid').count(),
+                'paid_requests': user_requests.filter(status='Fullpaid').count(),
                 'payment_completion_rate': (total_paid / total_requested * 100) if total_requested > 0 else 0
             })
     
@@ -770,7 +780,7 @@ def approval_workflow_report(request):
         'pending_requests': queryset.filter(status='Pending').count(),
         'approved_requests': queryset.filter(status='Approved').count(),
         'declined_requests': queryset.filter(status='Declined').count(),
-        'paid_requests': queryset.filter(status='Paid').count(),
+        'paid_requests': queryset.filter(status='Fullpaid').count(),
     }
     
     # Calculate approval rates
@@ -932,3 +942,553 @@ def report_api_data(request):
         })
     
     return JsonResponse({'error': 'Invalid chart type'}, status=400)
+
+
+
+# views.py - Fixed version (no model changes)
+import logging
+from datetime import datetime
+from decimal import Decimal
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q, Sum, F, DecimalField, ExpressionWrapper
+from django.db.models.functions import Coalesce
+from django.shortcuts import render
+
+
+import logging
+from decimal import Decimal
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q, Sum, F
+from datetime import datetime
+from django.utils.dateparse import parse_date
+
+# Import your models (make sure these are correct for your project)
+# from models import (
+#     PurchasedItem, ConsumableRequestDetail, ProjectFinanceRequest, 
+#     LoanRequest, Savings, Interest, PaybackConsumable, 
+#     ProjectFinancePayment, ConsumableFormFee, LoanRepayback, LoanRequestFee
+# )
+
+logger = logging.getLogger(__name__)
+
+@login_required
+def consolidated_report(request):
+    """Generate consolidated financial report with date filtering"""
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    # Parse and validate dates
+    parsed_date_from = None
+    parsed_date_to = None
+    
+    if date_from:
+        try:
+            parsed_date_from = parse_date(date_from)
+            if parsed_date_from is None:
+                raise ValueError("Invalid date format")
+        except (ValueError, TypeError):
+            context = {
+                'error': 'Invalid start date format. Please use YYYY-MM-DD format.',
+                'date_from': date_from,
+                'date_to': date_to,
+            }
+            return render(request, "reports/consolidated_report.html", context)
+    
+    if date_to:
+        try:
+            parsed_date_to = parse_date(date_to)
+            if parsed_date_to is None:
+                raise ValueError("Invalid date format")
+        except (ValueError, TypeError):
+            context = {
+                'error': 'Invalid end date format. Please use YYYY-MM-DD format.',
+                'date_from': date_from,
+                'date_to': date_to,
+            }
+            return render(request, "reports/consolidated_report.html", context)
+    
+    # Check if start date is after end date
+    if parsed_date_from and parsed_date_to and parsed_date_from > parsed_date_to:
+        context = {
+            'error': 'Start date cannot be later than end date',
+            'date_from': date_from,
+            'date_to': date_to,
+        }
+        return render(request, "reports/consolidated_report.html", context)
+
+    try:
+        filters = {}
+        if parsed_date_from:
+            filters['date_from'] = parsed_date_from
+        if parsed_date_to:
+            filters['date_to'] = parsed_date_to
+
+        # Calculate Total Expenditure (Money going out)
+        expenditure_data = calculate_total_expenditure(filters)
+        
+        # Calculate Total Income (Money coming in)
+        income_data = calculate_total_income(filters)
+        
+        # Calculate totals with proper error handling
+        total_expenditure = Decimal('0')
+        total_income = Decimal('0')
+        
+        try:
+            total_expenditure = sum(expenditure_data.values())
+            total_income = sum(income_data.values())
+        except (TypeError, ValueError) as e:
+            logger.error(f"Error calculating totals: {str(e)}")
+            total_expenditure = Decimal('0')
+            total_income = Decimal('0')
+        
+        # Calculate net position
+        net_position = total_income - total_expenditure
+        
+        filters_applied = bool(date_from or date_to)
+        
+        context = {
+            'total_expenditure': total_expenditure,
+            'total_income': total_income,
+            'net_position': net_position,
+            'date_from': date_from,
+            'date_to': date_to,
+            'filters_applied': filters_applied,
+            **expenditure_data,  # Unpack expenditure breakdown
+            **income_data,       # Unpack income breakdown
+        }
+        
+        return render(request, "reports/consolidated_report.html", context)
+        
+    except Exception as e:
+        logger.error(f"Error generating consolidated report: {str(e)}", exc_info=True)
+        context = {
+            'error': 'An error occurred while generating the report. Please try again.',
+            'date_from': date_from,
+            'date_to': date_to,
+        }
+        return render(request, "reports/consolidated_report.html", context)
+
+
+def calculate_total_expenditure(filters):
+    """Calculate total expenditure with proper error handling"""
+    date_from = filters.get('date_from')
+    date_to = filters.get('date_to')
+    
+    try:
+        # Build Q objects for filtering
+       
+        purchase_filter = Q()
+        consumable_expenditure_filter = Q()
+        finance_expenditure_filter = Q()
+        loan_disbursement_filter = Q()
+        
+        if date_from:
+           
+            purchase_filter &= Q(date_added__gte=date_from)
+            consumable_expenditure_filter &= Q(date_created__gte=date_from)
+            finance_expenditure_filter &= Q(created_at__gte=date_from)
+            loan_disbursement_filter &= Q(date_created__gte=date_from)
+
+        if date_to:
+           
+            purchase_filter &= Q(date_added__lte=date_to)
+            consumable_expenditure_filter &= Q(date_created__lte=date_to)
+            finance_expenditure_filter &= Q(created_at__lte=date_to)
+            loan_disbursement_filter &= Q(date_created__lte=date_to)
+
+       
+        
+        # 1. Staff purchases with null checks
+        try:
+            staff_purchases = PurchasedItem.objects.filter(
+                purchase_filter
+            ).aggregate(
+                total=Sum(
+                    F('unit_price') * F('quantity') + F('expenditure_amount'),
+                    output_field=models.DecimalField()
+                )
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating staff purchases: {str(e)}")
+            staff_purchases = Decimal('0')
+        
+        # 2. Member-requested consumables (cost to the organization)
+        try:
+            member_consumable_cost = ConsumableRequestDetail.objects.filter(
+                consumable_expenditure_filter,
+                request__status__in=['Approved', 'Itempicked', 'FullyPaid']
+            ).aggregate(
+                total=Sum(
+                    F('quantity') * F('item_price'),
+                    output_field=models.DecimalField()
+                )
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating member consumable cost: {str(e)}")
+            member_consumable_cost = Decimal('0')
+
+        # 3. Member-requested project finance (loan amount disbursed)
+        try:
+            member_finance_loans = ProjectFinanceRequest.objects.filter(
+                finance_expenditure_filter,
+                status__in=['Reviewed', 'Completed', 'FullyPaid']
+            ).aggregate(
+                total=Sum('requested_amount')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating member finance loans: {str(e)}")
+            member_finance_loans = Decimal('0')
+
+        # 4. Member-requested loans (loan amount disbursed)
+        try:
+            loan_disbursements = LoanRequest.objects.filter(
+                loan_disbursement_filter,
+                status__in=['approved', 'Fullpaid'],
+                approved_amount__isnull=False
+            ).aggregate(
+                total=Sum('approved_amount')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating loan disbursements: {str(e)}")
+            loan_disbursements = Decimal('0')
+
+        return {
+            'staff_purchases': staff_purchases,
+            'member_consumable_cost': member_consumable_cost,
+            'member_finance_loans': member_finance_loans,
+            'loan_disbursements': loan_disbursements,
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in calculate_total_expenditure: {str(e)}", exc_info=True)
+        return {
+           
+            'staff_purchases': Decimal('0'),
+            'member_consumable_cost': Decimal('0'),
+            'member_finance_loans': Decimal('0'),
+            'loan_disbursements': Decimal('0'),
+        }
+
+
+def calculate_total_income(filters):
+    """Calculate total income with proper filtering and error handling"""
+    date_from = filters.get('date_from')
+    date_to = filters.get('date_to')
+    
+    try:
+        # Build Q objects for filtering
+        admin_fee_filter = Q()
+        saving_filter = Q()
+        member_payback_filter = Q()
+        member_finance_payback_filter = Q()
+        member_fees_filter = Q()
+        loan_payback_filter = Q()
+        loan_fee_filter = Q()
+        
+        if date_from:
+            admin_fee_filter &= Q(date_deducted__gte=date_from)
+            saving_filter &= Q(date_created__gte=date_from)
+            member_payback_filter &= Q(repayment_date__gte=date_from)
+            member_finance_payback_filter &= Q(paid_at__gte=date_from)
+            member_fees_filter &= Q(created_at__gte=date_from)
+            loan_payback_filter &= Q(repayment_date__gte=date_from)
+            loan_fee_filter &= Q(created_at__gte=date_from)
+
+        if date_to:
+            admin_fee_filter &= Q(date_deducted__lte=date_to)
+            saving_filter &= Q(date_created__lte=date_to)
+            member_payback_filter &= Q(repayment_date__lte=date_to)
+            member_finance_payback_filter &= Q(paid_at__lte=date_to)
+            member_fees_filter &= Q(created_at__lte=date_to)
+            loan_payback_filter &= Q(repayment_date__lte=date_to)
+            loan_fee_filter &= Q(created_at__lte=date_to)
+
+        # 1. Income from saving items
+        try:
+            saving_income = Savings.objects.filter(
+                saving_filter
+            ).aggregate(
+                total=Sum('month_saving')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating saving income: {str(e)}")
+            saving_income = Decimal('0')
+
+        # 2. Income from Admin fee items
+        try:
+            admin_fee_income = Interest.objects.filter(
+                admin_fee_filter
+            ).aggregate(
+                total=Sum('amount_deducted')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating admin fee income: {str(e)}")
+            admin_fee_income = Decimal('0')
+
+        # 3. Member repayments for consumables
+        try:
+            consumable_payback_income = PaybackConsumable.objects.filter(
+                member_payback_filter
+            ).aggregate(
+                total=Sum('amount_paid')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating consumable payback income: {str(e)}")
+            consumable_payback_income = Decimal('0')
+
+        # 4. Member repayments for project finance
+        try:
+            finance_payback_income = ProjectFinancePayment.objects.filter(
+                member_finance_payback_filter
+            ).aggregate(
+                total=Sum('amount_paid')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating finance payback income: {str(e)}")
+            finance_payback_income = Decimal('0')
+
+        # 5. Income from consumable form fees
+        try:
+            form_fee_income = ConsumableFormFee.objects.filter(
+                member_fees_filter
+            ).aggregate(
+                total=Sum('form_fee')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating form fee income: {str(e)}")
+            form_fee_income = Decimal('0')
+
+        # 6. Member repayments for loans
+        try:
+            loan_payback_income = LoanRepayback.objects.filter(
+                loan_payback_filter
+            ).aggregate(
+                total=Sum('amount_paid')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating loan payback income: {str(e)}")
+            loan_payback_income = Decimal('0')
+
+        # 7. Income from loan form fees
+        try:
+            loan_form_fee_income = LoanRequestFee.objects.filter(
+                loan_fee_filter
+            ).aggregate(
+                total=Sum('form_fee')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating loan form fee income: {str(e)}")
+            loan_form_fee_income = Decimal('0')
+
+        return {
+            'saving_income': saving_income,
+            'admin_fee_income': admin_fee_income,
+            'consumable_payback_income': consumable_payback_income,
+            'finance_payback_income': finance_payback_income,
+            'form_fee_income': form_fee_income,
+            'loan_payback_income': loan_payback_income,
+            'loan_form_fee_income': loan_form_fee_income,
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in calculate_total_income: {str(e)}", exc_info=True)
+        return {
+            'saving_income': Decimal('0'),
+            'admin_fee_income': Decimal('0'),
+            'consumable_payback_income': Decimal('0'),
+            'finance_payback_income': Decimal('0'),
+            'form_fee_income': Decimal('0'),
+            'loan_payback_income': Decimal('0'),
+            'loan_form_fee_income': Decimal('0'),
+        }
+
+
+
+
+# logger = logging.getLogger(__name__)
+# @login_required
+# def consolidated_report(request):
+#     date_from = request.GET.get('date_from')
+#     date_to = request.GET.get('date_to')
+    
+#     if date_from and date_to and date_from > date_to:
+#         context = { 'error': 'Start date cannot be later than end date',
+#             'date_from': date_from,'date_to': date_to, }
+#         return render(request, "reports/consolidated_report.html", context)
+
+#     try:
+#         filters = {}
+#         if date_from:
+#             filters['date_from'] = date_from
+#         if date_to:
+#             filters['date_to'] = date_to
+
+#         # --- Calculate Total Expenditure (Money going out) ---
+#         expenditure_data = calculate_total_expenditure(filters)
+        
+#         # --- Calculate Total Income (Money coming in) ---
+#         income_data = calculate_total_income(filters)
+        
+#         # Calculate totals
+#         total_expenditure = sum(expenditure_data.values())
+#         total_income = sum(income_data.values())
+        
+#         # Calculate net position
+#         net_position = total_income - total_expenditure
+        
+#         filters_applied = bool(date_from or date_to)
+        
+#         context = {
+#             'total_expenditure': total_expenditure,
+#             'total_income': total_income,
+#             'net_position': net_position,
+#             'date_from': date_from,
+#             'date_to': date_to,
+#             'filters_applied': filters_applied,
+#             **expenditure_data,  # Unpack expenditure breakdown
+#             **income_data,       # Unpack income breakdown
+#         }
+        
+#         return render(request, "reports/consolidated_report.html", context)
+        
+#     except Exception as e:
+#         logger.error(f"Error generating consolidated report: {str(e)}")
+#         context = {'error': 'An error occurred while generating the report. Please try again.',
+#             'date_from': date_from,'date_to': date_to, }
+#         return render(request, "reports/consolidated_report.html", context)
+
+
+# def calculate_total_expenditure(filters):
+#     date_from = filters.get('date_from')
+#     date_to = filters.get('date_to')
+    
+#     # Build Q objects for filtering
+#     purchase_filter = Q()
+#     consumable_expenditure_filter = Q()
+#     finance_expenditure_filter = Q()
+#     loan_disbursement_filter = Q()
+    
+#     if date_from:
+#         purchase_filter &= Q(date_added__gte=date_from)
+#         consumable_expenditure_filter &= Q(date_created__gte=date_from)
+#         finance_expenditure_filter &= Q(created_at__gte=date_from)
+#         loan_disbursement_filter &= Q(date_created__gte=date_from)
+
+#     if date_to:
+#         purchase_filter &= Q(date_added__lte=date_to)
+#         consumable_expenditure_filter &= Q(date_created__lte=date_to)
+#         finance_expenditure_filter &= Q(created_at__lte=date_to)
+#         loan_disbursement_filter &= Q(date_created__lte=date_to)
+
+#     staff_purchases = PurchasedItem.objects.filter(
+#         purchase_filter
+#     ).aggregate(
+#         total=Sum(F('unit_price') * F('quantity') + F('expenditure_amount'))
+#     )['total'] or Decimal('0')
+    
+#     # 2. Member-requested consumables (cost to the organization)
+#     # Only include approved/completed requests
+#     member_consumable_cost = ConsumableRequestDetail.objects.filter(
+#         consumable_expenditure_filter,
+#         request__status__in=['Approved', 'Itempicked', 'FullyPaid']
+#     ).aggregate(
+#         total=Sum(F('quantity') * F('item_price'))
+#     )['total'] or Decimal('0')
+
+#     # 3. Member-requested project finance (loan amount disbursed)
+#     # Only include approved/completed requests
+#     member_finance_loans = ProjectFinanceRequest.objects.filter(
+#         finance_expenditure_filter,
+#         status__in=['Reviewed', 'Completed', 'FullyPaid']
+#     ).aggregate(total=Sum('requested_amount'))['total'] or Decimal('0')
+
+#     # 4. Member-requested loans (loan amount disbursed)
+#     # Only include actually approved loans with disbursed amounts
+#     loan_disbursements = LoanRequest.objects.filter(
+#         loan_disbursement_filter,
+#         status__in=['approved', 'paid'],
+#         approved_amount__isnull=False
+#     ).aggregate(total=Sum('approved_amount'))['total'] or Decimal('0')
+
+#     return {
+#         'staff_purchases': staff_purchases,
+#         'member_consumable_cost': member_consumable_cost,
+#         'member_finance_loans': member_finance_loans,
+#         'loan_disbursements': loan_disbursements,
+#     }
+
+
+# def calculate_total_income(filters):
+#     """Calculate total income with proper filtering"""
+#     date_from = filters.get('date_from')
+#     date_to = filters.get('date_to')
+    
+#     # Build Q objects for filtering
+#     admin_fee_filter = Q()
+#     saving_filter = Q()
+#     member_payback_filter = Q()
+#     member_finance_payback_filter = Q()
+#     member_fees_filter = Q()
+#     loan_payback_filter = Q()
+#     loan_fee_filter = Q()
+    
+#     if date_from:
+#         admin_fee_filter &= Q(created_at__gte=date_from)
+#         saving_filter &= Q(date_created__gte=date_from)
+#         member_payback_filter &= Q(repayment_date__gte=date_from)
+#         member_finance_payback_filter &= Q(paid_at__gte=date_from)
+#         member_fees_filter &= Q(created_at__gte=date_from)
+#         loan_payback_filter &= Q(repayment_date__gte=date_from)
+#         loan_fee_filter &= Q(created_at__gte=date_from)
+
+#     if date_to:
+#         admin_fee_filter &= Q(created_at__lte=date_to)
+#         saving_filter &= Q(date_created__lte=date_to)
+#         member_payback_filter &= Q(repayment_date__lte=date_to)
+#         member_finance_payback_filter &= Q(paid_at__lte=date_to)
+#         member_fees_filter &= Q(created_at__lte=date_to)
+#         loan_payback_filter &= Q(repayment_date__lte=date_to)
+#         loan_fee_filter &= Q(created_at__lte=date_to)
+
+#     # 1. Income from saving items
+#     saving_income = Savings.objects.filter(saving_filter
+#     ).aggregate( total=Sum(F('month_saving'))
+#     )['total'] or Decimal('0')
+
+#    # 2. Income from Admin fee items
+#     admin_fee_income = Interest.objects.filter(admin_fee_filter
+#     ).aggregate(total=Sum(F('amount_deducted'))
+#     )['total'] or Decimal('0')
+
+#     # 3. Member repayments for consumables
+#     consumable_payback_income = PaybackConsumable.objects.filter(
+#         member_payback_filter
+#     ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+
+#     # 4. Member repayments for project finance
+#     finance_payback_income = ProjectFinancePayment.objects.filter(
+#         member_finance_payback_filter
+#     ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+
+#     # 5. Income from consumable form fees
+#     form_fee_income = ConsumableFormFee.objects.filter( member_fees_filter
+#                 ).aggregate(total=Sum('form_fee'))['total'] or Decimal('0')
+
+#     # 6. Member repayments for loans
+#     loan_payback_income = LoanRepayback.objects.filter(loan_payback_filter
+#                 ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+
+#     # 7. Income from loan form fees
+#     loan_form_fee_income = LoanRequestFee.objects.filter(loan_fee_filter
+#                 ).aggregate(total=Sum('form_fee'))['total'] or Decimal('0')
+
+#     return {
+#         'saving_income': saving_income, 'admin_fee_income': admin_fee_income,
+#         'consumable_payback_income': consumable_payback_income,'finance_payback_income': finance_payback_income,
+#         'form_fee_income': form_fee_income,'loan_payback_income': loan_payback_income,
+#         'loan_form_fee_income': loan_form_fee_income,
+#     }
+
+
+

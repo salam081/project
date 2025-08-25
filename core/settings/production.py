@@ -36,12 +36,14 @@ INSTALLED_APPS = [
     
     'accounts', 
     'main', 
+   
     'consumable',
     'loan',
     'member',
     'savings',
     'PurchasedItems',
     'report',
+    'projectfinance',
 ]
 AUTH_USER_MODEL = 'accounts.User'
 MIDDLEWARE = [

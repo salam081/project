@@ -1,0 +1,93 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Income Report{% endblock %}
+
+{% block content %}
+<div class="content-card mt-4">
+    <h2 class="mt-4 mb-3 text-success text-center">Income Breakdown</h2>
+
+    <!-- Filter Form -->
+    <div class="row mb-1 no-print">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h3 class="text-center">Filter Report</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-center">
+                        <form method="get" class="w-100" style="max-width: 800px;">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3">
+                                    <label for="date_from" class="form-label fw-semibold">From Date</label>
+                                    <input type="date" id="date_from" name="date_from" class="form-control"
+                                           value="{{ date_from|default:'' }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="date_to" class="form-label fw-semibold">To Date</label>
+                                    <input type="date" id="date_to" name="date_to" class="form-control"
+                                           value="{{ date_to|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="search_query" class="form-label fw-semibold">Search Member</label>
+                                    <input type="text" id="search_query" name="search_query" class="form-control"
+                                           placeholder="e.g., John Doe"
+                                           value="{{ search_query|default:'' }}">
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="d-grid gap-3">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-search me-2"></i>Generate
+                                        </button>
+                                        <a href="{% url 'income_report' %}" class="btn btn-outline-danger">
+                                            <i class="bi bi-x-circle"></i> Clear
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    {% if error %}
+                        <p class="text-danger text-center mt-3">{{ error }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Income Breakdown Cards -->
+    <div class="row g-4 mb-5">
+        {% for item in income_breakdown %}
+            <div class="col-lg-4 col-md-6">
+                <div class="card border shadow h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div>
+                            <p class="card-title text-muted mb-1">{{ item.label }}</p>
+                            <h5 class="fw-bold text-success mb-0">
+                                ₦{{ item.amount|default:0|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center text-muted">
+                <p>No income records found for this filter.</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Total Income -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-12 text-center">
+            <div class="card border shadow h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-2">Total Income</h6>
+                    <h5 class="fw-bold text-success mb-0">
+                        ₦{{ total_income|default:0|floatformat:2 }}
+                    </h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

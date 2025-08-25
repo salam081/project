@@ -5,9 +5,9 @@
 {% block title %}Dashboard - Admin Panel{% endblock %}
 
 {% block content %}
-<div class="container  mt-1 col-md-8 ">
+
      <div class="col-md-12">
-        <div class="card shadow col-md-12">
+        <div class="content-card  shadow col-md-12">
             <div class="card-body">
                 {% if settings %}
                 <h4 class="text-center text-primary mb-4">Request Loan Form</h4>
@@ -58,20 +58,20 @@
                             <label for="bank_code" class="form-label">Bank Code <span class="text-danger">*</span></label>
                             <input type="text" id="bank_code" name="bank_code" class="form-control" readonly required>
                         </div>
-                    </div>
+                    
 
                     <!-- Payslip Upload -->
-                    <div class="mb-3">
+                    <div class="col-md-6 mb-3">
                         <label for="file_one" class="form-label">Upload Payslip <span class="text-danger">*</span></label>
                         <input type="file" class="form-control" id="file_one" name="file_one" required>
                     </div>
 
                     <!-- Guarantor IPPIS -->
-                    <div class="mb-3">
+                    <div class="col-md-6 mb-3">
                         <label for="guarantor_ippis" class="form-label">Guarantor IPPIS <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="guarantor_ippis" name="guarantor_ippis" placeholder="Enter guarantor IPPIS" required>
                     </div>
-
+                </div>
                     <!-- Submit Button -->
                     <div class="d-flex">
                         <button type="submit" class="btn btn-primary">Submit Request</button>
@@ -83,7 +83,7 @@
             </div>
         </div>
     </div>
-</div>
+
 <script src="/static/js/jquery.js"></script>
 
 <script>

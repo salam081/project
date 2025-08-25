@@ -58,8 +58,8 @@
                             <a class="btn btn-success " disabled><i class="bi bi-check"></i></a>
                         {% elif loan.status == 'rejected' %}
                         <button class="btn btn-danger btn-sm w-100" disabled>Rejected</button>
-                        {% elif loan.status == 'paid' %}
-                        <button class="btn btn-secondary btn-sm w-100" disabled>Paid</button>
+                        {% elif loan.status == 'Fullpaid' %}
+                        <button class="btn btn-secondary btn-sm w-100" disabled>Fullpaid</button>
                         {% else %}
                         <div class="d-flex flex-wrap gap-1">
                              <a href="{% url 'loan_request_detail' loan.id%}"class="btn btn-warning btn-sm" title="View Details"> <i class="bi bi-book"></i></a>

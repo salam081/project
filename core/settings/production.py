@@ -15,11 +15,15 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', cast=bool)
 
-# ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(",")
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
-# ✅ CSRF trusted origins (must start with http or https)
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS',  default='project-mow2.onrender.com').split(',')
+
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='https://project-mow2.onrender.com,http://localhost,http://127.0.0.1'
+).split(',')
+
+# CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
 # ALLOWED_HOSTS = []
 
 

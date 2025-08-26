@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <h2 class="text-primary mb-4">📊 Payment Analysis Report</h2>
+    <h4 class="text-dark mb-4">📊 Consumable Payments Analysis Report</h4>
 
     <!-- Filter Form -->
     <form method="get" class="row g-3 align-items-end mb-4">
@@ -28,34 +28,34 @@
     <!-- Summary Statistics -->
     <div class="row mb-4">
         <div class="col-md-3 mt-2">
-             <div class="card border-success shadow" style="border-left: 5px solid #22c214;">
+             <div class="card  shadow" style="border-top: 2px solid #22c214;">
                 <div class="card-body">
-                    <h6>Total Payments Received</h6>
-                    <h4>₦{{ payment_stats.total_payments|default:0|floatformat:2|intcomma }}</h4>
+                    <p>Total Payments Received</p>
+                    <h6 class="text-center">₦{{ payment_stats.total_payments|default:0|floatformat:2|intcomma }}</h6>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mt-2">
-             <div class="card border-warning shadow" style="border-left: 5px solid #ffc107;">
+             <div class="card  shadow" style="border-top: 2px solid #ffc107;">
                 <div class="card-body">
-                    <h6>Average Payment</h6>
-                    <h4>₦{{ payment_stats.avg_payment|default:0|floatformat:2|intcomma }}</h4>
+                    <p>Average Payment</p>
+                    <h6 class="text-center">₦{{ payment_stats.avg_payment|default:0|floatformat:2|intcomma }}</h6>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mt-2">
-             <div class="card border-danger shadow" style="border-left: 5px solid #d44127;">
+             <div class="card  shadow" style="border-top: 2px solid #d44127;">
                 <div class="card-body">
-                    <h6>Number of Payments</h6>
-                    <h4>{{ payment_stats.payment_count }}</h4>
+                    <p>Number of Payments</p>
+                    <h6 class="text-center">{{ payment_stats.payment_count }}</h6>
                 </div>
             </div>
         </div>
         <div class="col-md-3 text-danger mt-2">
-             <div class="card border-warning shadow" style="border-left: 5px solid #ffc107;">
+             <div class="card  shadow" style="border-top: 2px solid #ffc107;">
                 <div class="card-body">
                     <h6>Total Outstanding</h6>
-                    <h4>₦{{ total_outstanding|floatformat:2|intcomma }}</h4>
+                    <h6 class="text-center">₦{{ total_outstanding|floatformat:2|intcomma }}</h6>
                 </div>
             </div>
         </div>
@@ -65,7 +65,7 @@
     <div class="table-responsive mb-5">
         <h5 class="mb-3">📅 Monthly Payment Trends</h5>
         <table class="table  table-hover align-middle">
-        <thead class=" border-primary" style="border-left: 5px solid #484d9f; border-right: 5px solid #4547a3;">
+        <thead class="table-info" style="border-left: 5px solid #029c23ff; ">
                 <tr>
                     <th>Month</th>
                     <th>Total Paid</th>

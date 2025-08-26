@@ -75,8 +75,8 @@
                                             </td>
                                             <td>
                                                   <span class="status-badge 
-                                                {% if request_obj.status == 'Pending' %}status-pending
-                                                {% elif request_obj.status == 'Approved' %}status-active
+                                                {% if request_obj.status == 'pending' %}status-pending
+                                                {% elif request_obj.status == 'approved' %}status-active
                                                 {% elif request_obj.status == 'Itempicked' %}status-itempicked
                                                 {% elif request_obj.status == 'FullyPaid' %}status-completed
                                                 {% elif request_obj.status == 'Declined' %}status-cancelled
@@ -85,7 +85,7 @@
                                             </td>
                                             <td>
                                                 <span class="status-badge 
-                                                {% if request_item.status == 'Pending' %}status-pending
+                                                {% if request_item.status == 'pending' %}status-pending
                                                 {% elif request_item.status == 'Reviewed' %}status-active
                                                 {% elif request_item.status == 'Declined' %}status-cancelled
                                                 {% elif request_item.status == 'FullyPaid' %}status-completed

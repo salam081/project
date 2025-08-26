@@ -242,15 +242,15 @@
                </div>
                 <h3 class="">Select Items</h3>
                <div id="item-selection-container">
-    {% for item in items %}
+    {% for item in selling_plans %}
         <div class="item-row col-md-8">
             <input type="checkbox" id="item_{{ item.id }}" name="selected_items" value="{{ item.id }}">
             <label for="item_{{ item.id }}">
-                {{ item.title }} - <span class="price">₦{{ item.price|floatformat:0 }}</span>
+                {{ item.purchased_item.item_name }} - <span class="price">₦{{ item.selling_price_per_unit|floatformat:0 }}</span>
             </label>
             
             <span class="stock-info">
-                Stock: {{ item.quantity_in_stock }}
+                Stock: {{ item.quantity }}
             </span>
             
             <input type="number" name="quantity_{{ item.id }}" placeholder="Quantity" min="1" disabled required>

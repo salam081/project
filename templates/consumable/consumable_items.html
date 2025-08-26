@@ -33,9 +33,9 @@
                                 {% for item in consumables %}
                                 <tr>
                                     <td>{{ item.id }}</td>
-                                    <td>{{ item.title }}</td>
-                                    <td>{{ item.description }}</td>
-                                    <td>₦{{ item.price|floatformat:2 }}</td>
+                                    <td>{{ item.purchased_item.item_name }}</td>
+                                    <td>{{ item.description.description_title }}</td>
+                                    <td>₦{{ item.selling_price_per_unit|floatformat:2 }}</td>
                                    <td>
                                     <span class="status-badge 
                                         {% if item.available %}status-active

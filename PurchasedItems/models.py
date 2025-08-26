@@ -36,6 +36,7 @@ class ConsumablePurchasedRequest(models.Model):
 class PurchasedItem(models.Model):
     consumable_purchased_request = models.ForeignKey(ConsumablePurchasedRequest, on_delete=models.CASCADE, related_name='items'  )
     item_name = models.CharField(max_length=255)
+    description_title = models.TextField()
     quantity = models.IntegerField()
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     receipt = models.FileField(upload_to='receipts/', blank=True, null=True)
@@ -54,11 +55,12 @@ class SellingPlan(models.Model):
     purchased_item = models.OneToOneField(PurchasedItem, on_delete=models.CASCADE, related_name='selling_plan')
     selling_price_per_unit = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.IntegerField()
+    description = models.ForeignKey(PurchasedItem, on_delete=models.CASCADE, null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     date_created = models.DateField(auto_now_add=True)
     notes = models.TextField(blank=True, null=True)
     profit = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-
+    available = models.BooleanField(default=True)
 
     @property
     def total_sale_value(self):

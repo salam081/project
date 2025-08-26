@@ -384,125 +384,115 @@
     }
   </style>
 
-  <div class="request-detail-container fade-in">
-    <div class="detail-header d-flex justify-content-between align-items-center">
-      <h5>Consumable Request <span class="request-id">#{{ request.id }}</span></h5>
-      <span class="status-badge status-{{ request.status }}">{{ request.status }}</span>
-    </div>
-
-    <div class="row">
-      <div class="col-lg-7 col-md-12">
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>📋 Request Details</h5>
-            <div class="detail-section">
-              <div class="row">
-                <dt class="col-sm-4">👤 Requested By:</dt>
-                <dd class="col-sm-8">{{ request.user.get_full_name|default:request.user.username }}</dd>
-
-                <dt class="col-sm-4">📦 Consumable Type:</dt>
-                <dd class="col-sm-8">{{ request.consumable_type.name }}</dd>
-
-                <dt class="col-sm-4">📅 Loan Term:</dt>
-                <dd class="col-sm-8">
-                  {% if request.details.first %}
-                    <span class="info-icon">⏱</span>{{ request.details.first.loan_term_months }} Months
-                  {% else %}
-                    <span class="text-muted">N/A</span>
-                  {% endif %}
-                </dd>
-
-                <dt class="col-sm-4">🕒 Date Submitted:</dt>
-                <dd class="col-sm-8">{{ request.date_created|date:'F j, Y, P' }}</dd>
-
-                {% if request.file_payslpt %}
-                  <dt class="col-sm-4">💰 Payslip:</dt>
-                  <dd class="col-sm-5">
-                    <a href="{{ request.file_payslpt.url }}" target="_blank" class="btn btn-sm btn-primary payslip-link">
-                      View Payslip
-                    </a>
-                  </dd>
-                {% endif %}
-              </div>
-               <a href="{% url 'admin_consumables_list' %}" class="btn btn-secondary">
-                ← Back to List
-              </a>
-               {% if request.status == 'Pending' %}
-                  <form action="{% url 'admin_request_approve' request.id %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-success"> Approve</button>
-                  </form>
-                  <form action="{% url 'admin_request_reject' request.id %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Decline</button>
-                  </form>
-                {% endif %}
-            </div>
-            <hr style=" color: #100202ff;">
-               <div class=" col-md-12">
-        <div class="card shadow mt-2">
-          <div class="card-body">
-            <h4>Payment Summary</h4>
-           
-              <ul class="items-list">
-              
-                  <li class="d-flex justify-content-between align-items-center">
-                    <div>
-                      {% comment %} <div class="item-title">₦{{ total_paid|floatformat:2 }}</div> {% endcomment %}
-                      <div class="item-details fs-5">Total Paid: </div>
-                    </div>
-                    <div class="item-price">₦{{ total_paid|floatformat:2 }}</div>
-                  </li>
-               
-              </ul>
-              <ul class="items-list">
-              
-                  <li class="d-flex justify-content-between align-items-center">
-                   
-                    <div>
-                      {% comment %} <div class="item-title">₦{{ balance|floatformat:2 }}</div> {% endcomment %}
-                      <div class="item-details fs-5">Total Balance: </div>
-                    </div>
-                    <div class="item-price">₦{{ balance|floatformat:2 }}</div>
-                  </li>
-               
-              </ul>
-          </div>
-        </div>
+<div class="request-detail-container fade-in">
+  <div class="detail-header d-flex justify-content-between align-items-center">
+    <h5>Consumable Request <span class="request-id">#{{ consumable_request.id }}</span></h5>
+    <span class="status-badge status-{{ consumable_request.status }}">{{ consumable_request.status }}</span>
   </div>
-          </div>
-        </div>
-      </div>
-     
-      <div class="col-lg-5 col-md-12">
-        <div class="card shadow">
-          <div class="card-body">
-            <h4>🛒 Items Requested</h4>
-            {% if request.details.all %}
-              <ul class="items-list">
-                {% for detail in request.details.all %}
-                  <li class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div class="item-title">{{ detail.quantity }} × {{ detail.item.title }}</div>
-                      <div class="item-details">Unit Price: ₦{{ detail.item_price|floatformat:2 }}</div>
-                    </div>
-                    <div class="item-price">₦{{ detail.total_price|floatformat:2 }}</div>
-                  </li>
-                {% endfor %}
-              </ul>
-              <div class="total-price-summary">
-                💰 Total Amount: ₦{{ request.calculate_total_price|floatformat:2 }}
-              </div>
-            {% else %}
-              <div class="no-items-message">
-                <p>📭 No items were found for this request.</p>
-              </div>
+
+  <div class="row">
+    <div class="col-lg-7 col-md-12">
+      <div class="card shadow">
+        <div class="card-body">
+          <h5>📋 Request Details</h5>
+          <div class="detail-section">
+            <div class="row">
+              <dt class="col-sm-4">👤 Requested By:</dt>
+              <dd class="col-sm-8">{{ consumable_request.user.get_full_name|default:consumable_request.user.username }}</dd>
+
+              <dt class="col-sm-4">📦 Consumable Type:</dt>
+              <dd class="col-sm-8">{{ consumable_request.consumable_type.name }}</dd>
+
+              <dt class="col-sm-4">📅 Loan Term:</dt>
+              <dd class="col-sm-8">
+                {% if consumable_request.details.first %}
+                  <span class="info-icon">⏱</span>{{ consumable_request.details.first.loan_term_months }} Months
+                {% else %}
+                  <span class="text-muted">N/A</span>
+                {% endif %}
+              </dd>
+
+              <dt class="col-sm-4">🕒 Date Submitted:</dt>
+              <dd class="col-sm-8">{{ consumable_request.date_created|date:'F j, Y, P' }}</dd>
+
+              {% if consumable_request.file_payslpt %}
+                <dt class="col-sm-4">💰 Payslip:</dt>
+                <dd class="col-sm-5">
+                  <a href="{{ consumable_request.file_payslpt.url }}" target="_blank" class="btn btn-sm btn-primary payslip-link">
+                    View Payslip
+                  </a>
+                </dd>
+              {% endif %}
+            </div>
+
+            <a href="{% url 'admin_consumables_list' %}" class="btn btn-secondary">← Back to List</a>
+
+            {% if consumable_request.status == 'Pending' %}
+              <form action="{% url 'admin_request_approve' consumable_request.id %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">Approve</button>
+              </form>
+              <form action="{% url 'admin_request_reject' consumable_request.id %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Decline</button>
+              </form>
             {% endif %}
           </div>
+
+          <hr style="color: #100202ff;">
+
+          <div class="col-md-12">
+            <div class="card shadow mt-2">
+              <div class="card-body">
+                <h4>Payment Summary</h4>
+                <ul class="items-list">
+                  <li class="d-flex justify-content-between align-items-center">
+                    <div class="item-details fs-5">Total Paid:</div>
+                    <div class="item-price">₦{{ total_paid|floatformat:2 }}</div>
+                  </li>
+                  <li class="d-flex justify-content-between align-items-center">
+                    <div class="item-details fs-5">Total Balance:</div>
+                    <div class="item-price">₦{{ balance|floatformat:2 }}</div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-     
     </div>
+
+    <div class="col-lg-5 col-md-12">
+      <div class="card shadow">
+        <div class="card-body">
+          <h4>🛒 Items Requested</h4>
+          {% if consumable_request.details.all %}
+            <ul class="items-list">
+              {% for detail in consumable_request.details.all %}
+                <li class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="item-title">{{ detail.quantity }} × {{ detail.selling_item.purchased_item.item_name }}</div>
+                    <div class="item-details">Unit Price: ₦{{ detail.item_price|floatformat:2 }}</div>
+                  </div>
+                  <div class="item-price">₦{{ detail.total_price|floatformat:2 }}</div>
+                </li>
+              {% endfor %}
+            </ul>
+            <div class="total-price-summary">
+              💰 Total Amount: ₦{{ consumable_request.calculate_total_price|floatformat:2 }}
+            </div>
+          {% else %}
+            <div class="no-items-message">
+              <p>📭 No items were found for this request.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
   
 
     {% comment %} <div class="card col-md-7">

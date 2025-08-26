@@ -25,6 +25,9 @@ from main.models import *
 from PurchasedItems.models import *
 from member.models import *
 from projectfinance.models import *
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 # from accounts.decorator import group_required
 
 from datetime import date
@@ -358,23 +361,24 @@ def filtered_loan_repayments(request):
 
 
 
+@login_required
 def request_status_report(request):
-    """
-    Generates a status report for consumable requests with filtering and aggregation.
-    """
-    # Get filter parameters
+    # --- 1. Get filters ---
     status_filter = request.GET.get('status', 'all')
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
     user_filter = request.GET.get('user')
     consumable_type_filter = request.GET.get('consumable_type')
 
-    # Base queryset with optimized select_related and prefetch_related
+    # --- 2. Base queryset with optimized prefetch ---
     queryset = ConsumableRequest.objects.select_related(
         'user', 'approved_by', 'consumable_type'
-    ).prefetch_related('details__item', 'repayments')
+    ).prefetch_related(
+        'details__selling_item',  # ✅ changed from "item" to "selling_item"
+        'repayments'
+    )
 
-    # Apply filters
+    # --- 3. Apply filters ---
     if status_filter != 'all':
         queryset = queryset.filter(status=status_filter)
 
@@ -406,26 +410,18 @@ def request_status_report(request):
         except (ValueError, TypeError):
             pass
 
-    # Order queryset for consistent results
+    # --- 4. Order queryset ---
     queryset = queryset.order_by('-date_created')
 
-    # Create a list to hold request data with calculated fields
+    # --- 5. Build list with calculations ---
     requests_with_calculations = []
     for req in queryset:
-        # Calculate total price using the model method
-        total_price = req.calculate_total_price()
-        
-        # Calculate total paid using the model method
-        total_paid = req.total_paid()
-        
-        # Calculate balance
-        balance = req.balance()
-        
-        # Count items
+        total_price = Decimal(req.calculate_total_price() or 0)
+        total_paid = Decimal(req.total_paid() or 0)
+        balance = Decimal(req.balance() or 0)
         items_count = req.details.count()
-        
-        # Create a dictionary with all the data the template needs
-        req_data = {
+
+        requests_with_calculations.append({
             'id': req.id,
             'user': req.user,
             'date_created': req.date_created,
@@ -436,10 +432,9 @@ def request_status_report(request):
             'items_count': items_count,
             'approved_by': req.approved_by,
             'consumable_type': req.consumable_type,
-        }
-        requests_with_calculations.append(req_data)
+        })
 
-    # Calculate summary statistics
+    # --- 6. Summary statistics ---
     total_requests = len(requests_with_calculations)
     pending_count = sum(1 for req in requests_with_calculations if req['status'] == 'Pending')
     approved_count = sum(1 for req in requests_with_calculations if req['status'] == 'Approved')
@@ -447,34 +442,33 @@ def request_status_report(request):
     paid_count = sum(1 for req in requests_with_calculations if req['status'] == 'FullyPaid')
     declined_count = sum(1 for req in requests_with_calculations if req['status'] == 'Declined')
 
-    # Calculate financial totals
     total_value = sum(req['total_price'] for req in requests_with_calculations)
-    total_paid = sum(req['total_paid'] for req in requests_with_calculations)
-    total_balance = total_value - total_paid
+    total_paid_sum = sum(req['total_paid'] for req in requests_with_calculations)
+    total_balance = total_value - total_paid_sum
 
     summary = {
         'total_requests': total_requests,
         'pending_count': pending_count,
         'approved_count': approved_count,
+        'itempicked_count': itempicked_count,
         'paid_count': paid_count,
         'declined_count': declined_count,
-        'itempicked_count': itempicked_count,  # Added this new status
         'total_value': total_value,
-        'total_paid': total_paid,
+        'total_paid': total_paid_sum,
         'total_balance': total_balance,
     }
 
-    # Get list of available consumable types
     consumable_types = ConsumableType.objects.filter(available=True).order_by('name')
     users_with_requests = User.objects.filter(
         consumablerequest__isnull=False
     ).distinct().order_by('username')
-    
-    # Paginate the calculated requests
+
+    # --- 8. Paginate ---
     paginator = Paginator(requests_with_calculations, 25)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    # --- 9. Context ---
     context = {
         'requests': page_obj,
         'summary': summary,
@@ -491,7 +485,7 @@ def request_status_report(request):
             ('all', 'All Statuses'),
             ('Pending', 'Pending'),
             ('Approved', 'Approved'),
-            ('Itempicked', 'Item Picked'),  # Added this status from your model
+            ('Itempicked', 'Item Picked'),
             ('FullyPaid', 'Fully Paid'),
             ('Declined', 'Declined'),
         ]
@@ -502,10 +496,12 @@ def request_status_report(request):
 
 
 
+
 @login_required
 def payment_analysis_report(request):
     """Detailed payment analysis and trends with enhanced filtering and performance"""
 
+    # 1. --- FILTER INPUTS ---
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
     user_id = request.GET.get('user_id')
@@ -526,8 +522,13 @@ def payment_analysis_report(request):
         messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
         parsed_date_from = parsed_date_to = None
 
-    queryset = PaybackConsumable.objects.select_related('consumable_request__user', 'consumable_request')
+    # 2. --- BASE QUERYSET ---
+    queryset = PaybackConsumable.objects.select_related(
+        'consumable_request__user',
+        'consumable_request'
+    )
 
+    # Apply date filters
     if parsed_date_from:
         queryset = queryset.filter(repayment_date__gte=parsed_date_from)
     if parsed_date_to:
@@ -535,6 +536,7 @@ def payment_analysis_report(request):
     if user_id:
         queryset = queryset.filter(consumable_request__user_id=user_id)
 
+    # 3. --- PAYMENT STATS ---
     payment_stats = queryset.aggregate(
         total_payments=Sum('amount_paid'),
         avg_payment=Avg('amount_paid'),
@@ -542,8 +544,9 @@ def payment_analysis_report(request):
         min_payment=Min('amount_paid'),
         max_payment=Max('amount_paid')
     )
-    payment_stats = {k: v or 0 for k, v in payment_stats.items()}
+    payment_stats = {k: Decimal(v or 0) for k, v in payment_stats.items()}
 
+    # 4. --- MONTHLY PAYMENTS ---
     monthly_payments = queryset.annotate(
         month=TruncMonth('repayment_date')
     ).values('month').annotate(
@@ -552,6 +555,7 @@ def payment_analysis_report(request):
         avg_payment=Avg('amount_paid')
     ).order_by('month')
 
+    # 5. --- WEEKLY PAYMENTS (last 90 days) ---
     three_months_ago = timezone.now().date() - timedelta(days=90)
     weekly_payments = queryset.filter(
         repayment_date__gte=three_months_ago
@@ -562,16 +566,16 @@ def payment_analysis_report(request):
         payment_count=Count('id')
     ).order_by('week')
 
+    # 6. --- OUTSTANDING BALANCES ---
     outstanding_filter = Q(status__in=['Pending', 'Approved', 'Itempicked'])
     if status_filter != 'all':
         outstanding_filter &= Q(status=status_filter)
 
-    # Use database aggregation for outstanding totals to avoid Python loops
-    outstanding_data = ConsumableRequest.objects.filter(
-        outstanding_filter
-    ).annotate(
-        total_price=Sum(F('details__quantity') * F('details__item_price')),
+    # Use updated selling_item pricing instead of item_price
+    outstanding_data = ConsumableRequest.objects.filter(outstanding_filter).annotate(
+        total_price=Sum(F('details__quantity') * F('details__selling_item')),
         total_paid=Sum('repayments__amount_paid'),
+    ).annotate(
         balance=F('total_price') - F('total_paid')
     ).filter(
         balance__gt=0
@@ -579,9 +583,11 @@ def payment_analysis_report(request):
 
     total_outstanding = outstanding_data.aggregate(total=Sum('balance'))['total'] or 0
 
+    # 7. --- CALCULATE URGENCY + PERCENTAGES ---
     outstanding_data_with_urgency = []
     for req in outstanding_data:
         days_outstanding = (timezone.now().date() - req.date_created.date()).days
+
         if days_outstanding > 90:
             urgency = 'critical'
         elif days_outstanding > 60:
@@ -590,27 +596,28 @@ def payment_analysis_report(request):
             urgency = 'medium'
         else:
             urgency = 'low'
-        
-        # Calculate payment_percentage based on aggregated values
+
         payment_percentage = (req.total_paid / req.total_price * 100) if req.total_price else 0
-        
+
         outstanding_data_with_urgency.append({
             'request': req,
-            'total_price': req.total_price,
-            'total_paid': req.total_paid,
-            'balance': req.balance,
+            'total_price': req.total_price or Decimal(0),
+            'total_paid': req.total_paid or Decimal(0),
+            'balance': req.balance or Decimal(0),
             'days_outstanding': days_outstanding,
             'urgency': urgency,
-            'payment_percentage': payment_percentage
+            'payment_percentage': round(payment_percentage, 2),
         })
 
+    # 8. --- OUTSTANDING SUMMARY ---
     outstanding_summary = {
-        'critical': len([x for x in outstanding_data_with_urgency if x['urgency'] == 'critical']),
-        'high': len([x for x in outstanding_data_with_urgency if x['urgency'] == 'high']),
-        'medium': len([x for x in outstanding_data_with_urgency if x['urgency'] == 'medium']),
-        'low': len([x for x in outstanding_data_with_urgency if x['urgency'] == 'low']),
+        'critical': sum(1 for x in outstanding_data_with_urgency if x['urgency'] == 'critical'),
+        'high': sum(1 for x in outstanding_data_with_urgency if x['urgency'] == 'high'),
+        'medium': sum(1 for x in outstanding_data_with_urgency if x['urgency'] == 'medium'),
+        'low': sum(1 for x in outstanding_data_with_urgency if x['urgency'] == 'low'),
     }
-    
+
+    # 9. --- TOP PAYING USERS ---
     top_users = queryset.values(
         'consumable_request__user__username',
         'consumable_request__user__first_name',
@@ -620,15 +627,18 @@ def payment_analysis_report(request):
         payment_count=Count('id')
     ).order_by('-total_paid')[:10]
 
+    # 10. --- RECENT PAYMENTS (last 30 days) ---
     recent_payments = queryset.filter(
         repayment_date__gte=timezone.now().date() - timedelta(days=30)
     ).select_related('consumable_request__user').order_by('-repayment_date')[:10]
-    
+
+    # 11. --- FILTERS FOR FRONTEND ---
     month_list = ConsumableRequest.objects.dates('date_created', 'month', order='DESC')
     users_list = ConsumableRequest.objects.select_related('user').values(
         'user__id', 'user__username', 'user__first_name', 'user__last_name'
     ).distinct().order_by('user__username')
 
+    # 12. --- CONTEXT ---
     context = {
         'payment_stats': payment_stats,
         'monthly_payments': list(monthly_payments),
@@ -654,7 +664,6 @@ def payment_analysis_report(request):
     }
 
     return render(request, 'reports/consumable_payment_analysis_report.html', context)
-
 
 
 @login_required

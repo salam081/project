@@ -1,0 +1,226 @@
+{% extends 'base/base.html' %}
+{% block content %}
+
+<style>
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .header {
+        color: white;
+        padding: 30px;
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .header h2 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .form-content {
+        padding: 40px;
+    }
+
+    .form-group {
+        margin-bottom: 24px;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+        font-size: 0.95rem;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e1e5e9;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group input[type="file"] {
+        padding: 6px 10px;
+        background: #f8f9fa;
+        border-style: dashed;
+    }
+
+    #item-selection-container {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #e1e5e9;
+    }
+
+    .item-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border: 1px solid #e1e5e9;
+        transition: all 0.3s ease;
+    }
+
+    .item-row:hover {
+        border-color: #667eea;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    }
+
+    .item-row input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: #667eea;
+    }
+
+    .item-row label {
+        flex: 1;
+        font-weight: 500;
+        margin: 0;
+        cursor: pointer;
+        color: #333;
+    }
+
+    .item-row input[type="number"] {
+        width: 120px;
+        padding: 8px 12px;
+        border: 2px solid #e1e5e9;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .item-row input[type="number"]:disabled {
+        background: #f8f9fa;
+        color: #6c757d;
+        cursor: not-allowed;
+    }
+
+    .price {
+        font-weight: 600;
+        color: #28a745;
+    }
+
+    .no-items {
+        text-align: center;
+        color: #6c757d;
+        font-style: italic;
+        padding: 40px;
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 13px 22px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: block;
+        margin: 40px auto 0;
+        min-width: 200px;
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+</style>
+
+<div class="container mt-5" style="border-top: 3px solid #764ba2;">
+    <div class="header">
+        <h2>Request New Consumable</h2>
+    </div>
+    
+    <div class="form-content">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="row">
+                <div class="form-group col-md-6">
+                    <label for="id_loan_term_months">Loan Term (in Months)</label>
+                    <input type="number" name="loan_term_months" id="id_loan_term_months"
+                           placeholder="e.g., 6, 12, 24" min="1" required>
+                </div>
+
+                <div class="form-group col-md-6">
+                    <label for="id_file_payslpt">Payslip (Image)</label>
+                    <input type="file" name="file_payslpt" id="id_file_payslpt" accept="image/*">
+                </div>
+            </div>
+
+            <h3>Select Items from Selling Plan</h3>
+            <div id="item-selection-container">
+                {% for item in selling_plans %}
+                    <div class="item-row col-md-8">
+                        <input type="checkbox" id="item_{{ item.id }}" name="selected_items" value="{{ item.id }}">
+
+                        
+                        <label for="item_{{ item.id }}">
+                            {{ item.purchased_item.item_name }} — 
+                            <span class="price">₦{{ item.selling_price_per_unit|floatformat:0 }}</span>
+                        </label>
+                        
+                        <span class="stock-info">Stock: {{ item.quantity }}</span>
+                        
+                        <input type="number" name="quantity_{{ item.id }}" placeholder="Quantity" min="1" disabled required>
+                    </div>
+                {% empty %}
+                    <p class="no-items">No items are currently available in the Selling Plan.</p>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="submit-btn">Submit Request</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const itemContainer = document.getElementById('item-selection-container');
+
+        itemContainer.addEventListener('change', function(event) {
+            if (event.target.type === 'checkbox') {
+                const checkbox = event.target;
+                const quantityInput = document.querySelector(`input[name="quantity_${checkbox.value}"]`);
+                
+                if (quantityInput) {
+                    quantityInput.disabled = !checkbox.checked;
+                    if (checkbox.checked) {
+                        quantityInput.focus();
+                        quantityInput.style.background = 'white';
+                    } else {
+                        quantityInput.style.background = '#f8f9fa';
+                        quantityInput.value = '';
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+{% endblock content %}

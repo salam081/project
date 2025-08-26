@@ -3,54 +3,45 @@
 {% block content %}
 
 <h5 class="mb-4">My Consumable Requests</h5>
-<a href="{% url 'request_consumable' %}" class="btn btn-primary ">Make Now  Request</a>
-{% comment %} <div class="alert alert-info">
-    <strong>Total Remaining Balance:</strong> ₦{{ total_remaining|floatformat:2 }}
-</div> {% endcomment %}
-<div class="content-card mt-4 col-md-122 shadow">
+<a href="{% url 'request_consumable' %}" class="btn btn-primary mb-3">Make New Request</a>
+
+<div class="content-card mt-4 col-md-12 shadow">
     {% if consumable_data %}
         <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle mt-2">
-                <thead class="table-primary">
+                <thead class="table-info">
                     <tr>
                         <th>S/N</th>
                         <th class="text-nowrap" style="min-width: 120px;">Full Name</th>
                         <th class="text-nowrap" style="min-width: 120px;">Date Created</th>
                         <th class="text-nowrap" style="min-width: 120px;">Approved Amount (₦)</th>
                         <th class="text-nowrap" style="min-width: 120px;">Total Paid (₦)</th>
-                        <th>Balance (₦)</th>
+                        <th class="text-nowrap" style="min-width: 120px;">Balance (₦)</th>
                         <th class="text-nowrap" style="min-width: 120px;">Monthly Payment (₦)</th>
-                        {% comment %} <th>Items</th> {% endcomment %}
-                        <th>Acction</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for data in consumable_data %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
-                        <td class="text-nowrap" style="min-width: 120px;">{{ data.user.first_name }}</td>
-                        <td class="text-nowrap" style="min-width: 120px;">{{ data.consumable.date_created|date:"M d, Y" }}</td>
+                        <td class="text-nowrap" style="min-width: 120px;">
+                            {{ data.consumable.user.get_full_name|default:data.consumable.user.username }}
+                        </td>
+                        <td class="text-nowrap" style="min-width: 120px;">
+                            {{ data.consumable.date_created|date:"M d, Y" }}
+                        </td>
                         <td>₦{{ data.approved_amount|floatformat:2 }}</td>
                         <td>₦{{ data.total_paid|floatformat:2 }}</td>
                         <td>₦{{ data.balance|floatformat:2 }}</td>
                         <td>₦{{ data.monthly_payment|floatformat:2 }}</td>
-                        {% comment %} <td>
-                            {% if data.consumable.details.exists %}
-                                <ul class="list-unstyled mb-0">
-                                    {% for detail in data.consumable.details.all %}
-                                        <li>{{ detail.item.title }} (Qty: {{ detail.quantity }})</li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                                <em>No items</em>
-                            {% endif %}
-                        </td> {% endcomment %}
                         <td>
                             <div class="d-flex gap-2">
-                            <a href="{% url 'request_detail' data.consumable.id %}" class="btn btn-info btn-sm">View</a>
-
-                            <a href="{% url 'cancel_consumable_request' data.consumable.id %}" class="btn btn-danger btn-sm">Cancel</a>
-                       </div>
+                                <a href="{% url 'request_detail' data.consumable.id %}" class="btn btn-info btn-sm">View</a>
+                                {% if data.consumable.status == 'Pending' %}
+                                <a href="{% url 'cancel_consumable_request' data.consumable.id %}" class="btn btn-danger btn-sm">Cancel</a>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -63,5 +54,5 @@
         </div>
     {% endif %}
 </div>
-</div>
+
 {% endblock %}

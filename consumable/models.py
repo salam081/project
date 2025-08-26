@@ -4,6 +4,8 @@ from django.db import models
 from accounts.models import *
 from django.utils import timezone
 
+from PurchasedItems.models import SellingPlan
+
 
 class Item(models.Model):
     title = models.CharField(max_length=100)
@@ -40,10 +42,9 @@ class ConsumableType(models.Model):
 class ConsumableRequest(models.Model):
     STATUS_CHOICES = [
         ('Pending', 'Pending'),('Approved', 'Approved'), ('Itempicked', 'Itempicked '),
-        ('Declined', 'Declined'),('FullyPaid', 'FullyPaid'),
-    ]
+        ('Declined', 'Declined'),('FullyPaid', 'FullyPaid'),]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    consumable_type = models.ForeignKey(ConsumableType, on_delete=models.SET_NULL, null=True, blank=True, related_name='consumables_type')
+    consumable_type = models.ForeignKey(ConsumableType, on_delete=models.CASCADE, null=True, blank=True, related_name='consumables_type')
     date_created = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_consumables')
@@ -71,12 +72,12 @@ class ConsumableRequest(models.Model):
 
 class ConsumableRequestDetail(models.Model):
     request = models.ForeignKey(ConsumableRequest, on_delete=models.CASCADE, related_name="details")
-    item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    selling_item = models.ForeignKey(SellingPlan, on_delete=models.CASCADE) # 🔹 Change to SellingPlan
     quantity = models.PositiveIntegerField(default=1)
     item_price = models.DecimalField(max_digits=10, decimal_places=2)
     loan_term_months = models.PositiveIntegerField()
     approved_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    approval_date = models.DateField(null=True, blank=True) 
+    approval_date = models.DateField(null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -84,8 +85,7 @@ class ConsumableRequestDetail(models.Model):
         return self.quantity * self.item_price
     
     def __str__(self):
-        return f"{self.request} {self.quantity} x {self.item.title} (Req #{self.request.id})"
-    
+        return f"{self.request} {self.quantity} x {self.selling_item.purchased_item.item_name} (Req #{self.request.id})"
 
 
 class PaybackConsumable(models.Model):
@@ -98,19 +98,17 @@ class PaybackConsumable(models.Model):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
 
-        # If this is a new payment, calculate balance first
         if is_new:
-            total_price = self.consumable_request.calculate_total_price()
-
-            total_paid = (
-                self.consumable_request.repayments.aggregate(total=Sum('amount_paid'))['total'] or 0
-            ) + self.amount_paid  # Include current payment in calculation
+            # Ensure all values are Decimal
+            total_price = Decimal(self.consumable_request.calculate_total_price() or 0)
+            total_paid_aggregate = self.consumable_request.repayments.aggregate(total=Sum('amount_paid'))['total'] or Decimal('0.00')
+            total_paid = Decimal(total_paid_aggregate) + Decimal(self.amount_paid)
 
             self.balance_remaining = total_price - total_paid
 
-        super().save(*args, **kwargs)  # Save once
+        super().save(*args, **kwargs)
 
-        # If fully paid, update request status
+        # Update request status if fully paid
         if is_new and self.balance_remaining <= 0:
             self.consumable_request.status = 'FullyPaid'
             self.consumable_request.save(update_fields=['status'])

@@ -55,6 +55,51 @@ def consumable_dashboard(request):
     
     return render(request, 'consumable/consumable_dashboard.html', context)
 
+# def add_consumable_type(request):
+#     if request.method == 'POST':
+#         name = request.POST.get('name')
+#         description = request.POST.get('description')
+#         ConsumableType.objects.create(name=name, description=description, created_by=request.user)
+#         messages.success(request, 'Consumable type added successfully.')
+#         return redirect('consumable_dashboard')
+#     return render(request, 'consumable/add_consumable_type.html', )
+
+@login_required
+def add_consumable_type(request):
+    consumable_types = ConsumableType.objects.all()
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+        max_amount = request.POST.get('max_amount') or None
+        max_loan_term_months = request.POST.get('max_loan_term_months') or None
+        consumable_type_id = request.POST.get('consumable_type_id')
+        action = request.POST.get('action')  
+
+        if consumable_type_id:
+            consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
+
+            if action == 'toggle':
+                consumable_type.available = not consumable_type.available
+                consumable_type.save()
+                messages.success(request, 'Consumable type availability updated successfully.')
+                return redirect('add_consumable_type')
+
+            elif action == 'edit':
+                consumable_type.name = name
+                consumable_type.description = description
+                consumable_type.max_amount = max_amount
+                consumable_type.max_loan_term_months = max_loan_term_months
+                consumable_type.save()
+                messages.success(request, 'Consumable type updated successfully.')
+                return redirect('add_consumable_type')
+
+        else:
+            ConsumableType.objects.create(name=name,description=description,available=True,created_by=request.user)
+            messages.success(request, 'Consumable type created successfully.')
+            return redirect('add_consumable_type')
+
+    context = {'consumable_types': consumable_types}
+    return render(request, 'consumable/add_consumable_type.html', context)
 
 def process_item_pickup(request_id):
     try:
@@ -109,43 +154,7 @@ def consumable_fee(request):
     context = {"fee": fee,"consumable_req_form": consumable_req_form,'members':members, 'page_obj': page_obj}
     return render(request, "consumable/consumable_fee.html", context)
 
-@login_required
-def add_consumable_type(request):
-    consumable_types = ConsumableType.objects.all()
-    if request.method == 'POST':
-        name = request.POST.get('name')
-        description = request.POST.get('description')
-        max_amount = request.POST.get('max_amount') or None
-        max_loan_term_months = request.POST.get('max_loan_term_months') or None
-        consumable_type_id = request.POST.get('consumable_type_id')
-        action = request.POST.get('action')  
 
-        if consumable_type_id:
-            consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
-
-            if action == 'toggle':
-                consumable_type.available = not consumable_type.available
-                consumable_type.save()
-                messages.success(request, 'Consumable type availability updated successfully.')
-                return redirect('consumable_type')
-
-            elif action == 'edit':
-                consumable_type.name = name
-                consumable_type.description = description
-                consumable_type.max_amount = max_amount
-                consumable_type.max_loan_term_months = max_loan_term_months
-                consumable_type.save()
-                messages.success(request, 'Consumable type updated successfully.')
-                return redirect('consumable_type')
-
-        else:
-            ConsumableType.objects.create(name=name,description=description, max_amount=max_amount,
-                max_loan_term_months=max_loan_term_months,available=True,created_by=request.user)
-            messages.success(request, 'Consumable type created successfully.')
-            return redirect('consumable_type')
-
-    context = {'consumable_types': consumable_types}
-    return render(request, 'consumables/add_consumable_type.html', context)
 
 @login_required
 def consumable_items(request):
@@ -569,127 +578,6 @@ def add_single_consumable_payment(request):
         "consumable/add_single_payment.html",
         {"requests": requests_list, "selected_user": selected_user}
     )
-
-
-
-
-# @login_required
-# def upload_consumable_payment(request):
-#     # 1 — Group Itempicked requests by type
-#     available_requests = ConsumableRequest.objects.filter(status="Itempicked").select_related(
-#         "user", "consumable_type"
-#     )
-
-#     grouped_by_type = defaultdict(list)
-#     for req in available_requests:
-#         if req.balance() > 0:  # Uses model method
-#             grouped_by_type[req.consumable_type].append(req)
-
-#     grouped_list = sorted(grouped_by_type.items(), key=lambda x: x[0].name)
-
-#     # 2 — Handle upload
-#     if request.method == "POST":
-#         selected_type_id = request.POST.get("selected_type")
-#         repayment_date_str = request.POST.get("repayment_date")
-#         file = request.FILES.get("excel_file")
-
-#         if not selected_type_id or not repayment_date_str or not file:
-#             messages.error(request, "All fields are required.")
-#             return redirect("upload_consumable_payment")
-
-#         try:
-#             selected_type = ConsumableType.objects.get(id=selected_type_id)
-#         except ConsumableType.DoesNotExist:
-#             messages.error(request, "Invalid consumable type.")
-#             return redirect("upload_consumable_payment")
-
-#         try:
-#             repayment_date = datetime.strptime(repayment_date_str, "%Y-%m-%d").date()
-#         except ValueError:
-#             messages.error(request, "Invalid repayment date format. Use YYYY-MM-DD.")
-#             return redirect("upload_consumable_payment")
-
-#         try:
-#             df = pd.read_excel(file)
-#         except Exception as e:
-#             messages.error(request, f"Error reading Excel file: {e}")
-#             return redirect("upload_consumable_payment")
-
-#         required_cols = {"IPPIS", "Amount Paid"}
-#         if not required_cols.issubset(df.columns):
-#             messages.error(request, "Excel must contain 'IPPIS' and 'Amount Paid' columns.")
-#             return redirect("upload_consumable_payment")
-
-#         # Map IPPIS to requests for the selected type
-#         type_requests = grouped_by_type.get(selected_type, [])
-#         ippis_map = {
-#             str(req.user.member.ippis): req
-#             for req in type_requests
-#             if hasattr(req.user, "member") and req.user.member and req.user.member.ippis
-#         }
-
-#         paybacks_to_create = []
-#         skipped = []
-#         uploaded = 0
-
-#         with transaction.atomic():
-#             for _, row in df.iterrows():
-#                 ippis = str(row["IPPIS"]).strip()
-
-#                 # Convert amount to Decimal safely
-#                 try:
-#                     amount = Decimal(str(row["Amount Paid"]))
-#                     if amount <= 0:
-#                         raise ValueError("Amount must be positive")
-#                 except Exception:
-#                     skipped.append(f"{ippis} (invalid amount)")
-#                     continue
-
-#                 req = ippis_map.get(ippis)
-#                 if not req:
-#                     skipped.append(f"{ippis} (request not found)")
-#                     continue
-
-#                 # Skip duplicates for same date
-#                 if PaybackConsumable.objects.filter(
-#                     consumable_request=req,
-#                     repayment_date=repayment_date
-#                 ).exists():
-#                     skipped.append(f"{ippis} (already paid for date)")
-#                     continue
-
-#                 # Calculate remaining balance
-#                 total_price = Decimal(str(req.calculate_total_price() or 0))
-#                 total_paid_so_far = Decimal(str(req.repayments.aggregate(total=Sum("amount_paid"))["total"] or 0))
-#                 balance_remaining = total_price - (total_paid_so_far + amount)
-
-#                 paybacks_to_create.append(
-#                     PaybackConsumable(
-#                         consumable_request=req,
-#                         amount_paid=amount,
-#                         repayment_date=repayment_date,
-#                         balance_remaining=balance_remaining,
-#                         created_by=request.user
-#                     )
-#                 )
-#                 uploaded += 1
-
-#             if paybacks_to_create:
-#                 PaybackConsumable.objects.bulk_create(paybacks_to_create)
-
-#                 # Update request statuses after creating repayments
-#                 request_ids = {repay.consumable_request_id for repay in paybacks_to_create}
-#                 for req in ConsumableRequest.objects.filter(id__in=request_ids):
-#                     req.update_status_based_on_balance()
-
-#         messages.success(request, f"{uploaded} payment(s) uploaded successfully.")
-#         if skipped:
-#             messages.warning(request, f"Skipped IPPIS: {', '.join(skipped)}")
-
-#         return redirect("upload_consumable_payment")
-
-#     context = {"grouped_list": grouped_list}
-#     return render(request, "consumable/upload_consumable_payment.html", context)
 
 
 @login_required

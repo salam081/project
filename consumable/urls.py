@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('consumable_dashboard/', views.consumable_dashboard, name='consumable_dashboard'),
     path('consumable_fee/', views.consumable_fee, name='consumable_fee'),
+    path('add-consumable-type/', views.add_consumable_type, name='add_consumable_type'),
     path('consumable_items/', views.consumable_items, name='consumable_items'),
     path('delete_item/<id>/', views.delete_item, name='delete_item'),
 

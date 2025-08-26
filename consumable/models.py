@@ -29,8 +29,6 @@ class Item(models.Model):
 class ConsumableType(models.Model):
     name = models.CharField(max_length=100) 
     description = models.TextField(blank=True, null=True) 
-    max_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True) 
-    max_loan_term_months = models.PositiveIntegerField(null=True, blank=True) 
     available = models.BooleanField(default=True)
     created_by = models.ForeignKey(User,on_delete=models.CASCADE)
     

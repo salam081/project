@@ -24,21 +24,45 @@
         </div>
         
         <div class="navbar-right">
-            <button class="profile-btn" aria-label="Messages" title="Messages">
+            {% comment %} <button class="profile-btn" aria-label="Messages" title="Messages">
                 <i class="bi bi-envelope"></i>
                 <span class="badge">3</span>
-            </button>
-            
+            </button> {% endcomment %}
+           <div class="dropdown profile-dropdown">
+               <button class="profile-btn" data-bs-toggle="dropdown" aria-label="Messages" title="Messages">
+                   <i class="bi bi-envelope"></i>
+                   <span class="badge">3</span>
+               </button>
+               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="messagesDropdown">
+                   <li>
+                       <a class="dropdown-item" href="#">Message from John</a>
+                   </li>
+                   <li>
+                       <a class="dropdown-item" href="#">Project Update</a>
+                   </li>
+                   <li>
+                       <a class="dropdown-item" href="#">New Task Assigned</a>
+                   </li>
+                   <li>
+                       <hr class="dropdown-divider">
+                   </li>
+                   <li>
+                       <a class="dropdown-item text-center text-primary" href="#">View All Messages</a>
+                   </li>
+               </ul>
+           </div>
+
             {% comment %} <button class="profile-btn" aria-label="Notifications" title="Notifications">
                 <i class="bi bi-bell"></i>
                 <span class="badge">5</span>
             </button> {% endcomment %}
             
+        
             <div class="dropdown profile-dropdown">
                 <button class="profile-btn" data-bs-toggle="dropdown" aria-label="Profile menu" title="Profile">
                     <i class="bi bi-person-circle"></i>
                 </button>
-                <b class="text-white "data-bs-toggle="dropdown" aria-label="Profile menu" style="cosopointer">{{request.user.first_name}}</b>
+                <b class="text-white "data-bs-toggle="dropdown" aria-label="Profile menu" style="cursor: pointer;">{{request.user.first_name}}</b>
                 <ul class="dropdown-menu dropdown-menu-end">
                     {% if request.user.is_authenticated %}
                       {% if request.user.member %}

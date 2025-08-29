@@ -20,6 +20,8 @@ from django.db.models import Count
 from collections import defaultdict
 from django.utils import timezone
 import requests
+from django.utils import timezone
+from datetime import datetime
 from loan.models import *
 from .models import *
 from .forms import *
@@ -145,33 +147,40 @@ def admin_approve_finance_request(request, id):
 # MAIN REPORT GENERATION FUNCTION
 # ==========================================
 
+
 def generate_project_finance_report(start_date=None, end_date=None):
+    # Convert start and end dates into timezone-aware datetimes
+    if start_date:
+        start_date = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+    if end_date:
+        end_date = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+
     # Base queryset with optional date filtering
     base_filter = Q()
     if start_date:
         base_filter &= Q(created_at__gte=start_date)
     if end_date:
         base_filter &= Q(created_at__lte=end_date)
-    
-    # 1. EXPENDITURE (Total amount disbursed to members)
+
+    # 1. EXPENDITURE
     expenditure_data = ProjectFinanceRequest.objects.filter(
         base_filter,
-        status__in=['Reviewed', 'Completed', 'FullyPaid']  # Only approved/disbursed funds
+        status__in=['Reviewed', 'Completed', 'FullyPaid']
     ).aggregate(
         total_expenditure=Coalesce(Sum('requested_amount'), Decimal('0.00')),
         total_requests=Count('id')
     )
-    
-    # 2. INCOME (Total payments received from members)
+
+    # 2. INCOME
     income_data = ProjectFinancePayment.objects.filter(
-        request__created_at__gte=start_date if start_date else datetime.min,
-        request__created_at__lte=end_date if end_date else datetime.now()
+        request__created_at__gte=start_date if start_date else timezone.make_aware(datetime.min),
+        request__created_at__lte=end_date if end_date else timezone.now()
     ).aggregate(
         total_income=Coalesce(Sum('amount_paid'), Decimal('0.00')),
         total_payments=Count('id')
     )
-    
-    # 3. EXPECTED TOTAL INCOME (What we should receive in total)
+
+    # 3. EXPECTED TOTAL INCOME
     expected_income_data = ProjectFinanceRequest.objects.filter(
         base_filter,
         status__in=['Reviewed', 'Completed', 'FullyPaid'],
@@ -179,20 +188,18 @@ def generate_project_finance_report(start_date=None, end_date=None):
     ).aggregate(
         expected_total_income=Coalesce(Sum('total_repayment_amount'), Decimal('0.00'))
     )
-    
+
     # 4. PROFIT ANALYSIS
     total_expenditure = expenditure_data['total_expenditure']
     total_income = income_data['total_income']
     expected_total_income = expected_income_data['expected_total_income']
-    
+
     current_profit = total_income - total_expenditure
     expected_profit = expected_total_income - total_expenditure
     outstanding_amount = expected_total_income - total_income
-    
+
     # 5. PROFIT PER MEMBER
     member_profits = []
-    
-    # Get all members with project finance requests
     members_with_requests = ProjectFinanceRequest.objects.filter(
         base_filter,
         status__in=['Reviewed', 'Completed', 'FullyPaid']
@@ -201,48 +208,48 @@ def generate_project_finance_report(start_date=None, end_date=None):
         'application__member__member__first_name',
         'application__member__member__last_name'
     ).distinct()
-    
+
     for member_data in members_with_requests:
         member_id = member_data['application__member__id']
         member_name = f"{member_data['application__member__member__first_name']} {member_data['application__member__member__last_name']}"
-        
+
         # Get member's requests
         member_requests = ProjectFinanceRequest.objects.filter(
             base_filter,
             application__member__id=member_id,
             status__in=['Reviewed', 'Completed', 'FullyPaid']
         )
-        
-        # Calculate expenditure for this member
+
+        # Expenditure per member
         member_expenditure = member_requests.aggregate(
             total=Coalesce(Sum('requested_amount'), Decimal('0.00'))
         )['total']
-        
-        # Calculate income received from this member
+
+        # Income per member
         member_income = ProjectFinancePayment.objects.filter(
             request__application__member__id=member_id,
-            request__created_at__gte=start_date if start_date else datetime.min,
-            request__created_at__lte=end_date if end_date else datetime.now()
+            request__created_at__gte=start_date if start_date else timezone.make_aware(datetime.min),
+            request__created_at__lte=end_date if end_date else timezone.now()
         ).aggregate(
             total=Coalesce(Sum('amount_paid'), Decimal('0.00'))
         )['total']
-        
-        # Calculate expected income from this member
+
+        # Expected income per member
         member_expected_income = member_requests.filter(
             total_repayment_amount__isnull=False
         ).aggregate(
             total=Coalesce(Sum('total_repayment_amount'), Decimal('0.00'))
         )['total']
-        
-        # Calculate profits
+
+        # Profit calculations
         member_current_profit = member_income - member_expenditure
         member_expected_profit = member_expected_income - member_expenditure
         member_outstanding = member_expected_income - member_income
-        
-        # Get number of active requests
+
+        # Requests count
         active_requests = member_requests.exclude(status='FullyPaid').count()
         completed_requests = member_requests.filter(status='FullyPaid').count()
-        
+
         member_profits.append({
             'member_id': member_id,
             'member_name': member_name,
@@ -256,22 +263,22 @@ def generate_project_finance_report(start_date=None, end_date=None):
             'completed_requests': completed_requests,
             'total_requests': active_requests + completed_requests
         })
-    
-    # Sort by expected profit (descending)
+
+    # Sort members by expected profit
     member_profits.sort(key=lambda x: x['expected_profit'], reverse=True)
-    
+
     # 6. SUMMARY STATISTICS
     total_active_requests = ProjectFinanceRequest.objects.filter(
         base_filter,
         status__in=['Reviewed', 'Completed']
     ).count()
-    
+
     total_completed_requests = ProjectFinanceRequest.objects.filter(
         base_filter,
         status='FullyPaid'
     ).count()
-    
-    # Compile final report
+
+    # Final report
     report = {
         'summary': {
             'total_expenditure': total_expenditure,
@@ -292,14 +299,15 @@ def generate_project_finance_report(start_date=None, end_date=None):
             'unique_members': len(member_profits)
         },
         'member_profits': member_profits,
-        'generated_at': datetime.now(),
+        'generated_at': timezone.now(),
         'date_range': {
             'start_date': start_date,
             'end_date': end_date
         }
     }
-    
+
     return report
+
 
 
 # ==========================================

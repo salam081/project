@@ -5,7 +5,6 @@ from django.db.models import Sum,Min, Max, Count, Q, Avg , F, Case, When ,Expres
 from django.db.models.functions import Coalesce
 from django.db.models.functions import TruncMonth, TruncYear,TruncWeek
 from django.http import JsonResponse, HttpResponse
-from django.utils import timezone
 from django.core.paginator import Paginator
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -15,6 +14,9 @@ from django.db import transaction
 from decimal import Decimal
 from django.contrib import messages
 import json
+from django.utils import timezone
+from datetime import datetime, time
+from django.utils.dateparse import parse_date
 import logging
 from consumable.models import *
 from accounts.models import User
@@ -981,20 +983,119 @@ from django.utils.dateparse import parse_date
 
 logger = logging.getLogger(__name__)
 
+# @login_required
+# def consolidated_report(request):
+#     """Generate consolidated financial report with date filtering"""
+#     date_from = request.GET.get('date_from')
+#     date_to = request.GET.get('date_to')
+    
+#     # Parse and validate dates
+#     parsed_date_from = None
+#     parsed_date_to = None
+    
+#     if date_from:
+#         try:
+#             parsed_date_from = parse_date(date_from)
+#             if parsed_date_from is None:
+#                 raise ValueError("Invalid date format")
+#         except (ValueError, TypeError):
+#             context = {
+#                 'error': 'Invalid start date format. Please use YYYY-MM-DD format.',
+#                 'date_from': date_from,
+#                 'date_to': date_to,
+#             }
+#             return render(request, "reports/consolidated_report.html", context)
+    
+#     if date_to:
+#         try:
+#             parsed_date_to = parse_date(date_to)
+#             if parsed_date_to is None:
+#                 raise ValueError("Invalid date format")
+#         except (ValueError, TypeError):
+#             context = {
+#                 'error': 'Invalid end date format. Please use YYYY-MM-DD format.',
+#                 'date_from': date_from,
+#                 'date_to': date_to,
+#             }
+#             return render(request, "reports/consolidated_report.html", context)
+    
+#     # Check if start date is after end date
+#     if parsed_date_from and parsed_date_to and parsed_date_from > parsed_date_to:
+#         context = {
+#             'error': 'Start date cannot be later than end date',
+#             'date_from': date_from,
+#             'date_to': date_to,
+#         }
+#         return render(request, "reports/consolidated_report.html", context)
+
+#     try:
+#         filters = {}
+#         if parsed_date_from:
+#             filters['date_from'] = parsed_date_from
+#         if parsed_date_to:
+#             filters['date_to'] = parsed_date_to
+
+#         # Calculate Total Expenditure (Money going out)
+#         expenditure_data = calculate_total_expenditure(filters)
+        
+#         # Calculate Total Income (Money coming in)
+#         income_data = calculate_total_income(filters)
+        
+#         # Calculate totals with proper error handling
+#         total_expenditure = Decimal('0')
+#         total_income = Decimal('0')
+        
+#         try:
+#             total_expenditure = sum(expenditure_data.values())
+#             total_income = sum(income_data.values())
+#         except (TypeError, ValueError) as e:
+#             logger.error(f"Error calculating totals: {str(e)}")
+#             total_expenditure = Decimal('0')
+#             total_income = Decimal('0')
+        
+#         # Calculate net position
+#         net_position = total_income - total_expenditure
+        
+#         filters_applied = bool(date_from or date_to)
+        
+#         context = {
+#             'total_expenditure': total_expenditure,
+#             'total_income': total_income,
+#             'net_position': net_position,
+#             'date_from': date_from,
+#             'date_to': date_to,
+#             'filters_applied': filters_applied,
+#             **expenditure_data,  # Unpack expenditure breakdown
+#             **income_data,       # Unpack income breakdown
+#         }
+        
+#         return render(request, "reports/consolidated_report.html", context)
+        
+#     except Exception as e:
+#         logger.error(f"Error generating consolidated report: {str(e)}", exc_info=True)
+#         context = {
+#             'error': 'An error occurred while generating the report. Please try again.',
+#             'date_from': date_from,
+#             'date_to': date_to,
+#         }
+#         return render(request, "reports/consolidated_report.html", context)
+
+
+
 @login_required
 def consolidated_report(request):
     """Generate consolidated financial report with date filtering"""
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
     
-    # Parse and validate dates
     parsed_date_from = None
     parsed_date_to = None
     
+    # Parse start date
     if date_from:
         try:
             parsed_date_from = parse_date(date_from)
-            if parsed_date_from is None:
+            if not parsed_date_from:
                 raise ValueError("Invalid date format")
         except (ValueError, TypeError):
             context = {
@@ -1004,10 +1105,11 @@ def consolidated_report(request):
             }
             return render(request, "reports/consolidated_report.html", context)
     
+    # Parse end date
     if date_to:
         try:
             parsed_date_to = parse_date(date_to)
-            if parsed_date_to is None:
+            if not parsed_date_to:
                 raise ValueError("Invalid date format")
         except (ValueError, TypeError):
             context = {
@@ -1016,8 +1118,8 @@ def consolidated_report(request):
                 'date_to': date_to,
             }
             return render(request, "reports/consolidated_report.html", context)
-    
-    # Check if start date is after end date
+
+    # Check if start date > end date
     if parsed_date_from and parsed_date_to and parsed_date_from > parsed_date_to:
         context = {
             'error': 'Start date cannot be later than end date',
@@ -1029,33 +1131,25 @@ def consolidated_report(request):
     try:
         filters = {}
         if parsed_date_from:
-            filters['date_from'] = parsed_date_from
+            filters['date_from'] = timezone.make_aware(datetime.combine(parsed_date_from, time.min))
         if parsed_date_to:
-            filters['date_to'] = parsed_date_to
+            filters['date_to'] = timezone.make_aware(datetime.combine(parsed_date_to, time.max))
 
-        # Calculate Total Expenditure (Money going out)
+        # Calculate totals
         expenditure_data = calculate_total_expenditure(filters)
-        
-        # Calculate Total Income (Money coming in)
         income_data = calculate_total_income(filters)
         
-        # Calculate totals with proper error handling
-        total_expenditure = Decimal('0')
-        total_income = Decimal('0')
-        
+        # Handle potential errors
         try:
             total_expenditure = sum(expenditure_data.values())
             total_income = sum(income_data.values())
-        except (TypeError, ValueError) as e:
-            logger.error(f"Error calculating totals: {str(e)}")
+        except (TypeError, ValueError):
             total_expenditure = Decimal('0')
             total_income = Decimal('0')
         
-        # Calculate net position
         net_position = total_income - total_expenditure
-        
         filters_applied = bool(date_from or date_to)
-        
+
         context = {
             'total_expenditure': total_expenditure,
             'total_income': total_income,
@@ -1063,12 +1157,12 @@ def consolidated_report(request):
             'date_from': date_from,
             'date_to': date_to,
             'filters_applied': filters_applied,
-            **expenditure_data,  # Unpack expenditure breakdown
-            **income_data,       # Unpack income breakdown
+            **expenditure_data,
+            **income_data,
         }
         
         return render(request, "reports/consolidated_report.html", context)
-        
+
     except Exception as e:
         logger.error(f"Error generating consolidated report: {str(e)}", exc_info=True)
         context = {

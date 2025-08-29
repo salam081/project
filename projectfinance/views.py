@@ -148,42 +148,65 @@ def admin_approve_finance_request(request, id):
 # ==========================================
 
 
-def generate_project_finance_report(start_date=None, end_date=None):
+import xlsxwriter
+from decimal import Decimal
+from datetime import datetime, date
+from io import BytesIO
+
+from django.db.models import Sum, Count, Q
+from django.db.models.functions import Coalesce
+from django.utils import timezone
+from django.shortcuts import render
+from django.http import JsonResponse, HttpResponse
+from django.contrib.admin.views.decorators import staff_member_required
+from django.core.serializers.json import DjangoJSONEncoder
+
+
+# ==========================================
+# REFINED REPORT GENERATOR
+# ==========================================
+
+def generate_project_finance_report(start_date: date = None, end_date: date = None):
     # Convert start and end dates into timezone-aware datetimes
     if start_date:
-        start_date = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
-    if end_date:
-        end_date = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+        start_date_aware = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+    else:
+        start_date_aware = None
 
-    # Base queryset with optional date filtering
-    base_filter = Q()
-    if start_date:
-        base_filter &= Q(created_at__gte=start_date)
     if end_date:
-        base_filter &= Q(created_at__lte=end_date)
+        end_date_aware = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+    else:
+        end_date_aware = None
 
-    # 1. EXPENDITURE
-    expenditure_data = ProjectFinanceRequest.objects.filter(
-        base_filter,
-        status__in=['Reviewed', 'Completed', 'FullyPaid']
-    ).aggregate(
+    # Base filter for ProjectFinanceRequest
+    request_filter = Q(status__in=['Reviewed', 'Completed', 'FullyPaid'])
+    if start_date_aware:
+        request_filter &= Q(created_at__gte=start_date_aware)
+    if end_date_aware:
+        request_filter &= Q(created_at__lte=end_date_aware)
+
+    # Base filter for ProjectFinancePayment
+    payment_filter = Q()
+    if start_date_aware:
+        payment_filter &= Q(created_at__gte=start_date_aware)
+    if end_date_aware:
+        payment_filter &= Q(created_at__lte=end_date_aware)
+
+    # 1. TOTAL EXPENDITURE & REQUESTS
+    expenditure_data = ProjectFinanceRequest.objects.filter(request_filter).aggregate(
         total_expenditure=Coalesce(Sum('requested_amount'), Decimal('0.00')),
         total_requests=Count('id')
     )
 
-    # 2. INCOME
-    income_data = ProjectFinancePayment.objects.filter(
-        request__created_at__gte=start_date if start_date else timezone.make_aware(datetime.min),
-        request__created_at__lte=end_date if end_date else timezone.now()
-    ).aggregate(
+    # 2. TOTAL INCOME & PAYMENTS
+    income_data = ProjectFinancePayment.objects.filter(payment_filter).aggregate(
         total_income=Coalesce(Sum('amount_paid'), Decimal('0.00')),
         total_payments=Count('id')
     )
 
     # 3. EXPECTED TOTAL INCOME
     expected_income_data = ProjectFinanceRequest.objects.filter(
-        base_filter,
-        status__in=['Reviewed', 'Completed', 'FullyPaid'],
+        request_filter,
         total_repayment_amount__isnull=False
     ).aggregate(
         expected_total_income=Coalesce(Sum('total_repayment_amount'), Decimal('0.00'))
@@ -198,85 +221,59 @@ def generate_project_finance_report(start_date=None, end_date=None):
     expected_profit = expected_total_income - total_expenditure
     outstanding_amount = expected_total_income - total_income
 
-    # 5. PROFIT PER MEMBER
-    member_profits = []
-    members_with_requests = ProjectFinanceRequest.objects.filter(
-        base_filter,
-        status__in=['Reviewed', 'Completed', 'FullyPaid']
-    ).values(
+    # 5. PROFIT PER MEMBER (using a single query with annotate and values)
+    member_profits = ProjectFinanceRequest.objects.filter(request_filter).values(
         'application__member__id',
         'application__member__member__first_name',
         'application__member__member__last_name'
-    ).distinct()
+    ).annotate(
+        expenditure=Coalesce(Sum('requested_amount'), Decimal('0.00')),
+        expected_income=Coalesce(Sum('total_repayment_amount'), Decimal('0.00')),
+        # The income field still needs a separate query or a more complex subquery/join
+        # but for simplicity and readability, we'll keep the loop for this part.
+        # This is the most complex part to optimize with pure ORM aggregation.
+        total_requests=Count('id'),
+        active_requests=Count('id', filter=~Q(status='FullyPaid')),
+        completed_requests=Count('id', filter=Q(status='FullyPaid'))
+    ).order_by('-expected_income')
 
-    for member_data in members_with_requests:
-        member_id = member_data['application__member__id']
-        member_name = f"{member_data['application__member__member__first_name']} {member_data['application__member__member__last_name']}"
+    # Fetch income per member separately to avoid complex subqueries, still more efficient than original
+    member_ids = [m['application__member__id'] for m in member_profits]
+    member_incomes = ProjectFinancePayment.objects.filter(
+        payment_filter,
+        request__application__member__id__in=member_ids
+    ).values('request__application__member__id').annotate(
+        income_received=Coalesce(Sum('amount_paid'), Decimal('0.00'))
+    )
 
-        # Get member's requests
-        member_requests = ProjectFinanceRequest.objects.filter(
-            base_filter,
-            application__member__id=member_id,
-            status__in=['Reviewed', 'Completed', 'FullyPaid']
-        )
-
-        # Expenditure per member
-        member_expenditure = member_requests.aggregate(
-            total=Coalesce(Sum('requested_amount'), Decimal('0.00'))
-        )['total']
-
-        # Income per member
-        member_income = ProjectFinancePayment.objects.filter(
-            request__application__member__id=member_id,
-            request__created_at__gte=start_date if start_date else timezone.make_aware(datetime.min),
-            request__created_at__lte=end_date if end_date else timezone.now()
-        ).aggregate(
-            total=Coalesce(Sum('amount_paid'), Decimal('0.00'))
-        )['total']
-
-        # Expected income per member
-        member_expected_income = member_requests.filter(
-            total_repayment_amount__isnull=False
-        ).aggregate(
-            total=Coalesce(Sum('total_repayment_amount'), Decimal('0.00'))
-        )['total']
-
-        # Profit calculations
-        member_current_profit = member_income - member_expenditure
-        member_expected_profit = member_expected_income - member_expenditure
-        member_outstanding = member_expected_income - member_income
-
-        # Requests count
-        active_requests = member_requests.exclude(status='FullyPaid').count()
-        completed_requests = member_requests.filter(status='FullyPaid').count()
-
-        member_profits.append({
+    member_income_map = {item['request__application__member__id']: item['income_received'] for item in member_incomes}
+    
+    final_member_profits = []
+    for member in member_profits:
+        member_id = member['application__member__id']
+        member_income = member_income_map.get(member_id, Decimal('0.00'))
+        
+        member_expenditure = member['expenditure']
+        member_expected_income = member['expected_income']
+        
+        final_member_profits.append({
             'member_id': member_id,
-            'member_name': member_name,
+            'member_name': f"{member['application__member__member__first_name']} {member['application__member__member__last_name']}",
             'expenditure': member_expenditure,
             'income_received': member_income,
             'expected_income': member_expected_income,
-            'current_profit': member_current_profit,
-            'expected_profit': member_expected_profit,
-            'outstanding_amount': member_outstanding,
-            'active_requests': active_requests,
-            'completed_requests': completed_requests,
-            'total_requests': active_requests + completed_requests
+            'current_profit': member_income - member_expenditure,
+            'expected_profit': member_expected_income - member_expenditure,
+            'outstanding_amount': member_expected_income - member_income,
+            'active_requests': member['active_requests'],
+            'completed_requests': member['completed_requests'],
+            'total_requests': member['total_requests']
         })
-
-    # Sort members by expected profit
-    member_profits.sort(key=lambda x: x['expected_profit'], reverse=True)
-
-    # 6. SUMMARY STATISTICS
-    total_active_requests = ProjectFinanceRequest.objects.filter(
-        base_filter,
-        status__in=['Reviewed', 'Completed']
-    ).count()
-
-    total_completed_requests = ProjectFinanceRequest.objects.filter(
-        base_filter,
-        status='FullyPaid'
-    ).count()
+    
+    # Calculate collection rate and other summary stats
+    collection_rate = (total_income / expected_total_income * 100) if expected_total_income > 0 else 0
+    profit_margin_current = (current_profit / total_expenditure * 100) if total_expenditure > 0 else 0
+    profit_margin_expected = (expected_profit / total_expenditure * 100) if total_expenditure > 0 else 0
 
     # Final report
     report = {
@@ -287,105 +284,68 @@ def generate_project_finance_report(start_date=None, end_date=None):
             'current_profit': current_profit,
             'expected_profit': expected_profit,
             'outstanding_amount': outstanding_amount,
-            'profit_margin_current': (current_profit / total_expenditure * 100) if total_expenditure > 0 else 0,
-            'profit_margin_expected': (expected_profit / total_expenditure * 100) if total_expenditure > 0 else 0,
+            'profit_margin_current': profit_margin_current,
+            'profit_margin_expected': profit_margin_expected,
+            'collection_rate': collection_rate
         },
         'statistics': {
             'total_requests': expenditure_data['total_requests'],
             'total_payments_made': income_data['total_payments'],
-            'active_requests': total_active_requests,
-            'completed_requests': total_completed_requests,
+            'active_requests': ProjectFinanceRequest.objects.filter(request_filter).exclude(status='FullyPaid').count(),
+            'completed_requests': ProjectFinanceRequest.objects.filter(request_filter).filter(status='FullyPaid').count(),
             'average_request_amount': total_expenditure / expenditure_data['total_requests'] if expenditure_data['total_requests'] > 0 else 0,
-            'unique_members': len(member_profits)
+            'unique_members': len(final_member_profits)
         },
-        'member_profits': member_profits,
+        'member_profits': final_member_profits,
         'generated_at': timezone.now(),
         'date_range': {
             'start_date': start_date,
             'end_date': end_date
         }
     }
-
     return report
-
-
 
 # ==========================================
 # DJANGO VIEWS
 # ==========================================
 
-@staff_member_required  # Only allow staff/admin users
+def _get_dates_from_request(request):
+    """Helper function to safely parse dates from request.GET"""
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    start_date = None
+    end_date = None
+    try:
+        if start_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        if end_date_str:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return None, None
+    return start_date, end_date
+
+@staff_member_required
 def project_finance_report_view(request):
     context = {}
-    # Get date parameters from request
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    
-    # Parse dates if provided
-    if start_date:
-        try:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        except ValueError:
-            start_date = None
-    
-    if end_date:
-        try:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        except ValueError:
-            end_date = None
-    
-    # Generate report if we have parameters or if this is a GET request with dates
-    if request.method == 'GET' and (start_date or end_date or 'generate' in request.GET):
+    start_date, end_date = _get_dates_from_request(request)
+
+    if request.GET.get('generate') or (start_date or end_date):
         try:
             report = generate_project_finance_report(start_date, end_date)
             context['report'] = report
             context['success'] = True
         except Exception as e:
             context['error'] = f"Error generating report: {str(e)}"
-    
+
     return render(request, 'projectfinance/project_finance_report.html', context)
-
-
 
 
 @staff_member_required
 def project_finance_report_api(request):
-    """
-    API endpoint to get report data as JSON
-    """
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    
-    # Parse dates if provided
-    if start_date:
-        try:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        except ValueError:
-            return JsonResponse({'error': 'Invalid start date format'}, status=400)
-    
-    if end_date:
-        try:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        except ValueError:
-            return JsonResponse({'error': 'Invalid end date format'}, status=400)
-    
+    start_date, end_date = _get_dates_from_request(request)
     try:
         report = generate_project_finance_report(start_date, end_date)
-        
-        # Convert Decimal objects to float for JSON serialization
-        def decimal_to_float(obj):
-            if isinstance(obj, Decimal):
-                return float(obj)
-            elif isinstance(obj, dict):
-                return {k: decimal_to_float(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [decimal_to_float(v) for v in obj]
-            return obj
-        
-        report = decimal_to_float(report)
-        report['generated_at'] = report['generated_at'].isoformat()
-        
-        return JsonResponse(report)
+        return JsonResponse(report, encoder=DjangoJSONEncoder, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -394,43 +354,21 @@ def project_finance_report_api(request):
 def project_finance_report_excel(request):
     try:
         import xlsxwriter
-        from io import BytesIO
     except ImportError:
         return HttpResponse('Excel generation requires XlsxWriter. Install with: pip install XlsxWriter', status=500)
     
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    
-    # Parse dates
-    if start_date:
-        try:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        except ValueError:
-            start_date = None
-    
-    if end_date:
-        try:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        except ValueError:
-            end_date = None
+    start_date, end_date = _get_dates_from_request(request)
     
     try:
         report = generate_project_finance_report(start_date, end_date)
         
-        # Create Excel file in memory
         output = BytesIO()
         workbook = xlsxwriter.Workbook(output)
         
-        # Add formats
         header_format = workbook.add_format({
-            'bold': True,
-            'bg_color': '#2c3e50',
-            'font_color': 'white',
-            'align': 'center',
-            'valign': 'vcenter',
-            'border': 1
+            'bold': True, 'bg_color': '#2c3e50', 'font_color': 'white',
+            'align': 'center', 'valign': 'vcenter', 'border': 1
         })
-        
         currency_format = workbook.add_format({'num_format': '₦#,##0.00'})
         percent_format = workbook.add_format({'num_format': '0.00%'})
         
@@ -441,23 +379,24 @@ def project_finance_report_excel(request):
         summary_sheet.write('B3', 'Value')
         
         summary_data = [
-            ('Total Expenditure', float(report['summary']['total_expenditure'])),
-            ('Total Income', float(report['summary']['total_income'])),
-            ('Expected Total Income', float(report['summary']['expected_total_income'])),
-            ('Current Profit', float(report['summary']['current_profit'])),
-            ('Expected Profit', float(report['summary']['expected_profit'])),
-            ('Outstanding Amount', float(report['summary']['outstanding_amount'])),
-            ('Current Profit Margin', float(report['summary']['profit_margin_current']) / 100),
-            ('Expected Profit Margin', float(report['summary']['profit_margin_expected']) / 100)
+            ('Total Expenditure', report['summary']['total_expenditure']),
+            ('Total Income', report['summary']['total_income']),
+            ('Expected Total Income', report['summary']['expected_total_income']),
+            ('Current Profit', report['summary']['current_profit']),
+            ('Expected Profit', report['summary']['expected_profit']),
+            ('Outstanding Amount', report['summary']['outstanding_amount']),
+            ('Current Profit Margin', report['summary']['profit_margin_current'] / 100),
+            ('Expected Profit Margin', report['summary']['profit_margin_expected'] / 100),
+            ('Collection Rate', report['summary']['collection_rate'] / 100)
         ]
         
         for i, (metric, value) in enumerate(summary_data):
             row = i + 4
             summary_sheet.write(f'A{row}', metric)
-            if 'Margin' in metric:
-                summary_sheet.write(f'B{row}', value, percent_format)
+            if 'Margin' in metric or 'Rate' in metric:
+                summary_sheet.write(f'B{row}', float(value), percent_format)
             else:
-                summary_sheet.write(f'B{row}', value, currency_format)
+                summary_sheet.write(f'B{row}', float(value), currency_format)
         
         # Member profits sheet
         members_sheet = workbook.add_worksheet('Member Profits')
@@ -483,10 +422,8 @@ def project_finance_report_excel(request):
             members_sheet.write(row, 8, member['active_requests'])
             members_sheet.write(row, 9, member['completed_requests'])
         
-        # Adjust column widths
         summary_sheet.set_column('A:A', 25)
         summary_sheet.set_column('B:B', 15)
-        
         members_sheet.set_column('A:A', 25)
         members_sheet.set_column('B:G', 15)
         members_sheet.set_column('H:J', 12)
@@ -502,11 +439,8 @@ def project_finance_report_excel(request):
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         
         return response
-        
     except Exception as e:
         return HttpResponse(f'Error: {str(e)}', status=500)
-
-
 # ==========================================
 # SIMPLE TEST VIEW (Optional - for testing)
 # ==========================================

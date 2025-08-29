@@ -1,0 +1,280 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% block content %}
+    
+
+
+    <div class="container">
+        <div class="text-center" style=" font-weight: bolder; color: #79a2caff;">
+            <h4>Project Finance Report</h4>
+            <p>Comprehensive Financial Analysis Dashboard</p>
+        </div>
+            <!-- Filter Section -->
+            <div class="content-card shadow">
+                <h5 style="margin-bottom: 20px; color: #90b1d3ff;">📅 Report Filters</h5>
+                <form method="get" class="">
+                    <div class="row">
+                    <div class="col-md-4">
+                        <label for="start_date">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ request.GET.start_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="end_date">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ request.GET.end_date }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-success"> Generate</button>
+                    <a href="{% url 'project_finance_report' %}" class="btn btn-secondary"> Clear</a>
+                    </div>
+                    </div>
+                </form>
+            </div>
+
+            {% if report %}
+            <!-- Date Range Info -->
+            {% if report.date_range.start_date or report.date_range.end_date %}
+             <div class="alert alert-info">
+                <strong>📊 Report Period:</strong> 
+                {{ report.date_range.start_date|default:"Beginning" }} to {{ report.date_range.end_date|default:"Present" }}
+                <br>
+                <strong>🕒 Generated:</strong> {{ report.generated_at|date:"F j, Y \a\t g:i A" }}
+            </div>
+            {% endif %}
+
+
+<div class="stats-grid mt-3">
+    <div class="stat-card  shadow">
+        <div class="stat-icon bg-secondary">
+            <i class="bi bi-currency-dollar"></i>
+        </div>
+        <div class="stat-content">
+            <h5>₦{{ report.summary.total_expenditure|floatformat:2 }}</h5>
+            <p>Total Expenditure</p>
+        </div>
+    </div>
+
+    <div class="stat-card  shadow">
+        <div class="stat-icon bg-info">
+            <i class="bi bi-cash-stack"></i>
+        </div>
+        <div class="stat-content">
+            <h5>₦{{ report.summary.total_income|floatformat:2 }}</h5>
+            <p>Total Income</p>
+        </div>
+    </div>
+
+    <div class="stat-card  shadow">
+        <div class="stat-icon bg-success">
+            <i class="bi bi-graph-up"></i>
+        </div>
+        <div class="stat-content">
+            <h5 class="{% if report.summary.current_profit >= 0 %}positive{% else %}negative{% endif %}">
+                ₦{{ report.summary.current_profit|floatformat:2 }}
+            </h5>
+            <p>Current Profit</p>
+        </div>
+    </div>
+
+    <div class="stat-card  shadow">
+        <div class="stat-icon bg-warning">
+            <i class="bi bi-clock-history"></i>
+        </div>
+        <div class="stat-content">
+            <h5>₦{{ report.summary.outstanding_amount|floatformat:2 }}</h5>
+            <p>Outstanding</p>
+        </div>
+    </div>
+</div>
+
+
+<h3 style="margin-bottom: 20px; color: #2c504eff;">📈 Expected vs Current Performance</h3>
+
+<div class="stats-grid">
+    <div class="stat-card  shadow">
+        <div class="stat-icon bg-secondary">
+            <i class="bi bi-currency-dollar"></i>
+        </div>
+        <div class="stat-content">
+            <h6>₦{{ report.summary.expected_total_income|floatformat:0 }}</h6>
+            <p>Expected Total Income</p>
+        </div>
+    </div>
+
+    <div class="stat-card  shadow">
+        <div class="stat-icon bg-info">
+            <i class="bi bi-cash-stack"></i>
+        </div>
+        <div class="stat-content">
+           <h6 class="{% if report.summary.expected_profit >= 0 %}positive{% else %}negative{% endif %}">
+                    ₦{{ report.summary.expected_profit|floatformat:0 }}
+                </h6>
+                <p>Expected Profit</p>
+        </div>
+    </div>
+
+    {% comment %} <div class="stat-card  shadow">
+        <div class="stat-icon bg-success">
+            <i class="bi bi-graph-up"></i>
+        </div>
+        <div class="stat-content">
+            <h5>{{ report.summary.profit_margin_expected|floatformat:1 }}%</h5>
+            <p>Expected Profit Margin</p>
+        </div>
+    </div> {% endcomment %}
+
+    <div class="stat-card  shadow">
+        <div class="stat-icon bg-warning">
+            <i class="bi bi-clock-history"></i>
+        </div>
+        <div class="stat-content">
+            <h6>{{ report.summary.expected_total_income|floatformat:1 }}%</h6>
+            <p>Collection Rate</p>
+        </div>
+    </div>
+</div>
+
+---
+
+
+            <!-- Key Statistics -->
+            {% comment %} <div class="stats-section">
+                <h3 style="margin-bottom: 20px; color: #2c3e50;">📊 Key Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number">{{ report.statistics.total_requests }}</span>
+                        <div class="stat-label">Total Requests</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ report.statistics.active_requests }}</span>
+                        <div class="stat-label">Active Requests</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ report.statistics.completed_requests }}</span>
+                        <div class="stat-label">Completed Requests</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ report.statistics.unique_members }}</span>
+                        <div class="stat-label">Unique Members</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">₦{{ report.statistics.average_request_amount|floatformat:0 }}</span>
+                        <div class="stat-label">Average Request Amount</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ report.statistics.total_payments_made }}</span>
+                        <div class="stat-label">Total Payments Made</div>
+                    </div>
+                </div>
+            </div> {% endcomment %}
+
+            <!-- Member Profits Table -->
+           
+                <h2 class="section-title">👥 Individual Member Performance</h2>
+                <div class="content-card shadow ">
+                {% if report.member_profits %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-fixed">
+                        <thead class="table-info">
+                            <tr>
+                                <th>Member </th>
+                                <th>Expenditure</th>
+                                <th class="text-nowrap text-truncate" style="max-width: 270px;">Income Received</th>
+                                <th class="text-nowrap text-truncate" style="max-width: 270px;">Expected Income</th>
+                                <th class="text-nowrap text-truncate" style="max-width: 270px;">Current Profit</th>
+                                <th class="text-nowrap text-truncate" style="max-width: 270px;">Expected Profit</th>
+                                <th>Outstanding</th>
+                                {% comment %} <th>Requests</th> {% endcomment %}
+                                <th style="width: 300px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in report.member_profits %}
+                            <tr>
+                                <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ member.member_name }}</td>
+                                <td >₦{{ member.expenditure|floatformat:2 }}</td>
+                                <td >₦{{ member.income_received|floatformat:2 }}</td>
+                                <td class="amount">₦{{ member.expected_income|floatformat:2 }}</td>
+                                <td class="amount {% if member.current_profit >= 0 %}positive{% else %}negative{% endif %}">
+                                    ₦{{ member.current_profit|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if member.expected_profit >= 0 %}positive{% else %}negative{% endif %}">
+                                    ₦{{ member.expected_profit|floatformat:2 }}
+                                </td>
+                                <td class="amount">₦{{ member.outstanding_amount|floatformat:2 }}</td>
+                                {% comment %} <td style="text-align: center;">{{ member.total_requests }}</td> {% endcomment %}
+                                <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                                    {% if member.active_requests > 0 %}
+                                        <span class="status-badge d-flex status-active">{{ member.active_requests }} Active</span>
+                                    {% endif %}
+                                    {% if member.completed_requests > 0 %}
+                                        <span class="status-badge d-flex status-completed text-white">{{ member.completed_requests }} Fully Paid</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center">
+                        <p>📋 No member data available for the selected period.</p>
+                        <p style="margin-top: 10px; font-size: 1rem;">This could mean:</p>
+                        <ul style="list-style: none; margin-top: 10px;">
+                            <li>• No approved/completed requests in this timeframe</li>
+                            <li>• All requests are still pending approval</li>
+                            <li>• Date filter may be too restrictive</li>
+                        </ul>
+                    </div>
+                </div>
+                    {% endif %}
+            </div>
+
+            <!-- Export Section -->
+            <div class="text-center mt-3">
+                <h6>📥 Export Report</h6>
+                <p>Download this report in different formats for sharing or archival</p>
+                <br>
+               
+                <a href="{% url 'project_finance_report_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+                    📊 Export as Excel
+                </a>
+            </div>
+
+            {% else %}
+            <!-- No Report Generated Yet -->
+            <div class="text-center shadow content-card" style="padding: 40px; font-weight: bolder; margin-top: 20px; color: #79a2caff;">
+                <h3>📊 Generate Your Financial Report</h3>
+                <p>Select a date range above and click "Generate Report" to view comprehensive financial analysis.</p>
+                <br>
+                <p style="font-size: 1rem; color: #6c757d;">
+                    💡 <strong>Tip:</strong> Leave dates empty to generate an all-time report, or specify a range for focused analysis.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add loading effect to form submission
+            const form = document.querySelector('.filter-form');
+            const submitButton = form.querySelector('button[type="submit"]');
+            
+            form.addEventListener('submit', function() {
+                submitButton.innerHTML = '<span class="loading"></span> Generating...';
+                submitButton.disabled = true;
+            });
+
+            // Add smooth scrolling to table when data loads
+            {% if report.member_profits %}
+            const table = document.querySelector('.table-section');
+            if (table) {
+                setTimeout(() => {
+                    table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 500);
+            }
+            {% endif %}
+        });
+    </script>
+
+{% endblock %}

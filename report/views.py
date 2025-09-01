@@ -1235,14 +1235,14 @@ def calculate_total_expenditure(filters):
         try:
             member_finance_loans = ProjectFinanceRequest.objects.filter(
                 finance_expenditure_filter,
-                status__in=['Reviewed', 'Completed', 'FullyPaid']
+                status__in=['Reviewed', 'Approved', 'FullyPaid']
             ).aggregate(
                 total=Sum('requested_amount')
             )['total'] or Decimal('0')
         except Exception as e:
             logger.error(f"Error calculating member finance loans: {str(e)}")
             member_finance_loans = Decimal('0')
-
+            print(member_finance_loans,'member_finance_loans')
         # 4. Member-requested loans (loan amount disbursed)
         try:
             loan_disbursements = LoanRequest.objects.filter(
@@ -1293,7 +1293,7 @@ def calculate_total_income(filters):
             admin_fee_filter &= Q(date_deducted__gte=date_from)
             saving_filter &= Q(date_created__gte=date_from)
             member_payback_filter &= Q(repayment_date__gte=date_from)
-            member_finance_payback_filter &= Q(paid_at__gte=date_from)
+            member_finance_payback_filter &= Q(amount_paid__gte=date_from)
             member_fees_filter &= Q(created_at__gte=date_from)
             loan_payback_filter &= Q(repayment_date__gte=date_from)
             loan_fee_filter &= Q(created_at__gte=date_from)
@@ -1302,7 +1302,7 @@ def calculate_total_income(filters):
             admin_fee_filter &= Q(date_deducted__lte=date_to)
             saving_filter &= Q(date_created__lte=date_to)
             member_payback_filter &= Q(repayment_date__lte=date_to)
-            member_finance_payback_filter &= Q(paid_at__lte=date_to)
+            member_finance_payback_filter &= Q(created_at__lte=date_to)
             member_fees_filter &= Q(created_at__lte=date_to)
             loan_payback_filter &= Q(repayment_date__lte=date_to)
             loan_fee_filter &= Q(created_at__lte=date_to)
@@ -1350,7 +1350,7 @@ def calculate_total_income(filters):
         except Exception as e:
             logger.error(f"Error calculating finance payback income: {str(e)}")
             finance_payback_income = Decimal('0')
-
+            print('finance_payback_income',finance_payback_income)
         # 5. Income from consumable form fees
         try:
             form_fee_income = ConsumableFormFee.objects.filter(
@@ -1361,7 +1361,7 @@ def calculate_total_income(filters):
         except Exception as e:
             logger.error(f"Error calculating form fee income: {str(e)}")
             form_fee_income = Decimal('0')
-
+            
         # 6. Member repayments for loans
         try:
             loan_payback_income = LoanRepayback.objects.filter(
@@ -1409,189 +1409,7 @@ def calculate_total_income(filters):
 
 
 
-# logger = logging.getLogger(__name__)
-# @login_required
-# def consolidated_report(request):
-#     date_from = request.GET.get('date_from')
-#     date_to = request.GET.get('date_to')
-    
-#     if date_from and date_to and date_from > date_to:
-#         context = { 'error': 'Start date cannot be later than end date',
-#             'date_from': date_from,'date_to': date_to, }
-#         return render(request, "reports/consolidated_report.html", context)
 
-#     try:
-#         filters = {}
-#         if date_from:
-#             filters['date_from'] = date_from
-#         if date_to:
-#             filters['date_to'] = date_to
-
-#         # --- Calculate Total Expenditure (Money going out) ---
-#         expenditure_data = calculate_total_expenditure(filters)
-        
-#         # --- Calculate Total Income (Money coming in) ---
-#         income_data = calculate_total_income(filters)
-        
-#         # Calculate totals
-#         total_expenditure = sum(expenditure_data.values())
-#         total_income = sum(income_data.values())
-        
-#         # Calculate net position
-#         net_position = total_income - total_expenditure
-        
-#         filters_applied = bool(date_from or date_to)
-        
-#         context = {
-#             'total_expenditure': total_expenditure,
-#             'total_income': total_income,
-#             'net_position': net_position,
-#             'date_from': date_from,
-#             'date_to': date_to,
-#             'filters_applied': filters_applied,
-#             **expenditure_data,  # Unpack expenditure breakdown
-#             **income_data,       # Unpack income breakdown
-#         }
-        
-#         return render(request, "reports/consolidated_report.html", context)
-        
-#     except Exception as e:
-#         logger.error(f"Error generating consolidated report: {str(e)}")
-#         context = {'error': 'An error occurred while generating the report. Please try again.',
-#             'date_from': date_from,'date_to': date_to, }
-#         return render(request, "reports/consolidated_report.html", context)
-
-
-# def calculate_total_expenditure(filters):
-#     date_from = filters.get('date_from')
-#     date_to = filters.get('date_to')
-    
-#     # Build Q objects for filtering
-#     purchase_filter = Q()
-#     consumable_expenditure_filter = Q()
-#     finance_expenditure_filter = Q()
-#     loan_disbursement_filter = Q()
-    
-#     if date_from:
-#         purchase_filter &= Q(date_added__gte=date_from)
-#         consumable_expenditure_filter &= Q(date_created__gte=date_from)
-#         finance_expenditure_filter &= Q(created_at__gte=date_from)
-#         loan_disbursement_filter &= Q(date_created__gte=date_from)
-
-#     if date_to:
-#         purchase_filter &= Q(date_added__lte=date_to)
-#         consumable_expenditure_filter &= Q(date_created__lte=date_to)
-#         finance_expenditure_filter &= Q(created_at__lte=date_to)
-#         loan_disbursement_filter &= Q(date_created__lte=date_to)
-
-#     staff_purchases = PurchasedItem.objects.filter(
-#         purchase_filter
-#     ).aggregate(
-#         total=Sum(F('unit_price') * F('quantity') + F('expenditure_amount'))
-#     )['total'] or Decimal('0')
-    
-#     # 2. Member-requested consumables (cost to the organization)
-#     # Only include approved/completed requests
-#     member_consumable_cost = ConsumableRequestDetail.objects.filter(
-#         consumable_expenditure_filter,
-#         request__status__in=['Approved', 'Itempicked', 'FullyPaid']
-#     ).aggregate(
-#         total=Sum(F('quantity') * F('item_price'))
-#     )['total'] or Decimal('0')
-
-#     # 3. Member-requested project finance (loan amount disbursed)
-#     # Only include approved/completed requests
-#     member_finance_loans = ProjectFinanceRequest.objects.filter(
-#         finance_expenditure_filter,
-#         status__in=['Reviewed', 'Completed', 'FullyPaid']
-#     ).aggregate(total=Sum('requested_amount'))['total'] or Decimal('0')
-
-#     # 4. Member-requested loans (loan amount disbursed)
-#     # Only include actually approved loans with disbursed amounts
-#     loan_disbursements = LoanRequest.objects.filter(
-#         loan_disbursement_filter,
-#         status__in=['approved', 'paid'],
-#         approved_amount__isnull=False
-#     ).aggregate(total=Sum('approved_amount'))['total'] or Decimal('0')
-
-#     return {
-#         'staff_purchases': staff_purchases,
-#         'member_consumable_cost': member_consumable_cost,
-#         'member_finance_loans': member_finance_loans,
-#         'loan_disbursements': loan_disbursements,
-#     }
-
-
-# def calculate_total_income(filters):
-#     """Calculate total income with proper filtering"""
-#     date_from = filters.get('date_from')
-#     date_to = filters.get('date_to')
-    
-#     # Build Q objects for filtering
-#     admin_fee_filter = Q()
-#     saving_filter = Q()
-#     member_payback_filter = Q()
-#     member_finance_payback_filter = Q()
-#     member_fees_filter = Q()
-#     loan_payback_filter = Q()
-#     loan_fee_filter = Q()
-    
-#     if date_from:
-#         admin_fee_filter &= Q(created_at__gte=date_from)
-#         saving_filter &= Q(date_created__gte=date_from)
-#         member_payback_filter &= Q(repayment_date__gte=date_from)
-#         member_finance_payback_filter &= Q(paid_at__gte=date_from)
-#         member_fees_filter &= Q(created_at__gte=date_from)
-#         loan_payback_filter &= Q(repayment_date__gte=date_from)
-#         loan_fee_filter &= Q(created_at__gte=date_from)
-
-#     if date_to:
-#         admin_fee_filter &= Q(created_at__lte=date_to)
-#         saving_filter &= Q(date_created__lte=date_to)
-#         member_payback_filter &= Q(repayment_date__lte=date_to)
-#         member_finance_payback_filter &= Q(paid_at__lte=date_to)
-#         member_fees_filter &= Q(created_at__lte=date_to)
-#         loan_payback_filter &= Q(repayment_date__lte=date_to)
-#         loan_fee_filter &= Q(created_at__lte=date_to)
-
-#     # 1. Income from saving items
-#     saving_income = Savings.objects.filter(saving_filter
-#     ).aggregate( total=Sum(F('month_saving'))
-#     )['total'] or Decimal('0')
-
-#    # 2. Income from Admin fee items
-#     admin_fee_income = Interest.objects.filter(admin_fee_filter
-#     ).aggregate(total=Sum(F('amount_deducted'))
-#     )['total'] or Decimal('0')
-
-#     # 3. Member repayments for consumables
-#     consumable_payback_income = PaybackConsumable.objects.filter(
-#         member_payback_filter
-#     ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
-
-#     # 4. Member repayments for project finance
-#     finance_payback_income = ProjectFinancePayment.objects.filter(
-#         member_finance_payback_filter
-#     ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
-
-#     # 5. Income from consumable form fees
-#     form_fee_income = ConsumableFormFee.objects.filter( member_fees_filter
-#                 ).aggregate(total=Sum('form_fee'))['total'] or Decimal('0')
-
-#     # 6. Member repayments for loans
-#     loan_payback_income = LoanRepayback.objects.filter(loan_payback_filter
-#                 ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
-
-#     # 7. Income from loan form fees
-#     loan_form_fee_income = LoanRequestFee.objects.filter(loan_fee_filter
-#                 ).aggregate(total=Sum('form_fee'))['total'] or Decimal('0')
-
-#     return {
-#         'saving_income': saving_income, 'admin_fee_income': admin_fee_income,
-#         'consumable_payback_income': consumable_payback_income,'finance_payback_income': finance_payback_income,
-#         'form_fee_income': form_fee_income,'loan_payback_income': loan_payback_income,
-#         'loan_form_fee_income': loan_form_fee_income,
-#     }
 
 
 

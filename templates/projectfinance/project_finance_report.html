@@ -17,13 +17,13 @@
         }
 
         .stat-icon {
-            width: 60px;
-            height: 60px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 2rem;
+            font-size: 1rem;
             color: white;
         }
 
@@ -54,17 +54,8 @@
             color: #dc3545;
         }
 
-        .table-fixed {
-            table-layout: fixed;
-            width: 100%;
-        }
+     
 
-        .table-fixed th,
-        .table-fixed td {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
 
         .status-badge {
             display: inline-block;
@@ -127,7 +118,7 @@
                 </div>
                 <div class="stat-content">
                     <h5>₦{{ report.summary.total_expenditure|floatformat:2|intcomma }}</h5>
-                    <p>Total Expenditure</p>
+                    <p class="text-danger">Total Expenditure</p>
                 </div>
             </div>
 
@@ -137,7 +128,7 @@
                 </div>
                 <div class="stat-content">
                     <h5>₦{{ report.summary.total_income|floatformat:2|intcomma }}</h5>
-                    <p>Total Income</p>
+                    <p class="text-success">Total Income</p>
                 </div>
             </div>
 
@@ -159,7 +150,7 @@
                 </div>
                 <div class="stat-content">
                     <h5>₦{{ report.summary.outstanding_amount|floatformat:2|intcomma }}</h5>
-                    <p>Outstanding</p>
+                    <p class="text-danger">Outstanding</p>
                 </div>
             </div>
         </div>
@@ -168,7 +159,7 @@
         <div class="stats-grid">
             <div class="stat-card shadow">
                 <div class="stat-icon bg-secondary">
-                    <i class="bi bi-currency-dollar"></i>
+                    <i class="bi bi-wallet"></i>
                 </div>
                 <div class="stat-content">
                     <h6>₦{{ report.summary.expected_total_income|floatformat:2|intcomma }}</h6>
@@ -198,7 +189,7 @@
                 </div>
             </div>
             
-            <div class="stat-card shadow">
+            {% comment %} <div class="stat-card shadow">
                 <div class="stat-icon bg-warning">
                     <i class="bi bi-clock-history"></i>
                 </div>
@@ -206,7 +197,7 @@
                     <h6>{{ report.summary.collection_rate|floatformat:1 }}%</h6>
                     <p>Collection Rate</p>
                 </div>
-            </div>
+            </div> {% endcomment %}
         </div>
 
         <h2 class="section-title">👥 Individual Member Performance</h2>
@@ -216,12 +207,12 @@
                 <table class="table table-striped table-hover table-fixed">
                     <thead class="table-info">
                         <tr>
-                            <th>Member</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 230px;">Full name</th>
                             <th>Expenditure</th>
-                            <th>Income Received</th>
-                            <th>Expected Income</th>
-                            <th>Current Profit</th>
-                            <th>Expected Profit</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 230px;">Income Received</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 230px;">Expected Income</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 230px;">Current Profit</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 230px;">Expected Profit</th>
                             <th>Outstanding</th>
                             <th>Status</th>
                         </tr>
@@ -229,7 +220,7 @@
                     <tbody>
                         {% for member in report.member_profits %}
                         <tr>
-                            <td>{{ member.member_name }}</td>
+                            <td class="text-nowrap text-truncate" style="max-width: 230px;">{{ member.member_name }}</td>
                             <td>₦{{ member.expenditure|floatformat:2|intcomma }}</td>
                             <td>₦{{ member.income_received|floatformat:2|intcomma }}</td>
                             <td>₦{{ member.expected_income|floatformat:2|intcomma }}</td>
@@ -258,14 +249,14 @@
                 <p>📋 No member data available for the selected period.</p>
                 <p style="margin-top: 10px; font-size: 1rem;">This could mean:</p>
                 <ul style="list-style: none; margin-top: 10px;">
-                    <li>• No approved/completed requests in this timeframe</li>
+                    <li>• No approved/fully paid requests in this timeframe</li>
                     <li>• All requests are still pending approval</li>
                     <li>• Date filter may be too restrictive</li>
                 </ul>
             </div>
             {% endif %}
         </div>
-
+         
         <div class="text-center mt-3">
             <h6>📥 Export Report</h6>
             <p>Download this report in different formats for sharing or archival</p>

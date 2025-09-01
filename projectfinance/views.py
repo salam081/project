@@ -156,7 +156,7 @@ def generate_project_finance_report(start_date=None, end_date=None):
     # 1. EXPENDITURE (Total amount disbursed to members)
     expenditure_data = ProjectFinanceRequest.objects.filter(
         base_filter,
-        status__in=['Reviewed', 'Completed', 'FullyPaid']  # Only approved/disbursed funds
+        status__in=['Reviewed', 'Approved', 'FullyPaid']  # Only approved/disbursed funds
     ).aggregate(
         total_expenditure=Coalesce(Sum('requested_amount'), Decimal('0.00')),
         total_requests=Count('id')
@@ -174,7 +174,7 @@ def generate_project_finance_report(start_date=None, end_date=None):
     # 3. EXPECTED TOTAL INCOME (What we should receive in total)
     expected_income_data = ProjectFinanceRequest.objects.filter(
         base_filter,
-        status__in=['Reviewed', 'Completed', 'FullyPaid'],
+        status__in=['Reviewed', 'Approved', 'FullyPaid'],
         total_repayment_amount__isnull=False
     ).aggregate(
         expected_total_income=Coalesce(Sum('total_repayment_amount'), Decimal('0.00'))
@@ -195,7 +195,7 @@ def generate_project_finance_report(start_date=None, end_date=None):
     # Get all members with project finance requests
     members_with_requests = ProjectFinanceRequest.objects.filter(
         base_filter,
-        status__in=['Reviewed', 'Completed', 'FullyPaid']
+        status__in=['Reviewed', 'Approved', 'FullyPaid']
     ).values(
         'application__member__id',
         'application__member__member__first_name',
@@ -210,7 +210,7 @@ def generate_project_finance_report(start_date=None, end_date=None):
         member_requests = ProjectFinanceRequest.objects.filter(
             base_filter,
             application__member__id=member_id,
-            status__in=['Reviewed', 'Completed', 'FullyPaid']
+            status__in=['Reviewed', 'Approved', 'FullyPaid']
         )
         
         # Calculate expenditure for this member
@@ -263,7 +263,7 @@ def generate_project_finance_report(start_date=None, end_date=None):
     # 6. SUMMARY STATISTICS
     total_active_requests = ProjectFinanceRequest.objects.filter(
         base_filter,
-        status__in=['Reviewed', 'Completed']
+        status__in=['Reviewed', 'Approved']
     ).count()
     
     total_completed_requests = ProjectFinanceRequest.objects.filter(
@@ -308,7 +308,10 @@ def generate_project_finance_report(start_date=None, end_date=None):
 
 @staff_member_required  # Only allow staff/admin users
 def project_finance_report_view(request):
-    context = {}
+    member_requests = ProjectFinanceRequest.objects.all().exclude(status='Declined')
+    print("member_requests",member_requests)
+        
+    context = {'member_requests':member_requests}
     # Get date parameters from request
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -715,5 +718,4 @@ def upload_project_finance_repayment(request):
     upload_results = request.session.pop('upload_results', None)
     context = {'skipped_payments': upload_results['skipped_payments'] if upload_results else []}
     return render(request, "projectfinance/upload_project_finance_payment.html", context)
-
 

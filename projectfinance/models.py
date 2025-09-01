@@ -1,5 +1,8 @@
 from django.db import models
 from accounts.models import *
+from django.db import models
+from django.db.models import Sum
+from django.conf import settings
 # models.py
 class ProjectFinanceApplication(models.Model):
     STATUS_CHOICES = [('Pending', 'Pending'),('Reviewed', 'Reviewed'),('Rejected', 'Rejected')]
@@ -18,7 +21,7 @@ class ProjectFinanceRequest(models.Model):
         ('Approved', 'Approved'),
         ('Declined', 'Declined'),
         ('Completed', 'Completed'),
-        ('FullyPaid', 'Fully Paid'),
+        ('FullyPaid', 'FullyPaid'),
     ]
     GUARANTOR_STATUS = [('Pending', 'Pending'), ('Approved', 'Approved'), ('Declined', 'Declined')]
     
@@ -72,9 +75,7 @@ class ProjectFinanceRequest(models.Model):
     def __str__(self):
         return f"{self.application.member.member.first_name} - {self.product}"
 
-from django.db import models
-from django.db.models import Sum
-from django.conf import settings
+
 
 class ProjectFinancePayment(models.Model):
     request = models.ForeignKey(ProjectFinanceRequest, on_delete=models.CASCADE, related_name="payments")

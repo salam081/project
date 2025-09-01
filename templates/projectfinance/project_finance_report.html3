@@ -188,12 +188,12 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for member in report.member_profits %}
+                            {% for member in member_requests %}
                             <tr>
-                                <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ member.member_name }}</td>
-                                <td >₦{{ member.expenditure|floatformat:2 }}</td>
+                                <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ member.application.member }}</td>
+                                <td >₦{{ member.requested_amount|floatformat:2 }}</td>
                                 <td >₦{{ member.income_received|floatformat:2 }}</td>
-                                <td class="amount">₦{{ member.expected_income|floatformat:2 }}</td>
+                                <td class="amount">₦{{ member.balance_remaining|floatformat:2 }}</td>
                                 <td class="amount {% if member.current_profit >= 0 %}positive{% else %}negative{% endif %}">
                                     ₦{{ member.current_profit|floatformat:2 }}
                                 </td>

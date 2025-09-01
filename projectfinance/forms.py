@@ -39,7 +39,16 @@ class AdminProjectFinanceRequestForm(forms.ModelForm):
        
         }     
 
-
-
 class ExcelUploadForm(forms.Form):
-    excel_file = forms.FileField(label='Select an Excel file', help_text='Only .xlsx files are supported.')        
+    excel_file = forms.FileField(label='Select an Excel file', help_text='Only .xlsx files are supported.')  
+
+
+class ProjectFinancePaymentForm(forms.ModelForm):
+    class Meta:
+        model = ProjectFinancePayment
+        fields = ["amount_paid", "month"]
+
+        widgets = {
+            "amount_paid": forms.NumberInput(attrs={"class": "form-control", "placeholder": "Enter amount"}),
+            "month": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+        }          

@@ -23,6 +23,7 @@ class ProjectFinanceRequest(models.Model):
         ('Completed', 'Completed'),
         ('FullyPaid', 'FullyPaid'),
     ]
+    db_index=True
     GUARANTOR_STATUS = [('Pending', 'Pending'), ('Approved', 'Approved'), ('Declined', 'Declined')]
     
     application = models.ForeignKey(ProjectFinanceApplication, on_delete=models.CASCADE, related_name="requests")

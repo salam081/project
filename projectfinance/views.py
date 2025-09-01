@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator,PageNotAnInteger,EmptyPage
 from django.forms import DecimalField
 from django.http import JsonResponse, HttpResponse
-from django.db.models import F, Q, Sum, DecimalField, Value
+from django.db.models import F, Q, Sum,Prefetch, DecimalField, Value
 from django.db.models.functions import Coalesce
 from collections import defaultdict
 import pandas as pd
@@ -105,8 +105,20 @@ def application_detail_view(request, application_id):
 
 @login_required
 def admin_project_finance_requests_list(request):
-    requests = ProjectFinanceRequest.objects.filter(status__in=['Pending', 'Reviewed']).order_by('-created_at').select_related( 'application__member__member')
-    context = {'requests': requests}
+    status_filter = request.GET.get('status', '')  # Get status from query params
+
+    requests = ProjectFinanceRequest.objects.select_related(
+        'application__member__member'
+    ).order_by('-created_at')
+
+    # Apply filter only if a status is selected
+    if status_filter:
+        requests = requests.filter(status=status_filter)
+
+    context = {
+        'requests': requests,
+        'selected_status': status_filter,
+    }
     return render(request, 'projectfinance/project_finance_list_requests.html', context)
 
 @login_required
@@ -144,6 +156,249 @@ def admin_approve_finance_request(request, id):
 # ==========================================
 # MAIN REPORT GENERATION FUNCTION
 # ==========================================
+
+# def generate_project_finance_report(start_date=None, end_date=None):
+#     # Base queryset with optional date filtering
+#     base_filter = Q()
+#     if start_date:
+#         base_filter &= Q(created_at__gte=start_date)
+#     if end_date:
+#         base_filter &= Q(created_at__lte=end_date)
+    
+#     # 1. EXPENDITURE (Total amount disbursed to members)
+#     expenditure_data = ProjectFinanceRequest.objects.filter(
+#         base_filter,
+#         status__in=['Reviewed', 'Approved', 'FullyPaid']  # Only approved/disbursed funds
+#     ).aggregate(
+#         total_expenditure=Coalesce(Sum('requested_amount'), Decimal('0.00')),
+#         total_requests=Count('id')
+#     )
+    
+#     # 2. INCOME (Total payments received from members)
+#     income_data = ProjectFinancePayment.objects.filter(
+#         request__created_at__gte=start_date if start_date else datetime.min,
+#         request__created_at__lte=end_date if end_date else datetime.now()
+#     ).aggregate(
+#         total_income=Coalesce(Sum('amount_paid'), Decimal('0.00')),
+#         total_payments=Count('id')
+#     )
+    
+#     # 3. EXPECTED TOTAL INCOME (What we should receive in total)
+#     expected_income_data = ProjectFinanceRequest.objects.filter(
+#         base_filter,
+#         status__in=['Reviewed', 'Approved', 'FullyPaid'],
+#         total_repayment_amount__isnull=False
+#     ).aggregate(
+#         expected_total_income=Coalesce(Sum('total_repayment_amount'), Decimal('0.00'))
+#     )
+    
+#     # 4. PROFIT ANALYSIS
+#     total_expenditure = expenditure_data['total_expenditure']
+#     total_income = income_data['total_income']
+#     expected_total_income = expected_income_data['expected_total_income']
+    
+#     current_profit = total_income - total_expenditure
+#     expected_profit = expected_total_income - total_expenditure
+#     outstanding_amount = expected_total_income - total_income
+    
+#     # 5. PROFIT PER MEMBER
+#     member_profits = []
+    
+#     # Get all members with project finance requests
+#     members_with_requests = ProjectFinanceRequest.objects.filter(
+#         base_filter,
+#         status__in=['Reviewed', 'Approved', 'FullyPaid']
+#     ).values(
+#         'application__member__id',
+#         'application__member__member__first_name',
+#         'application__member__member__last_name'
+#     ).distinct()
+    
+#     for member_data in members_with_requests:
+#         member_id = member_data['application__member__id']
+#         member_name = f"{member_data['application__member__member__first_name']} {member_data['application__member__member__last_name']}"
+        
+#         # Get member's requests
+#         member_requests = ProjectFinanceRequest.objects.filter(
+#             base_filter,
+#             application__member__id=member_id,
+#             status__in=['Reviewed', 'Approved', 'FullyPaid']
+#         )
+        
+#         # Calculate expenditure for this member
+#         member_expenditure = member_requests.aggregate(
+#             total=Coalesce(Sum('requested_amount'), Decimal('0.00'))
+#         )['total']
+        
+#         # Calculate income received from this member
+#         member_income = ProjectFinancePayment.objects.filter(
+#             request__application__member__id=member_id,
+#             request__created_at__gte=start_date if start_date else datetime.min,
+#             request__created_at__lte=end_date if end_date else datetime.now()
+#         ).aggregate(
+#             total=Coalesce(Sum('amount_paid'), Decimal('0.00'))
+#         )['total']
+        
+#         # Calculate expected income from this member
+#         member_expected_income = member_requests.filter(
+#             total_repayment_amount__isnull=False
+#         ).aggregate(
+#             total=Coalesce(Sum('total_repayment_amount'), Decimal('0.00'))
+#         )['total']
+        
+#         # Calculate profits
+#         member_current_profit = member_income - member_expenditure
+#         member_expected_profit = member_expected_income - member_expenditure
+#         member_outstanding = member_expected_income - member_income
+        
+#         # Get number of active requests
+#         active_requests = member_requests.exclude(status='FullyPaid').count()
+#         completed_requests = member_requests.filter(status='FullyPaid').count()
+        
+#         member_profits.append({
+#             'member_id': member_id,
+#             'member_name': member_name,
+#             'expenditure': member_expenditure,
+#             'income_received': member_income,
+#             'expected_income': member_expected_income,
+#             'current_profit': member_current_profit,
+#             'expected_profit': member_expected_profit,
+#             'outstanding_amount': member_outstanding,
+#             'active_requests': active_requests,
+#             'completed_requests': completed_requests,
+#             'total_requests': active_requests + completed_requests
+#         })
+    
+#     # Sort by expected profit (descending)
+#     member_profits.sort(key=lambda x: x['expected_profit'], reverse=True)
+    
+#     # 6. SUMMARY STATISTICS
+#     total_active_requests = ProjectFinanceRequest.objects.filter(
+#         base_filter,
+#         status__in=['Reviewed', 'Approved']
+#     ).count()
+    
+#     total_completed_requests = ProjectFinanceRequest.objects.filter(
+#         base_filter,
+#         status='FullyPaid'
+#     ).count()
+    
+#     # Compile final report
+#     report = {
+#         'summary': {
+#             'total_expenditure': total_expenditure,
+#             'total_income': total_income,
+#             'expected_total_income': expected_total_income,
+#             'current_profit': current_profit,
+#             'expected_profit': expected_profit,
+#             'outstanding_amount': outstanding_amount,
+#             'profit_margin_current': (current_profit / total_expenditure * 100) if total_expenditure > 0 else 0,
+#             'profit_margin_expected': (expected_profit / total_expenditure * 100) if total_expenditure > 0 else 0,
+#         },
+#         'statistics': {
+#             'total_requests': expenditure_data['total_requests'],
+#             'total_payments_made': income_data['total_payments'],
+#             'active_requests': total_active_requests,
+#             'completed_requests': total_completed_requests,
+#             'average_request_amount': total_expenditure / expenditure_data['total_requests'] if expenditure_data['total_requests'] > 0 else 0,
+#             'unique_members': len(member_profits)
+#         },
+#         'member_profits': member_profits,
+#        'generated_at': timezone.now(),
+#         'date_range': {
+#             'start_date': start_date,
+#             'end_date': end_date
+#         }
+#     }
+    
+#     return report
+
+
+
+
+# # ==========================================
+# # DJANGO VIEWS
+# # ==========================================
+
+# @staff_member_required  # Only allow staff/admin users
+# def project_finance_report_view(request):
+#     """
+#     Renders the project finance report page with data based on selected filters.
+#     """
+#     context = {}
+    
+#     # Get date parameters from request
+#     start_date_str = request.GET.get('start_date')
+#     end_date_str = request.GET.get('end_date')
+
+#     start_date = None
+#     end_date = None
+    
+#     # Parse dates if provided
+#     if start_date_str:
+#         try:
+#             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+#         except ValueError:
+#             context['error'] = "Invalid start date format. Please use YYYY-MM-DD."
+#             # We can still proceed with a partial report or no report if one date is bad
+    
+#     if end_date_str:
+#         try:
+#             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+#         except ValueError:
+#             context['error'] = "Invalid end date format. Please use YYYY-MM-DD."
+#             # Same here, don't crash on one bad date
+
+#     # Always generate the report on a GET request
+#     try:
+#         report = generate_project_finance_report(start_date, end_date)
+#         context['report'] = report
+#         context['success'] = True
+#     except Exception as e:
+#         context['error'] = f"Error generating report: {str(e)}"
+    
+#     return render(request, 'projectfinance/project_finance_report.html', context)
+
+# @staff_member_required
+# def project_finance_report_api(request):
+#     """
+#     API endpoint to get report data as JSON
+#     """
+#     start_date = request.GET.get('start_date')
+#     end_date = request.GET.get('end_date')
+    
+#     # Parse dates if provided
+#     if start_date:
+#         try:
+#             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+#         except ValueError:
+#             return JsonResponse({'error': 'Invalid start date format'}, status=400)
+    
+#     if end_date:
+#         try:
+#             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+#         except ValueError:
+#             return JsonResponse({'error': 'Invalid end date format'}, status=400)
+    
+#     try:
+#         report = generate_project_finance_report(start_date, end_date)
+        
+#         # Convert Decimal objects to float for JSON serialization
+#         def decimal_to_float(obj):
+#             if isinstance(obj, Decimal):
+#                 return float(obj)
+#             elif isinstance(obj, dict):
+#                 return {k: decimal_to_float(v) for k, v in obj.items()}
+#             elif isinstance(obj, list):
+#                 return [decimal_to_float(v) for v in obj]
+#             return obj
+        
+#         report = decimal_to_float(report)
+#         report['generated_at'] = report['generated_at'].isoformat()
+        
+#         return JsonResponse(report)
+#     except Exception as e:
+#         return JsonResponse({'error': str(e)}, status=500)
 
 def generate_project_finance_report(start_date=None, end_date=None):
     # Base queryset with optional date filtering
@@ -189,78 +444,112 @@ def generate_project_finance_report(start_date=None, end_date=None):
     expected_profit = expected_total_income - total_expenditure
     outstanding_amount = expected_total_income - total_income
     
-    # 5. PROFIT PER MEMBER
-    member_profits = []
+    # 5. INDIVIDUAL MEMBER REQUESTS
+    member_requests_data = []
     
-    # Get all members with project finance requests
-    members_with_requests = ProjectFinanceRequest.objects.filter(
+    # Get all individual requests with member details
+    requests_with_members = ProjectFinanceRequest.objects.filter(
         base_filter,
         status__in=['Reviewed', 'Approved', 'FullyPaid']
-    ).values(
-        'application__member__id',
+    ).select_related(
+        'application__member__member'
+    ).order_by(
         'application__member__member__first_name',
-        'application__member__member__last_name'
-    ).distinct()
+        'application__member__member__last_name',
+        'created_at'
+    )
     
-    for member_data in members_with_requests:
-        member_id = member_data['application__member__id']
-        member_name = f"{member_data['application__member__member__first_name']} {member_data['application__member__member__last_name']}"
+    for request_obj in requests_with_members:
+        member = request_obj.application.member.member
+        member_name = f"{member.first_name} {member.last_name}"
         
-        # Get member's requests
-        member_requests = ProjectFinanceRequest.objects.filter(
-            base_filter,
-            application__member__id=member_id,
-            status__in=['Reviewed', 'Approved', 'FullyPaid']
-        )
-        
-        # Calculate expenditure for this member
-        member_expenditure = member_requests.aggregate(
-            total=Coalesce(Sum('requested_amount'), Decimal('0.00'))
-        )['total']
-        
-        # Calculate income received from this member
-        member_income = ProjectFinancePayment.objects.filter(
-            request__application__member__id=member_id,
-            request__created_at__gte=start_date if start_date else datetime.min,
-            request__created_at__lte=end_date if end_date else datetime.now()
+        # Calculate income received for this specific request
+        request_income = ProjectFinancePayment.objects.filter(
+            request=request_obj
         ).aggregate(
             total=Coalesce(Sum('amount_paid'), Decimal('0.00'))
         )['total']
         
-        # Calculate expected income from this member
-        member_expected_income = member_requests.filter(
-            total_repayment_amount__isnull=False
-        ).aggregate(
-            total=Coalesce(Sum('total_repayment_amount'), Decimal('0.00'))
-        )['total']
+        # Calculate expected income for this request
+        expected_income = request_obj.total_repayment_amount or Decimal('0.00')
         
-        # Calculate profits
-        member_current_profit = member_income - member_expenditure
-        member_expected_profit = member_expected_income - member_expenditure
-        member_outstanding = member_expected_income - member_income
+        # Calculate profits for this request
+        request_current_profit = request_income - request_obj.requested_amount
+        request_expected_profit = expected_income - request_obj.requested_amount
+        request_outstanding = expected_income - request_income
         
-        # Get number of active requests
-        active_requests = member_requests.exclude(status='FullyPaid').count()
-        completed_requests = member_requests.filter(status='FullyPaid').count()
+        # Get payment count for this request
+        payment_count = ProjectFinancePayment.objects.filter(request=request_obj).count()
         
-        member_profits.append({
-            'member_id': member_id,
+        # Calculate profit margin for this request
+        profit_margin_current = (request_current_profit / request_obj.requested_amount * 100) if request_obj.requested_amount > 0 else 0
+        profit_margin_expected = (request_expected_profit / request_obj.requested_amount * 100) if request_obj.requested_amount > 0 else 0
+        
+        member_requests_data.append({
+            'request_id': request_obj.id,
+            'member_id': request_obj.application.member.id,
             'member_name': member_name,
-            'expenditure': member_expenditure,
-            'income_received': member_income,
-            'expected_income': member_expected_income,
-            'current_profit': member_current_profit,
-            'expected_profit': member_expected_profit,
-            'outstanding_amount': member_outstanding,
-            'active_requests': active_requests,
-            'completed_requests': completed_requests,
-            'total_requests': active_requests + completed_requests
+            'request_date': request_obj.created_at,
+            'status': request_obj.status,
+            'expenditure': request_obj.requested_amount,
+            'income_received': request_income,
+            'expected_income': expected_income,
+            'current_profit': request_current_profit,
+            'expected_profit': request_expected_profit,
+            'outstanding_amount': request_outstanding,
+            'profit_margin_current': profit_margin_current,
+            'profit_margin_expected': profit_margin_expected,
+            'payment_count': payment_count,
+            'is_fully_paid': request_obj.status == 'FullyPaid',
+            # Additional request details
+            'interest_rate': getattr(request_obj, 'interest_rate', None),
+            'duration_months': getattr(request_obj, 'duration_months', None),
+            'application_id': request_obj.application.id
         })
     
-    # Sort by expected profit (descending)
-    member_profits.sort(key=lambda x: x['expected_profit'], reverse=True)
+    # 6. MEMBER SUMMARY (Aggregated view by member)
+    member_summary = {}
+    for request_data in member_requests_data:
+        member_id = request_data['member_id']
+        member_name = request_data['member_name']
+        
+        if member_id not in member_summary:
+            member_summary[member_id] = {
+                'member_id': member_id,
+                'member_name': member_name,
+                'total_expenditure': Decimal('0.00'),
+                'total_income_received': Decimal('0.00'),
+                'total_expected_income': Decimal('0.00'),
+                'total_current_profit': Decimal('0.00'),
+                'total_expected_profit': Decimal('0.00'),
+                'total_outstanding': Decimal('0.00'),
+                'request_count': 0,
+                'active_requests': 0,
+                'completed_requests': 0,
+                'total_payments': 0
+            }
+        
+        # Aggregate the data
+        summary = member_summary[member_id]
+        summary['total_expenditure'] += request_data['expenditure']
+        summary['total_income_received'] += request_data['income_received']
+        summary['total_expected_income'] += request_data['expected_income']
+        summary['total_current_profit'] += request_data['current_profit']
+        summary['total_expected_profit'] += request_data['expected_profit']
+        summary['total_outstanding'] += request_data['outstanding_amount']
+        summary['request_count'] += 1
+        summary['total_payments'] += request_data['payment_count']
+        
+        if request_data['is_fully_paid']:
+            summary['completed_requests'] += 1
+        else:
+            summary['active_requests'] += 1
     
-    # 6. SUMMARY STATISTICS
+    # Convert member_summary to list and sort by expected profit
+    member_summary_list = list(member_summary.values())
+    member_summary_list.sort(key=lambda x: x['total_expected_profit'], reverse=True)
+    
+    # 7. SUMMARY STATISTICS
     total_active_requests = ProjectFinanceRequest.objects.filter(
         base_filter,
         status__in=['Reviewed', 'Approved']
@@ -289,10 +578,11 @@ def generate_project_finance_report(start_date=None, end_date=None):
             'active_requests': total_active_requests,
             'completed_requests': total_completed_requests,
             'average_request_amount': total_expenditure / expenditure_data['total_requests'] if expenditure_data['total_requests'] > 0 else 0,
-            'unique_members': len(member_profits)
+            'unique_members': len(member_summary_list)
         },
-        'member_profits': member_profits,
-       'generated_at': timezone.now(),
+        'individual_requests': member_requests_data,  # Each request listed separately
+        'member_summary': member_summary_list,       # Aggregated by member
+        'generated_at': timezone.now(),
         'date_range': {
             'start_date': start_date,
             'end_date': end_date
@@ -308,40 +598,42 @@ def generate_project_finance_report(start_date=None, end_date=None):
 
 @staff_member_required  # Only allow staff/admin users
 def project_finance_report_view(request):
-    member_requests = ProjectFinanceRequest.objects.all().exclude(status='Declined')
-    print("member_requests",member_requests)
-        
-    context = {'member_requests':member_requests}
+    """
+    Renders the project finance report page with data based on selected filters.
+    """
+    context = {}
+    
     # Get date parameters from request
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    view_type = request.GET.get('view', 'individual')  # 'individual' or 'summary'
+
+    start_date = None
+    end_date = None
     
     # Parse dates if provided
-    if start_date:
+    if start_date_str:
         try:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         except ValueError:
-            start_date = None
+            context['error'] = "Invalid start date format. Please use YYYY-MM-DD."
     
-    if end_date:
+    if end_date_str:
         try:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
         except ValueError:
-            end_date = None
-    
-    # Generate report if we have parameters or if this is a GET request with dates
-    if request.method == 'GET' and (start_date or end_date or 'generate' in request.GET):
-        try:
-            report = generate_project_finance_report(start_date, end_date)
-            context['report'] = report
-            context['success'] = True
-        except Exception as e:
-            context['error'] = f"Error generating report: {str(e)}"
+            context['error'] = "Invalid end date format. Please use YYYY-MM-DD."
+
+    # Always generate the report on a GET request
+    try:
+        report = generate_project_finance_report(start_date, end_date)
+        context['report'] = report
+        context['view_type'] = view_type
+        context['success'] = True
+    except Exception as e:
+        context['error'] = f"Error generating report: {str(e)}"
     
     return render(request, 'projectfinance/project_finance_report.html', context)
-
-
-
 
 @staff_member_required
 def project_finance_report_api(request):
@@ -350,6 +642,7 @@ def project_finance_report_api(request):
     """
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    view_type = request.GET.get('view', 'individual')
     
     # Parse dates if provided
     if start_date:
@@ -380,10 +673,73 @@ def project_finance_report_api(request):
         report = decimal_to_float(report)
         report['generated_at'] = report['generated_at'].isoformat()
         
-        return JsonResponse(report)
+        # Return only the requested view type if specified
+        if view_type == 'individual':
+            response_data = {
+                'summary': report['summary'],
+                'statistics': report['statistics'],
+                'data': report['individual_requests'],
+                'view_type': 'individual',
+                'generated_at': report['generated_at'],
+                'date_range': report['date_range']
+            }
+        elif view_type == 'summary':
+            response_data = {
+                'summary': report['summary'],
+                'statistics': report['statistics'],
+                'data': report['member_summary'],
+                'view_type': 'summary',
+                'generated_at': report['generated_at'],
+                'date_range': report['date_range']
+            }
+        else:
+            response_data = report  # Return full report
+        
+        return JsonResponse(response_data)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+# ==========================================
+# OPTIONAL: Helper function for template use
+# ==========================================
+
+def get_member_request_details(member_id, start_date=None, end_date=None):
+    """
+    Helper function to get detailed request information for a specific member
+    """
+    base_filter = Q(application__member__id=member_id)
+    if start_date:
+        base_filter &= Q(created_at__gte=start_date)
+    if end_date:
+        base_filter &= Q(created_at__lte=end_date)
+    
+    requests = ProjectFinanceRequest.objects.filter(
+        base_filter,
+        status__in=['Reviewed', 'Approved', 'FullyPaid']
+    ).select_related(
+        'application__member__member'
+    ).prefetch_related(
+        'projectfinancepayment_set'
+    ).order_by('created_at')
+    
+    request_details = []
+    for request_obj in requests:
+        # Get all payments for this request
+        payments = request_obj.projectfinancepayment_set.all()
+        total_paid = sum(payment.amount_paid for payment in payments)
+        
+        request_details.append({
+            'request': request_obj,
+            'payments': payments,
+            'total_paid': total_paid,
+            'outstanding': (request_obj.total_repayment_amount or Decimal('0.00')) - total_paid,
+            'profit_current': total_paid - request_obj.requested_amount,
+            'profit_expected': (request_obj.total_repayment_amount or Decimal('0.00')) - request_obj.requested_amount
+        })
+    
+    return request_details
+#=======================================
 
 @staff_member_required
 def project_finance_report_excel(request):
@@ -718,4 +1074,51 @@ def upload_project_finance_repayment(request):
     upload_results = request.session.pop('upload_results', None)
     context = {'skipped_payments': upload_results['skipped_payments'] if upload_results else []}
     return render(request, "projectfinance/upload_project_finance_payment.html", context)
+
+
+@login_required
+def make_finance_payment(request, id):
+    # Get the finance request
+    finance_request = get_object_or_404(ProjectFinanceRequest, id=id)
+
+    # Initialize the form
+    if request.method == "POST":
+        form = ProjectFinancePaymentForm(request.POST)
+        if form.is_valid():
+            payment = form.save(commit=False)
+            payment.request = finance_request
+            payment.recorded_by = request.user
+
+            # Calculate remaining balance
+            total_paid = finance_request.payments.aggregate(total=Sum('amount_paid'))['total'] or Decimal('0.00')
+            new_total_paid = total_paid + payment.amount_paid
+            total_price = finance_request.total_repayment_amount or finance_request.requested_amount
+            payment.balance_remaining = total_price - new_total_paid
+
+            # Save payment
+            payment.save()
+
+            # Update finance request balance & status
+            finance_request.update_balance_remaining()
+
+            messages.success(request, f"✅ Payment of ₦{payment.amount_paid} recorded successfully!")
+            return redirect("project_finance_request_detail", id=finance_request.id)
+        else:
+            messages.error(request, "❌ Please correct the errors below.")
+    else:
+        form = ProjectFinancePaymentForm()
+
+    # Fetch all previous payments
+    payments = finance_request.payments.all().order_by("-created_at")
+
+    context = {
+        "finance_request": finance_request,
+        "form": form,
+        "payments": payments,
+    }
+    return render(request, "projectfinance/make_payment.html", context)
+
+
+#============================================
+
 

@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h3>💰 Make Payment for {{ finance_request.application.member.member.first_name }} {{ finance_request.application.member.member.last_name }}</h3>
+    <p><strong>Product:</strong> {{ finance_request.product }}</p>
+    <p><strong>Requested Amount:</strong> ₦{{ finance_request.balance_remaining }}</p>
+    <p><strong>Total Repayment:</strong> ₦{{ finance_request.total_repayment_amount }}</p>
+    <hr>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="id_amount_paid">Amount Paid</label>
+            {{ form.amount_paid }}
+        </div>
+        <div class="mb-3">
+            <label for="id_month">Payment Month</label>
+            {{ form.month }}
+        </div>
+        <button type="submit" class="btn btn-success">💸 Submit Payment</button>
+        <a href="" class="btn btn-secondary">Cancel</a>
+    </form>
+
+    <hr>
+    <h4>📜 Previous Payments</h4>
+    {% if payments %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Amount Paid</th>
+                    <th>Month</th>
+                    <th>Balance Remaining</th>
+                    <th>Date Recorded</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td>₦{{ payment.amount_paid }}</td>
+                    <td>{{ payment.month|date:"F Y" }}</td>
+                    <td>₦{{ payment.balance_remaining }}</td>
+                    <td>{{ payment.created_at|date:"M d, Y g:i A" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No payments made yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

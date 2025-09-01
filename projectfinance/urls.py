@@ -15,5 +15,6 @@ urlpatterns = [
     path('project-finance/report/api/', views.project_finance_report_api, name='project_finance_report_api'),
     path('project-finance/report/excel/', views.project_finance_report_excel, name='project_finance_report_excel'),
     path('upload-payments/', views.upload_project_finance_repayment, name='upload_project_finance_payment'),
+    path('make_finance-payments/<int:id>/', views.make_finance_payment, name='make_finance_payment'),
 
 ]

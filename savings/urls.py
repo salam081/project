@@ -22,7 +22,7 @@ urlpatterns = [
     path('details/<int:year>/<int:month>/', views.loanable_investment_details, name='loanable_investment_details'),
     path("delete/month/<int:year>/<int:month>/", views.delete_month_entries, name="delete_month_entries"),
 
-     path('get_upload_interest/',views.get_upload_interest,name='get_upload_interest'),
+    path('get_upload_interest/',views.get_upload_interest,name='get_upload_interest'),
     path('get_upload_interest_details/<int:month>/',views.get_upload_interest_details,name='get_upload_interest_details'),
     path('delete_interest/<int:year>/<int:month>/', views.delete_interest_saving, name='delete_interest_saving'),
     path('combined_upload_view/',views.combined_upload_view,name='combined_upload_view'),

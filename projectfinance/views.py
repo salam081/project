@@ -1075,13 +1075,10 @@ def upload_project_finance_repayment(request):
     context = {'skipped_payments': upload_results['skipped_payments'] if upload_results else []}
     return render(request, "projectfinance/upload_project_finance_payment.html", context)
 
-
 @login_required
 def make_finance_payment(request, id):
-    # Get the finance request
     finance_request = get_object_or_404(ProjectFinanceRequest, id=id)
 
-    # Initialize the form
     if request.method == "POST":
         form = ProjectFinancePaymentForm(request.POST)
         if form.is_valid():
@@ -1089,10 +1086,32 @@ def make_finance_payment(request, id):
             payment.request = finance_request
             payment.recorded_by = request.user
 
-            # Calculate remaining balance
-            total_paid = finance_request.payments.aggregate(total=Sum('amount_paid'))['total'] or Decimal('0.00')
-            new_total_paid = total_paid + payment.amount_paid
+            # ✅ 1. Calculate remaining balance
+            total_paid = finance_request.payments.aggregate(
+                total=Sum('amount_paid')
+            )['total'] or Decimal('0.00')
+
             total_price = finance_request.total_repayment_amount or finance_request.requested_amount
+            balance_remaining = total_price - total_paid
+
+            # ✅ 2. Block payment if balance is already cleared
+            if balance_remaining <= 0:
+                messages.error(request, "This request has been fully paid. No further payments are allowed.")
+                return redirect("admin_project_finance_requests_list", id=finance_request.id)
+
+            # ✅ 3. Block duplicate payments for the same month
+            existing_payment = finance_request.payments.filter(
+                month__year=payment.month.year,
+                month__month=payment.month.month
+            ).exists()
+
+            if existing_payment:
+                messages.error(
+                    request,f"A payment for {payment.month.strftime('%B %Y')} already exists.")
+                return redirect("admin_project_finance_requests_list", id=finance_request.id)
+
+            # ✅ 4. Update remaining balance after this payment
+            new_total_paid = total_paid + payment.amount_paid
             payment.balance_remaining = total_price - new_total_paid
 
             # Save payment
@@ -1101,22 +1120,57 @@ def make_finance_payment(request, id):
             # Update finance request balance & status
             finance_request.update_balance_remaining()
 
-            messages.success(request, f"✅ Payment of ₦{payment.amount_paid} recorded successfully!")
-            return redirect("project_finance_request_detail", id=finance_request.id)
+            messages.success(
+                request,f"Payment of ₦{payment.amount_paid} for {payment.month.strftime('%B %Y')} recorded successfully!")
+            return redirect("admin_project_finance_requests_list", id=finance_request.id)
         else:
-            messages.error(request, "❌ Please correct the errors below.")
+            messages.error(request, "Please correct the errors below.")
     else:
         form = ProjectFinancePaymentForm()
 
     # Fetch all previous payments
     payments = finance_request.payments.all().order_by("-created_at")
-
-    context = {
-        "finance_request": finance_request,
-        "form": form,
-        "payments": payments,
-    }
+    context = { "finance_request": finance_request, "form": form, "payments": payments,}
     return render(request, "projectfinance/make_payment.html", context)
+
+# @login_required
+# def make_finance_payment(request, id):
+#     finance_request = get_object_or_404(ProjectFinanceRequest, id=id)
+#     if request.method == "POST":
+#         form = ProjectFinancePaymentForm(request.POST)
+#         if form.is_valid():
+#             payment = form.save(commit=False)
+#             payment.request = finance_request
+#             payment.recorded_by = request.user
+
+#             # Calculate remaining balance
+#             total_paid = finance_request.payments.aggregate(total=Sum('amount_paid'))['total'] or Decimal('0.00')
+#             new_total_paid = total_paid + payment.amount_paid
+#             total_price = finance_request.total_repayment_amount or finance_request.requested_amount
+#             payment.balance_remaining = total_price - new_total_paid
+
+#             # Save payment
+#             payment.save()
+
+#             # Update finance request balance & status
+#             finance_request.update_balance_remaining()
+
+#             messages.success(request, f"Payment of ₦{payment.amount_paid} recorded successfully!")
+#             return redirect("admin_project_finance_requests_list", id=finance_request.id)
+#         else:
+#             messages.error(request, " Please correct the errors below.")
+#     else:
+#         form = ProjectFinancePaymentForm()
+
+#     # Fetch all previous payments
+#     payments = finance_request.payments.all().order_by("-created_at")
+
+#     context = {
+#         "finance_request": finance_request,
+#         "form": form,
+#         "payments": payments,
+#     }
+#     return render(request, "projectfinance/make_payment.html", context)
 
 
 #============================================

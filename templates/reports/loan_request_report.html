@@ -7,27 +7,27 @@
 
 
 
-<div class="container">        
+    
             <h6 class="page-title text-center">
                 <i class="fas fa-clipboard-list me-3"></i>
                 Loan Request Report
             </h6>
             <h6 class="page-subtitle text-dark text-center">Monitor and track all Loan requests across your organization</h6>
-     <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow">
+            <div class="row mb-4">
+                <div class="col-12">
+           
                 <div class="card-header">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-filter me-2"></i>
                         Filter Options
                     </h5>
                 </div>
-                <div class="card-body">
+              
             <form method="get" id="filterForm">
                 <div class="row">
                     <div class="col-md-3">
                         <label class="report-form-label" for="status">Status</label>
-                        <select class="form-control"  name="status" id="status">
+                        <select class="form-control shadow"  name="status" id="status">
                             {# The first option is "All Statuses" which value is 'all' #}
                             {% for value, label in status_choices %}
                                 <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>
@@ -38,16 +38,16 @@
                     </div>
                     <div class="col-md-3">
                         <label class="report-form-label" for="date_from">Date From</label>
-                        <input type="date" class="form-control" name="date_from" id="date_from" value="{{ filters.date_from|default:'' }}">
+                        <input type="date" class="form-control shadow" name="date_from" id="date_from" value="{{ filters.date_from|default:'' }}">
                     </div>
                     <div class="col-md-3">
                         <label class="report-form-label" for="date_to">Date To</label>
-                        <input type="date" class="form-control" name="date_to" id="date_to" value="{{ filters.date_to|default:'' }}">
+                        <input type="date" class="form-control shadow" name="date_to" id="date_to" value="{{ filters.date_to|default:'' }}">
                     </div>
 
                     <div class="col-md-3">
                         <label class="report-form-label" for="month">Filter by Month</label>
-                        <select name="month" id="month" class="form-control">
+                        <select name="month" id="month" class="form-control shadow">
                             <option value="">All Months</option>
                             {% for m in months %}
                                 <option value="{{ m|date:"Y-m" }}" {% if filters.month == m|date:"Y-m" %}selected{% endif %}>
@@ -61,7 +61,8 @@
 
                 <div class="row mt-2">
                     <div class="col-md-3">
-                    <select class="form-control" name="loan_type" id="loan_type">
+                        <label for="">Loan Type</label>
+                    <select class="form-control shadow" name="loan_type" id="loan_type">
                         <option value="">All Loan Types</option>
                         {% for type in loan_types %}
                             <option value="{{ type.name }}" {% if filters.loan_type == type.name %}selected{% endif %}>
@@ -70,11 +71,10 @@
                         {% endfor %}
                     </select>
                 </div>
-                 <div class="col-md-3">
+                 <div class="d-flex gap-2 mt-2">
                     <button type="submit" class="btn btn-primary">Apply Filters </button>
-                 </div>
-                  <div class="col-md-3">
-                    <a href="{% url 'loan_request_report' %}" class="btn btn-secondary">Clear Filters</a>
+            
+                    <a href="{% url 'loan_request_report' %}" class="btn btn-secondary">Clear</a>
                 </div>
                 </div>
                 
@@ -82,14 +82,14 @@
          </div>
             </div>
         </div>
-    </div>
+   
         <div class="stats-grid m-3">
             <div class="stat-card shadow" style="border-top: 2px solid blue;">
                 <div class="stat-icon bg-primary">
                     <i class="fas fa-list-ul"></i> 
                 </div>
                 <div class="stat-content">
-                    <h4>{{ summary.total_requests }}</h4>
+                    <h5>{{ summary.total_requests }}</h5>
                     <p>Total Requests</p>
                 </div>
             </div>
@@ -99,7 +99,7 @@
                     <i class="fas fa-money-bill-wave"></i> 
                 </div>
                 <div class="stat-content">
-                    <h4>₦{{ summary.total_value|floatformat:2|intcomma }}</h4>
+                    <h5>₦{{ summary.total_value|floatformat:2|intcomma }}</h5>
                     <p>Total Approved Value</p>
                 </div>
             </div>
@@ -109,7 +109,7 @@
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <h4>₦{{ summary.total_paid|floatformat:2|intcomma }}</h4>
+                    <h5>₦{{ summary.total_paid|floatformat:2|intcomma }}</h5>
                     <p>Total Repaid</p>
                 </div>
             </div>
@@ -119,7 +119,7 @@
                     <i class="fas fa-clock"></i>
                 </div>
                 <div class="stat-content">
-                    <h4>₦{{ summary.total_balance|floatformat:2|intcomma }}</h4>
+                    <h5>₦{{ summary.total_balance|floatformat:2|intcomma }}</h5>
                     <p>Balance Remaining</p>
                 </div>
             </div>
@@ -129,7 +129,7 @@
                     <i class="fas fa-hourglass-half"></i>
                 </div>
                 <div class="stat-content">
-                    <h4>{{ summary.pending_count }}</h4>
+                    <h5>{{ summary.pending_count }}</h5>
                     <p>Pending</p>
                 </div>
             </div>
@@ -139,7 +139,7 @@
                     <i class="fas fa-thumbs-up"></i> 
                 </div>
                 <div class="stat-content">
-                    <h4>{{ summary.approved_count }}</h4>
+                    <h5>{{ summary.approved_count }}</h5>
                     <p>Approved</p>
                 </div>
             </div>
@@ -149,7 +149,7 @@
                     <i class="fas fa-wallet"></i>
                 </div>
                 <div class="stat-content">
-                    <h4>{{ summary.paid_count }}</h4>
+                    <h5>{{ summary.paid_count }}</h5>
                     <p>Fully Paid</p>
                 </div>
             </div>
@@ -159,7 +159,7 @@
                     <i class="fas fa-times-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <h4>{{ summary.declined_count }}</h4>
+                    <h5>{{ summary.declined_count }}</h5>
                     <p>Rejected</p>
                 </div>
             </div>

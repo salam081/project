@@ -275,7 +275,7 @@ def get_upload_savings(request):
     data.sort(key=lambda x: (x["year"], x["num"]))
 
     # Paginator setup
-    paginator = Paginator(data, 24)  
+    paginator = Paginator(data, 12)  
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 

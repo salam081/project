@@ -217,11 +217,10 @@
                 <thead class="table-info">
                     <tr>
                         <th class="text-nowrap text-truncate">Member</th>
-                       
-                        <th>Expenditure</th>
+                        <th class="text-nowrap text-truncate">Requests Amount</th>
                         <th class="text-nowrap text-truncate">Income Received</th>
                         <th class="text-nowrap text-truncate">Expected Income</th>
-                        <th class="text-nowrap text-truncate">Current Profit</th>
+                        {% comment %} <th class="text-nowrap text-truncate">Current Profit</th> {% endcomment %}
                         <th class="text-nowrap text-truncate">Expected Profit</th>
                         <th>Outstanding</th>
                         <th>Status</th>
@@ -236,12 +235,12 @@
                         <td>₦{{ request.expenditure|floatformat:2|intcomma }}</td>
                         <td>₦{{ request.income_received|floatformat:2|intcomma }}</td>
                         <td>₦{{ request.expected_income|floatformat:2|intcomma }}</td>
-                        <td class="{% if request.current_profit >= 0 %}positive{% else %}negative{% endif %}">
+                        {% comment %} <td class="{% if request.current_profit >= 0 %}positive{% else %}negative{% endif %}">
                             ₦{{ request.current_profit|floatformat:2|intcomma }}
                             {% if request.expenditure > 0 %}
                                 <small class="d-block text-muted">({{ request.profit_margin_current|floatformat:1 }}%)</small>
                             {% endif %}
-                        </td>
+                        </td> {% endcomment %}
                         <td class="{% if request.expected_profit >= 0 %}positive{% else %}negative{% endif %}">
                             ₦{{ request.expected_profit|floatformat:2|intcomma }}
                             {% if request.expenditure > 0 %}

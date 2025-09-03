@@ -36,7 +36,7 @@ class Religion(models.Model):
 class User(AbstractUser):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    other_name = models.CharField(max_length=100)
+    other_name = models.CharField(max_length=100,blank=True,null=True)
     date_of_birth = models.DateField(blank=True,null=True)
     username = models.CharField(max_length=100, unique=True)
     savings = models.IntegerField(blank=True,null=True)

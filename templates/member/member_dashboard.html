@@ -7,8 +7,8 @@
 {% block content %}
 <div id="dashboard" class="content-section active">
     <div class="content-card">
-        <h1>Dashboard Overview</h1>
-        <p>Welcome to your admin dashboard. Here's a quick overview of your system.</p>
+        <h5>Member Dashboard</h5>
+       
     </div>
  {% if pending_guarantor_requests %}
             <div class="card shadow-lg border-0 rounded-4">
@@ -123,7 +123,7 @@
             </div>
         </div>
         
-        <div class="stat-card">
+        {% comment %} <div class="stat-card">
             <div class="stat-icon bg-danger">
                 <i class="bi bi-graph-up"></i>
             </div>
@@ -131,7 +131,7 @@
                 <h3>95%</h3>
                 <p>Success Rate</p>
             </div>
-        </div>
+        </div> {% endcomment %}
     </div>
 
     <!-- Recent Activity -->

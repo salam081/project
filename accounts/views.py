@@ -326,7 +326,7 @@ def complete_profile(request):
 
 
 def is_profile_complete(user):
-    required_fields = ['first_name', 'last_name', 'other_name', 'date_of_birth', 'department', 'group']
+    required_fields = ['first_name', 'last_name', 'date_of_birth', 'department', 'group']
     for field in required_fields:
         if not getattr(user, field, None):
             return False

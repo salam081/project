@@ -1,11 +1,12 @@
 {% extends 'base/base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <h5 class="text-center text-primary ">Member Monthly Savings Details</h5>
+<div class="content-card mt-4">
+    <h5 class="text-center text-dark ">Member Monthly Savings Details</h5>
+    <a class="btn btn-primary mb-4" href="{% url 'get_upload_savings' %}">Back to List</a>
 <div class="table-responsive">
     <table class="table table-bordered table-striped table-hover text-center">
-        <thead class="table-primary">
+        <thead class="table-info">
             <tr>
                 <th>S/N</th>
                 <th class="text-nowrap" style="min-width: 120px;">Member Id</th>
@@ -13,7 +14,7 @@
                 <th>IPPIS</th>
                 <th class="text-nowrap" style="min-width: 120px;">Monthly Deduction</th>
                 <th class="text-nowrap" style="min-width: 120px;">Monthly Saving</th>
-                <th class="text-nowrap" style="min-width: 120px;">Corrent Total Savings</th>
+                {% comment %} <th class="text-nowrap" style="min-width: 120px;">Corrent Total Savings</th> {% endcomment %}
                 <th>Month</th>
             </tr>
         </thead>
@@ -26,7 +27,7 @@
                 <td>{{ save.member.ippis }}</td>
                 <td>₦{{ save.original_amount }}</td>
                 <td>₦{{ save.month_saving }}</td>
-                <td>₦{{ save.member.total_savings }}</td>
+                {% comment %} <td>₦{{ save.member.total_savings }}</td> {% endcomment %}
                 <td class="text-nowrap" style="min-width: 120px;">{{ save.month|date:"M d, Y" }}</td>
             </tr>
             {% empty %}

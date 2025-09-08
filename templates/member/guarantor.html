@@ -1,7 +1,8 @@
 {% extends 'base/base.html' %}
 
 {% block content %}
-<div class="container mt-5 d-flex justify-content-center">
+<div class="content-card mt-5 d-flex justify-content-center">
+    
     {% if request.user.member == loan.guarantor and not loan.guarantor_accepted %}
         <a href="{% url 'confirm_guarantor_approval' loan.id %}" class="btn btn-sm btn-primary">
             Accept as Guarantor

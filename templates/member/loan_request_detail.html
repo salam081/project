@@ -93,13 +93,12 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item">
-                        <a href="{% url 'my_loan_requests' %}" class="text-decoration-none">
-                            <i class="fas fa-home me-1"></i>My Loan Requests
-                        </a>
+                        <a href="{% url 'my_loan_requests' %}" class="btn btn-outline-primary w-100 mb-2 action-button">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Back to My Loans
+                    </a>
                     </li>
-                    <li class="breadcrumb-item active" aria-current="page">
-                        Loan #{{ loan_request.id }}
-                    </li>
+                   
                 </ol>
             </nav>
         </div>
@@ -125,10 +124,10 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="mb-3">
+                            {% comment %} <div class="mb-3">
                                 <label class="form-label text-muted mb-1">Loan ID</label>
                                 <b class="fw-bold">#{{ loan_request.id }}</b>
-                            </div>
+                            </div> {% endcomment %}
                             <div class="mb-3">
                                 <label class="form-label text-muted mb-1">Application Date</label>
                                 <b class="fw-bold">{{ loan_request.application_date|date:"M d, Y" }}</b>
@@ -136,9 +135,9 @@
                             <div class="mb-3">
                                 <label class="form-label text-muted mb-1">Status</label>
                                 <b>
-                                    <span class="badge status-{{ loan_request.status|lower }}">
-                                        {{ loan_request.status|title }}
-                                    </span>
+                                    
+                                        {{ loan_request.status }}
+                                  
                                 </b>
                             </div>
                         </div>
@@ -235,7 +234,7 @@
                 <div class="card-body text-center">
                     <h5 class="mb-3">
                         <i class="fas fa-calculator me-2"></i>
-                        Financial Summary
+                         Summary
                     </h5>
                     <hr class="bg-white opacity-50">
                     
@@ -292,31 +291,7 @@
             </div>
 
             <!-- Actions Card -->
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-title mb-3">
-                        <i class="fas fa-tasks me-2"></i>
-                        Available Actions
-                    </h6>
-                    
-                    {% if loan_request.status == 'approved' and balance > 0 %}
-                        <button class="btn btn-success w-100 mb-2 action-button">
-                            <i class="fas fa-credit-card me-2"></i>
-                            Make Repayment
-                        </button>
-                    {% endif %}
-
-                    <a href="{% url 'my_loan_requests' %}" class="btn btn-outline-primary w-100 mb-2 action-button">
-                        <i class="fas fa-arrow-left me-2"></i>
-                        Back to My Loans
-                    </a>
-
-                    <!-- <button class="btn btn-outline-secondary w-100 action-button" onclick="window.print()">
-                        <i class="fas fa-print me-2"></i>
-                        Print Details
-                    </button> -->
-                </div>
-            </div>
+           
         </div>
     </div>
 </div>

@@ -47,6 +47,12 @@ def member_dashboard(request):
         guarantor_accepted=False,
         status="pending"
     )
+    
+    total_savings = Savings.objects.filter(member=member).aggregate(
+        total=Sum('month_saving')
+    )['total'] or 0
+    print(total_savings)
+
     loanable_total = Loanable.objects.filter(member=member).aggregate(
         total=Sum('amount')
     )['total'] or 0
@@ -69,6 +75,7 @@ def member_dashboard(request):
         month__month=current_month, 
         month__year=current_year
     ).first()
+    
 
     previous_monthly_saving = Savings.objects.filter(
         member=member, 
@@ -128,7 +135,7 @@ def member_dashboard(request):
 
     context = {
         'member': member,
-        'total_savings': member.total_savings or 0,
+        'total_savings': total_savings,
         'monthly_saving': monthly_saving.month_saving if monthly_saving else 0,
         'previous_monthly_saving': previous_monthly_saving.month_saving if previous_monthly_saving else 0,
         'loan': active_loan,
@@ -148,32 +155,61 @@ def member_dashboard(request):
 
     return render(request, 'member/member_dashboard.html', context)
 
+# def member_savings(request):
+#     try:
+#         member = Member.objects.get(member=request.user)
+#     except Member.DoesNotExist:
+#         return redirect('login')
+    
+#     savings = Savings.objects.filter(member=member)
+#     total_savings = Savings.objects.filter(member=member).aggregate(
+#         total=Sum('month_saving')
+#     )['total'] or 0
+
+#     investmentsavings = Investment.objects.filter(member=member)
+#     total_investment = Investment.objects.filter(member=member).aggregate(
+#         total=Sum('total_amount')
+#     )['total'] or 0
+    
+#     loanable = Loanable.objects.filter(member=member)
+#     total_loanable = Loanable.objects.filter(member=member).aggregate(total=Sum('total_amount'))['total'] or 0
+#     g_total = total_investment + total_loanable 
+#     print(g_total)
+#     total = g_total /2
+#     print(total)
+#     context = {'savings': savings,'total_savings':total_savings,
+#                'investmentsavings':investmentsavings,'total_investment':total_investment,
+#                'loanable':loanable,'total_loanable':total_loanable,'total':total,}
+#     return render(request, 'member/member_savings.html', context)
+
 def member_savings(request):
     try:
         member = Member.objects.get(member=request.user)
     except Member.DoesNotExist:
         return redirect('login')
-    savings = Savings.objects.filter(member=member)
-    total_savings = Savings.objects.filter(member=member).aggregate(
-        total=Sum('month_saving')
-    )['total'] or 0
 
-    investmentsavings = Investment.objects.filter(member=member)
-    total_investment = Investment.objects.filter(member=member).aggregate(
-        total=Sum('total_amount')
-    )['total'] or 0
-    
-    loanable = Loanable.objects.filter(member=member)
-    total_loanable = Loanable.objects.filter(member=member).aggregate(
-        total=Sum('total_amount')
-    )['total'] or 0
-    g_total = total_investment + total_loanable 
-    print(g_total)
-    total = g_total /4
-    print(total)
-    context = {'savings': savings,'total_savings':total_savings,
-               'investmentsavings':investmentsavings,'total_investment':total_investment,
-               'loanable':loanable,'total_loanable':total_loanable,'total':total,}
+    # Fetch all savings for this member
+    savings = Savings.objects.filter(member=member)
+
+    # Total savings BEFORE deductions
+    total_savings = savings.aggregate(total=Sum('month_saving'))['total'] or 0
+
+    # Get subscription fee from Interest table if available
+    subscription_fee = member.interest.amount if hasattr(member, 'interest') and member.interest else 0
+
+    # Deduct subscription fee only once per month
+    net_savings = total_savings - subscription_fee
+
+    # Correctly calculate Investment and Loanable from net savings
+    total_investment = net_savings / 2
+    total_loanable = net_savings / 2
+
+    context = {
+        'savings': savings,
+        'total_savings': total_savings,
+        'total_investment': total_investment,
+        'total_loanable': total_loanable,
+    }
     return render(request, 'member/member_savings.html', context)
 
 def ajax_load_bank_code(request):
@@ -278,7 +314,7 @@ def loan_request_view(request):
         # LoanFormFee.objects.create(form_fee = '500',paid_by=request.user,)
         
         messages.success(request, "Loan request submitted successfully!")
-        return redirect('loan_request')
+        return redirect('my_loan_requests')
 
     context = {
         "loan_types": loan_types,

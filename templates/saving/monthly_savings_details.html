@@ -1,0 +1,116 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block content %}
+<a href="{% url 'monthly_savings_uploads' %}" class="btn btn-secondary">back to List</a>
+<div class="container mt-4">
+    <h3>Monthly Savings Details — {{ month|date:"F Y" }}</h3>
+    <div class="row">
+  <div class="col-md-3 mt-2">
+    <div class="card shadow text-dark text-center">
+      <div class="card-body">
+        <p class="card-title"> Total Savings</p>
+        <h5 class="card-text ">{{ total_uploaded|floatformat:2|intcomma }}</h5>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mt-2">
+    <div class="card shadow text-dark text-center">
+      <div class="card-body">
+        <p class="card-title">Total Subscription</p>
+        <h5 class="card-text ">{{ total_interest|floatformat:2|intcomma }}</h5>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mt-2">
+    <div class="card shadow text-dark text-center">
+      <div class="card-body">
+        <p class="card-title">Total Investment</p>
+        <h5 class="card-text ">{{ total_investment|floatformat:2|intcomma }}</h5>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mt-2">
+    <div class="card shadow text-dark text-center">
+      <div class="card-body">
+        <p class="card-title">Total Loanable</p>
+        <h5 class="card-text ">{{ total_loanable|floatformat:2|intcomma }}</h5>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="alert alert-info py-1 mt-2">
+  <h5>Total Savings and Subscription  :<strong class="text-success">{{total_saving_intresr|floatformat:2|intcomma}} For  ({{ month|date:"F Y" }})</strong></h5>
+</div>
+    <div class="card shadow p-3">
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>IPPIS</th>
+                    <th>Member Name</th>
+                    <th class="text-start">Savings (₦)</th>
+                    <th class="text-start">Subscription (₦)</th>
+                    <th class="text-start">Investment (₦)</th>
+                    <th class="text-start">Loanable (₦)</th>
+                    {% comment %} <th>Action</th> {% endcomment %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in page_obj %}
+                <tr>
+                    <td>{{ data.member.ippis }}</td>
+                    <td>{{ data.member.member.first_name }} {{ data.member.member.last_name }}</td>
+                    <td class="text-start">{{ data.savings|floatformat:2|intcomma }}</td>
+                    <td class="text-start">{{ data.interest|floatformat:2|intcomma }}</td>
+                    <td class="text-start">{{ data.investment|floatformat:2|intcomma }}</td>
+                    <td class="text-start">{{ data.loanable|floatformat:2|intcomma }}</td>
+                     {% comment %} <td>
+                        <a href="" class="btn btn-sm btn-warning">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                    </td> {% endcomment %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-danger">No savings records found for this month.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+           
+        </table>
+      
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">&laquo; First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+    </div>
+</div>
+{% endblock %}

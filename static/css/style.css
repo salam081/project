@@ -291,7 +291,7 @@ body {
 .main-content {
     margin-left: var(--sidebar-width);
     margin-top: var(--navbar-height);
-    padding: 1.1rem; /* Reduced from 2rem */
+    padding: 1rem; /* Reduced from 2rem */
     min-height: calc(100vh - var(--navbar-height));
     transition: margin-left 0.3s ease;
 }
@@ -368,7 +368,7 @@ body {
 .content-card {
     background: white;
     border-radius: 8px; /* Smaller radius */
-    padding: 1.5rem; /* Reduced from 2rem */
+    padding: 1.2rem; /* Reduced from 2rem */
     box-shadow: 0 1px 6px rgba(0,0,0,0.1); /* Reduced shadow */
     margin-bottom: 1.5rem; /* Reduced spacing */
 }
@@ -384,7 +384,7 @@ body {
     background: white;
     border-radius: 8px; /* Smaller radius */
     padding: 1.25rem; /* Reduced padding */
-    box-shadow: 0 1px 6px rgba(0,0,0,0.1); /* Reduced shadow */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1); /* Reduced shadow */
     display: flex;
     align-items: center;
     transition: transform 0.3s ease;
@@ -395,8 +395,8 @@ body {
 }
 
 .stat-icon {
-    width: 30px; /* Reduced from 60px */
-    height: 30px;
+    width: 25px; /* Reduced from 60px */
+    height: 25px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -444,7 +444,7 @@ body {
     }
     
     .sidebar {
-        width: 240px; /* Reduced mobile width */
+        width: 220px; /* Reduced mobile width */
         transform: translateX(-100%);
         z-index: 1050;
     }
@@ -518,7 +518,7 @@ body {
     }
     
     .content-card {
-        padding: 1.25rem; /* Reduced padding */
+        padding: 2.5rem; /* Reduced padding */
     }
     
     .stats-grid {
@@ -564,7 +564,7 @@ body {
     font-weight: 600;
 }
 
-.status-pending { background-color: #edbf27; color: #ffffff; }
+.status-pending { background-color: #e7c145; color: #ffffff; }
 .status-active { background-color: #069c17; color: #ffffff; }
 .status-completed { background-color: #210591; color: #ffffff; }
 .status-cancelled { background-color: #dd1111; color: #ffffff; }
@@ -575,7 +575,7 @@ body {
     border-radius: 8px; /* Smaller radius */
     padding: 1.25rem; /* Reduced padding */
     margin-bottom: 0.875rem; /* Reduced spacing */
-    box-shadow: 0 1px 6px rgba(0,0,0,0.1); /* Reduced shadow */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Reduced shadow */
 }
 
 .section-title {

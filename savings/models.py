@@ -1,9 +1,10 @@
 from django.db import models
-from savings.models import *
+from accounts.models import *
 # Create your models here.
 
+
 class Savings(models.Model):
-    member = models.ForeignKey('accounts.Member', on_delete=models.CASCADE,related_name="savings")
+    member = models.ForeignKey("accounts.Member", on_delete=models.CASCADE,related_name="savings")
     month = models.DateField(db_index=True)
     month_saving = models.DecimalField(max_digits=10, decimal_places=2)
     original_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -27,8 +28,17 @@ class Savings(models.Model):
         return f"{self.member} - {self.month.strftime('%B %Y')}: ₦{self.month_saving}"
 
 
+class InterestAmount(models.Model):
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_updated = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey("accounts.User", on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.amount}"
+
 class Interest(models.Model):
-    member = models.ForeignKey('accounts.Member', on_delete=models.CASCADE)
+    member = models.ForeignKey("accounts.Member", on_delete=models.CASCADE)
     month = models.DateField(db_index=True)  
     amount_deducted = models.DecimalField(max_digits=10, decimal_places=2, default=400.00)
     date_deducted = models.DateField(auto_now_add=True)
@@ -40,7 +50,7 @@ class Interest(models.Model):
 
 
 class Loanable(models.Model):
-    member = models.ForeignKey('accounts.Member', on_delete=models.CASCADE)
+    member = models.ForeignKey("accounts.Member", on_delete=models.CASCADE)
     month = models.DateField(db_index=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
@@ -50,7 +60,7 @@ class Loanable(models.Model):
         return f"{self.member} - {self.amount} -  {self.month.strftime('%B %Y')}"
 
 class Investment(models.Model):
-    member = models.ForeignKey('accounts.Member', on_delete=models.CASCADE)
+    member = models.ForeignKey("accounts.Member", on_delete=models.CASCADE)
     month = models.DateField(db_index=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)

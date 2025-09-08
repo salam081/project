@@ -6,22 +6,6 @@
     <style>
         
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            {% comment %} background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); {% endcomment %}
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
         .header h2 {
             font-size: 2rem;
             font-weight: 600;
@@ -95,8 +79,8 @@
         .item-row {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 10px;
+            gap: 12px;
+            padding: 5px;
             background: white;
             border-radius: 8px;
             margin-bottom: 12px;
@@ -181,9 +165,9 @@
             transform: translateY(0);
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 668px) {
             .container {
-                margin: 10px;
+                margin: 5px;
                 border-radius: 12px;
             }
 
@@ -202,7 +186,7 @@
             .item-row {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 12px;
+                gap: 10px;
             }
 
             .item-row input[type="number"] {
@@ -211,8 +195,8 @@
         }
     </style>
 
-    <div class="container mt-5" style="border-top: 3px solid #764ba2;">
-        <div class="header">
+    <div class="content-card mt-3">
+        <div >
             <h2>Request New Consumable</h2>
         </div>
         
@@ -243,7 +227,7 @@
                 <h3 class="">Select Items</h3>
                <div id="item-selection-container">
     {% for item in selling_plans %}
-        <div class="item-row col-md-8">
+        <div class="item-row col-md-8 col-sm-8">
             <input type="checkbox" id="item_{{ item.id }}" name="selected_items" value="{{ item.id }}">
             <label for="item_{{ item.id }}">
                 {{ item.purchased_item.item_name }} - <span class="price">₦{{ item.selling_price_per_unit|floatformat:0 }}</span>

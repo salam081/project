@@ -45,18 +45,9 @@
             </a>
         </div>
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
 
         {% if loan_data %}
-            <div class="card shadow col-md-12">
-                <div class="card-body">
+            
                     <div class="table-responsive">
                         <table class="table table">
                              <thead class="table-info">
@@ -87,9 +78,9 @@
                                         <td class="text-nowrap" style="min-width: 120px;">{{ loan.loan_type.name }}</td>
                                         <td>{{ loan.loan_term_months }} Months</td>
                                         <td class="text-nowrap" style="min-width: 120px;">
-                                             <span class="status-badge text-white
-                                                {% if req.status == 'Pending' %}status-pending
-                                                {% elif req.status == 'Approved' %}status-active
+                                             <span class="status-badge 
+                                                {% if req.status == 'pending' %}status-pending
+                                                {% elif req.status == 'approved' %}status-active
                                                 {% elif req.status == 'Itempicked' %}status-itempicked
                                                 {% elif req.status == 'FullyPaid' %}status-completed
                                                 {% elif req.status == 'Declined' %}status-cancelled
@@ -127,7 +118,7 @@
                         </table>
                     </div>
                 </div>
-            </div>
+          
         {% else %}
             <div class="text-center py-5">
                 <div class="mb-4">

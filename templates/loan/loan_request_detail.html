@@ -34,6 +34,7 @@
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             margin-bottom: 1.5rem;
+            
         }
 
         .custom-card:hover {
@@ -64,7 +65,7 @@
             color: white;
         }
 
-        .status-paid {
+        .status-Fullypaid {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
         }
@@ -105,10 +106,11 @@
 
         .btn-action {
             border-radius: 25px;
-            padding: 0.6rem 1.5rem;
+            padding: 0.4rem 1.5rem;
             font-weight: 600;
-            margin: 0.2rem;
+            margin: 0.6rem;
             transition: all 0.3s ease;
+        
         }
 
         .btn-action:hover {
@@ -257,26 +259,19 @@
 </head>
 <body>
     <!-- Page Header -->
-    <div class="page-header">
-        <div class="content-card">
-            <div class="row align-items-center">
-                {% comment %} <div class="col">
-                    <p class="mb-0 mt-1 opacity-75">Complete loan request details and repayment history</p>
-                </div> {% endcomment %}
+   
                 <div class="col-auto">
                     <a href="{% url 'admin_loan_requests' %}" class="btn btn-light btn-action">
                         <i class="fas fa-arrow-left me-2"></i>Back to List
                     </a>
                 </div>
-            </div>
-        </div>
-    </div>
+      
 
     <div class="container">
         <!-- Quick Status Overview -->
         <div class="row ">
             <div class="col-12">
-                <div class="custom-card animate-fade-in">
+                <div class="  animate-fade-in">
                     <div class="card-body p-1">
                         <div class="row align-items-center">
                             <div class="col-md-6">
@@ -295,12 +290,12 @@
                                     <i class="fas fa-circle me-2"></i>{{ loan_request.get_status_display }}
                                 </span>
                             </div>
-                            <div class="col-md-3 mt-1 text-end">
+                            <div class="col-md-3 mb-3 text-end">
                                 <div class="dropdown">
                                     <button class="btn btn-outline-primary dropdown-toggle btn-action" type="button" data-bs-toggle="dropdown">
                                         <i class="fas fa-cog me-2"></i>Actions
                                     </button>
-                                    <ul class="dropdown-menu">
+                                    <ul class="dropdown-menu ">
                                         {% if loan_request.status == 'pending' %}
                                             <li><a class="dropdown-item" href="{% url 'approve_loan_request' loan_request.id %}">
                                                 <i class="fas fa-check text-success me-2"></i>Approve

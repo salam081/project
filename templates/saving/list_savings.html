@@ -1,0 +1,247 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title ">Member Savings List</h5>
+                    <div class="card-tools">
+                        <span class="badge badge-info">Total: {{ total_records }} record{{ total_records|pluralize }}</span>
+                    </div>
+                </div>
+                
+                <!-- Filters Section -->
+                <div class="card-body">
+                    <form method="get" class="row g-3 mb-4" id="filterForm">
+                        <div class="col-md-3">
+                            <label class="form-label">Filter by Month:</label>
+                            <input type="month" name="month" value="{{ selected_month }}" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Search by Name:</label>
+                            <input type="text" name="name" value="{{ search_name }}" placeholder="First or last name..." class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Search by IPPIS:</label>
+                            <input type="text" name="ippis" value="{{ search_ippis }}" placeholder="IPPIS number..." class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Records per page:</label>
+                            <select name="per_page" class="form-control form-control-sm">
+                                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                                <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary btn-sm me-2">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                            <a href="{% url 'list_savings' %}" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Pagination Info -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="text-muted">
+                            Showing 
+                            {% if page_obj.object_list %}
+                                {{ page_obj.start_index }} to {{ page_obj.end_index }} 
+                            {% else %}
+                                0 to 0
+                            {% endif %}
+                            of {{ total_records }} entries
+                        </div>
+                        
+                        <!-- Records per page on the right -->
+                        <div>
+                            <small class="text-muted">
+                                Page {{ pagination_info.current_page }} of {{ pagination_info.total_pages }}
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Member</th>
+                                    <th>IPPIS</th>
+                                    <th>Month</th>
+                                    <th class="text-nowrap" style="min-width: 120px;">Original Amount</th>
+                                    <th class="text-nowrap" style="min-width: 120px;">Savings Amount</th>
+                                    <th>Loanable</th>
+                                    <th>Investment</th>
+                                    {% comment %} <th>Action</th> {% endcomment %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for saving in page_obj.object_list %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ saving.member.member.first_name }} {{ saving.member.member.last_name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-info">{{ saving.member.ippis }}</span>
+                                    </td>
+                                    <td>{{ saving.month|date:"F Y" }}</td>
+                                    <td class="text-end">₦{{ saving.original_amount|floatformat:2 }}</td>
+                                    <td class="text-end">₦{{ saving.month_saving|floatformat:2 }}</td>
+                                    <td class="text-end">₦{{ saving.loanable_amount|floatformat:2 }}</td>
+                                    <td class="text-end">₦{{ saving.investment_amount|floatformat:2 }}</td>
+                                    {% comment %} <td>
+                                        <a href="{% url 'edit_saving' saving.id %}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                    </td> {% endcomment %}
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle"></i> No savings records found matching your criteria.
+                                        {% if search_name or search_ippis or selected_month %}
+                                            <br><small>Try adjusting your filters.</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Enhanced Pagination -->
+                    {% if pagination_info.total_pages > 1 %}
+                    <nav aria-label="Savings pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <!-- First page -->
+                            {% if pagination_info.current_page > 1 %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page=1">
+                                        <i class="fas fa-angle-double-left"></i> First
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <!-- Previous page -->
+                            {% if pagination_info.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page={{ pagination_info.previous_page }}">
+                                        <i class="fas fa-angle-left"></i> Previous
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <!-- Page numbers -->
+                            {% for page_num in page_obj.paginator.page_range %}
+                                {% if page_num == pagination_info.current_page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% elif page_num >= pagination_info.current_page|add:-2 and page_num <= pagination_info.current_page|add:2 %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page={{ page_num }}">{{ page_num }}</a>
+                                    </li>
+                                {% elif page_num == 1 or page_num == pagination_info.total_pages %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page={{ page_num }}">{{ page_num }}</a>
+                                    </li>
+                                {% elif page_num == pagination_info.current_page|add:-3 or page_num == pagination_info.current_page|add:3 %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            <!-- Next page -->
+                            {% if pagination_info.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page={{ pagination_info.next_page }}">
+                                        Next <i class="fas fa-angle-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <!-- Last page -->
+                            {% if pagination_info.current_page < pagination_info.total_pages %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page={{ pagination_info.total_pages }}">
+                                        Last <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Optional: Auto-submit form on per_page change -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const perPageSelect = document.querySelector('select[name="per_page"]');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    }
+    
+    // Add Enter key support for search inputs
+    const searchInputs = document.querySelectorAll('input[name="name"], input[name="ippis"]');
+    searchInputs.forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('filterForm').submit();
+            }
+        });
+    });
+});
+</script>
+
+<style>
+/* Custom styles for better UX */
+.table th {
+    background-color: #343a40;
+    color: white;
+    font-weight: 600;
+    border-color: #454d55;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,123,255,.075);
+}
+
+.badge-info {
+    background-color: #17a2b8;
+}
+
+.text-end {
+    text-align: right;
+}
+
+.pagination .page-link {
+    color: #007bff;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* Loading indicator for form submissions */
+.btn:disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+</style>
+
+{% endblock %}

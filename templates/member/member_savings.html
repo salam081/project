@@ -1,87 +1,65 @@
 {% extends 'base/base.html' %}
-
+{% load humanize %}
 {% load static %}
 
 {% block title %}Dashboard - Admin Panel{% endblock %}
 
 {% block content %}
-<div id="dashboard" class="content-section active">
-   
-{% comment %}     
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon bg-primary">
-                <i class="bi bi-folder"></i>
-            </div>
-            <div class="stat-content">
-                <h3>150</h3>
-                <p>Total Cases</p>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon bg-success">
-                <i class="bi bi-people"></i>
-            </div>
-            <div class="stat-content">
-                <h3>1,250</h3>
-                <p>Active Members</p>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon bg-warning">
-                <i class="bi bi-exclamation-triangle"></i>
-            </div>
-            <div class="stat-content">
-                <h3>25</h3>
-                <p>Pending Cases</p>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon bg-danger">
-                <i class="bi bi-graph-up"></i>
-            </div>
-            <div class="stat-content">
-                <h3>95%</h3>
-                <p>Success Rate</p>
-            </div>
-        </div>
+<style>
+    p {
+        padding: 20px;
+        color: white;
+    }
+    .cardheader {
+        text-align: center;
+        background: linear-gradient(134deg, #ab5fd1 0%, #d35fc8 100%);
+    }
+    .a1 {
+        background: linear-gradient(134deg, #2eaeb2ff 0%, #357cdaff 100%);
+    }
+    .a2 {
+        background: linear-gradient(134deg, #67d8d6 0%, #4779ca 100%);
+        text-align: center;
+    }
+    .a3 {
+        background: linear-gradient(134deg, #3fb6c6ff 0%, #42a4e5ff 100%);
+    }
+</style>
+
+<h4 class="text-center">My Savings</h4>
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table bg-info">
+                <tr>
+                    <th>S/N</th>
+                    <th>Full Name</th>
+                    <th>IPPIS</th>
+                    <th class="text-nowrap">Savings Month</th>
+                    <th class="text-nowrap">Monthly Savings Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in savings %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ m.member.member.first_name }} {{ m.member.member.last_name }}</td>
+                    <td>{{ m.member.ippis }}</td>
+                    <td>{{ m.month }}</td>
+                    <td>₦{{ m.month_saving|default:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td colspan="4" class="text-end"><b>Total</b></td>
+                    <td class="text-primary">₦{{ total_savings|default:0|intcomma }}</td>
+                </tr>
+            </tbody>
+        </table>
+       <div class="d-flex text-center">
+        <p class="col-4 a1"><b>Total Savings</b> : ₦{{ total_savings|default:0|intcomma }}</p>
+        <p class="col-4 a2"><b>Investment</b> : ₦{{ total_investment|default:0|intcomma }}</p>
+        <p class="col-4 a3"><b>Loanable</b> : ₦{{ total_loanable|default:0|intcomma }}</p>
     </div>
-     {% endcomment %}
-    <!-- Recent Activity -->
-    <div class="content-card">
-        <h3>My savings</h3>
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>S/N</th>
-                        <th>FullName</th>
-                        <th>Month</th>
-                        <th>MonthlySavings</th>
-                    </tr>
-                </thead>
-                <tbody>
-                     {% for m in savings %}
-                    <tr>
-                        <td>{{forloop.counter}}</td>
-                        <td class="text-nowrap text-truncate" style="max-width: 230px;">{{ m.member.member.first_name }} {{ m.member.member.first_name }} {{ m.member.ippis }}</td>
-                        <td class="text-nowrap text-truncate" style="max-width: 100px;">{{ m.month }}</td>
-                        <td>₦{{m.month_saving}}</td>
-                    </tr>
-                   {% endfor %}
-                    <tr>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td class="text-primary"><b>Total</b> : {{total_savings}}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
     </div>
-</div>
 </div>
 {% endblock content %}

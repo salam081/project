@@ -109,30 +109,23 @@
                     <span class="nav-text">Upload Savings</span>
                 </a>
               
-                <a href="{% url 'get_upload_savings'  %}" class="nav-link" >
+                <a href="{% url 'monthly_savings_uploads'  %}" class="nav-link" >
                     <i class="bi bi-plus"></i>
                     <span class="nav-text">View Savings</span>
                 </a>
-                <a href="{% url 'interest_form'  %}" class="nav-link" >
+                <a href="{% url 'list_savings'  %}" class="nav-link" >
                     <i class="bi bi-plus"></i>
-                    <span class="nav-text">Take Admin Fee</span>
+                    <span class="nav-text">Members Savings</span>
                 </a>
-                <a href="{% url 'get_upload_interest'  %}" class="nav-link" >
+                <a href="{% url 'delete_monthly_savings'  %}" class="nav-link" >
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">Delete Savings</span>
+                </a>
+                <a href="{% url 'saving_report'  %}" class="nav-link" >
                     <i class="bi bi-eye"></i>
-                    <span class="nav-text">View Admin Fee</span>
+                    <span class="nav-text">Saving Report</span>
                 </a> 
-                <a href="{% url 'distribute_savings'  %}" class="nav-link" >
-                    <i class="bi bi-plus-circle"></i>
-                    <span class="nav-text">Distribute Savings</span>
-                </a>
-                  {% comment %} <a href="{% url 'combined_upload_view' %}" class="nav-link" >
-                    <i class="bi bi-file"></i>
-                    <span class="nav-text"> Management All Savings Upload</span>
-                </a> {% endcomment %}
-                <a href="{% url 'loanable_investment_months'  %}" class="nav-link" >
-                    <i class="bi bi-calendar"></i>
-                    <span class="nav-text">Loanable Investment</span>
-                </a>
+               
             </div>
         </div>
         <div class="nav-item">
@@ -243,7 +236,7 @@
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="reportSubmenu">
-                 <a href="{% url 'all_member_saving_search' %}" class="nav-link" >
+                 <a href="" class="nav-link" >
                      <i class="fas fa-file-alt me-2"></i>
                     <span class="nav-text">Savings Report</span>
                 </a>

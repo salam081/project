@@ -1,4 +1,5 @@
 {% extends "base/base.html" %}
+{% load humanize %}
 {% block content %}
 
 <div class="container mt-4">
@@ -6,22 +7,22 @@
     <h5 class="mb-3 text-center text-success">{% if selected_type %}{{ selected_type|title }}{% endif %}</h5>
 
      <div class="stats-grid m-3 ">  
-         <div class="stat-card shadow" style="border-top: 2px solid green;">
+         <div class="stat-card shadow" >
                 <div class="stat-icon bg-success">
                     <i class="fas fa-list-ul"></i> 
                 </div>
                <div class="stat-content">
-                    <h3>Total Amount Paid</h3>
-                    <p class="stat-value"> ₦{{ total_sum_paid|floatformat:2 }}</p>
+                    <h5>Total Payment Recived </h5>
+                    <p class="stat-value text-success fs-4"> ₦{{ total_sum_paid|floatformat:2|intcomma }}</p>
                 </div>
             </div>
-         <div class="stat-card shadow" style="border-top: 2px solid red;">
+         <div class="stat-card shadow" >
                 <div class="stat-icon bg-danger">
                      <i class="fas fa-calendar-alt"></i>
                 </div>
                <div class="stat-content">
-                    <h3>Active Loan Balance</h3>
-                    <p class="stat-value"> ₦{{ total_sum_remaining|floatformat:2 }}</p>
+                    <h5>Total Balance Remaining</h5>
+                    <p class="stat-value text-danger fs-4"> ₦{{ total_sum_remaining|floatformat:2|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -66,11 +67,12 @@
         <thead>
             <tr>
                 <!-- <th>IPPIS</th> -->
+                <th>S/N</th>
                 <th>Member</th>
                 <th class="text-nowrap text-truncate" style="max-width: 250px;">Loan Type</th>
                 <!-- <th class="text-nowrap text-truncate" style="max-width: 250px;">Approved Amount</th> -->
                 <th class="text-nowrap text-truncate" style="max-width: 250px;">Amount Paid</th>
-                <th class="text-nowrap text-truncate" style="max-width: 250px;">Total Paid</th>
+                <th class="text-nowrap text-truncate" style="max-width: 250px;">Total Amount Paid</th>
                 <th class="text-nowrap text-truncate" style="max-width: 250px;">Balance Remaining</th>
                 <th class="text-nowrap text-truncate" style="max-width: 250px;">Repayment Date</th>
             </tr>
@@ -78,6 +80,7 @@
         <tbody>
             {% for item in page_obj %}
             <tr>
+                <td>{{forloop.counter}}</td>
                 <!-- <td>{{ item.repayment.loan_request.member.ippis }}</td> -->
                 <td class="text-nowrap text-truncate" style="max-width: 250px;">{{ item.repayment.loan_request.member }}</td>
                 <!-- <td>{{ item.repayment.loan_request.loan_type.name }}</td> -->
@@ -92,9 +95,9 @@
                     </td>
 
                 <!-- <td>₦{{ item.approved_amount|floatformat:2 }}</td> -->
-                <td>₦{{ item.repayment.amount_paid|floatformat:2 }}</td>
-                <td>₦{{ item.total_paid|floatformat:2 }}</td>
-                <td>₦{{ item.balance_remaining|floatformat:2 }}</td>
+                <td >₦{{ item.repayment.amount_paid|floatformat:2 }}</td>
+                <td class="text-success">₦{{ item.total_paid|floatformat:2 }}</td>
+                <td class="text-danger">₦{{ item.balance_remaining|floatformat:2 }}</td>
                 <td class="text-nowrap text-truncate" style="max-width: 250px;">{{ item.repayment.repayment_date|date:"F Y" }}</td>
             </tr>
 

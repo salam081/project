@@ -21,6 +21,6 @@ urlpatterns = [
     path('loans_by_year/<int:year>/<str:loan_type_filter>/', views.loans_by_year, name='loans_by_year'),
     path('loan_fee',views.loan_fee,name="loan_fee"),
    path('loan/repayments/', views.admin_repayment_tracking, name='admin_repayment_tracking'),
-
+   path('add_payment/',views.add_payment,name='add_payment'),
 
 ]

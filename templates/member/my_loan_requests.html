@@ -79,12 +79,12 @@
                                         <td>{{ loan.loan_term_months }} Months</td>
                                         <td class="text-nowrap" style="min-width: 120px;">
                                              <span class="status-badge 
-                                                {% if req.status == 'pending' %}status-pending
+                                                 {% if req.status == 'pending' %}status-pending
                                                 {% elif req.status == 'approved' %}status-active
-                                                {% elif req.status == 'Itempicked' %}status-itempicked
-                                                {% elif req.status == 'FullyPaid' %}status-completed
-                                                {% elif req.status == 'Declined' %}status-cancelled
-                                                {% else %}bg-secondary{% endif %}">
+                                                {% elif req.status == 'Fullpaid' %}status-completed
+                                                {% elif req.status == 'rejected' %}status-cancelled
+                                                {% else %}text-success{% endif %}">
+                                               
                                                  {{ loan.status|title }}
                                             </span>
                                            

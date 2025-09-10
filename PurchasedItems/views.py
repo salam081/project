@@ -80,53 +80,6 @@ def purchase_consumable_dashboard(request):
     }
 
     return render(request, 'consumable/purchase_consumable_dashboard.html', context)
-# def purchase_consumable_dashboard(request):
-#     if  request.user.is_staff:
-#         requests = ConsumablePurchasedRequest.objects.all()
-#     else:
-#         requests = ConsumablePurchasedRequest.objects.filter(requested_by=request.user)
-
-#     # Stats
-#     total_requests = requests.count()
-#     pending_requests = requests.filter(status='pending').count()
-#     approved_requests = requests.filter(status='approved').count()
-#     accounted_requests = requests.filter(status='accounted').count()
-
-#     # Total approved amount
-#     total_requested = requests.aggregate(
-#         total=Sum('approved_amount')
-#     )['total'] or 0
-
-#     # Total spent (items + expenditure)
-#     total_spent = PurchasedItem.objects.filter(
-#         consumable_purchased_request__in=requests
-#     ).aggregate(
-#         total=Sum(
-#             ExpressionWrapper(
-#                 F('quantity') * F('unit_price') + F('expenditure_amount'),
-#                 output_field=DecimalField()
-#             )
-#         )
-#     )['total'] or 0
-#     print(f"Total Spent: {total_spent}")
-#     # Remaining balance
-#     balance_remaining = total_requested - total_spent
-
-#     # Recent requests
-#     recent_requests = requests.order_by('-date_requested')[:10]
-
-#     context = {
-#         'total_requests': total_requests,
-#         'pending_requests': pending_requests,
-#         'approved_requests': approved_requests,
-#         'accounted_requests': accounted_requests,
-#         'total_requested': total_requested,
-#         'total_spent': total_spent,
-#         'balance_remaining': balance_remaining,
-#         'recent_requests': recent_requests,
-#     }
-
-#     return render(request, 'consumable/purchase_consumable_dashboard.html', context)
 
 # API Views for AJAX calls
 @login_required
@@ -150,7 +103,6 @@ def purchase_request_balance_api(request, pk):
 
 @login_required
 def consumable_purchase_request_create(request):
-    """Create a new consumable request"""
     if request.method == 'POST':
         item = request.POST.get('item')
         purpose = request.POST.get('purpose')
@@ -569,9 +521,11 @@ def selling_plan_detail(request, pk):
     selling_plan = get_object_or_404(SellingPlan, pk=pk)
     purchased_item = selling_plan.purchased_item
     # Calculate total purchase cost: (unit_price * selling_quantity) + expenditure_amount
-    total_purchase_cost = (purchased_item.unit_price * selling_plan.quantity) + purchased_item.expenditure_amount
+    total_purchase_cost = (purchased_item.unit_price * selling_plan.quantity ) + purchased_item.expenditure_amount
+    print(total_purchase_cost)
     # Calculate potential profit
     potential_profit = selling_plan.total_sale_value - total_purchase_cost
+    print(potential_profit)
     context = {'selling_plan': selling_plan,'potential_profit': potential_profit,'total_purchase_cost': total_purchase_cost,}
     return render(request, 'consumable/selling_plan_detail.html', context)
 
@@ -635,17 +589,6 @@ def selling_plan_delete(request, pk):
     return redirect('consumable_purchase_request_detail', pk=consumable_request.pk)
 
 
-# In your views.py
-
-# from django.shortcuts import render, redirect, get_object_or_404
-# from django.contrib.auth.decorators import login_required
-# from django.contrib import messages
-# from django.db.models import Sum, F, ExpressionWrapper, DecimalField
-# from django.db import transaction
-# from .models import ConsumablePurchasedRequest, PurchasedItem
-
-# # Your existing purchase_consumable_dashboard view remains unchanged.
-# # ... (your existing view code here) ...
 
 @login_required
 @transaction.atomic

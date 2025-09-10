@@ -114,89 +114,6 @@ def all_member_saving_search(request):
 
 
 
-@login_required
-def process_member_savings(request, id):
-    member = get_object_or_404(Member, id=id)
-
-    if request.method == "POST":
-        month_str = request.POST.get("month")
-        month_saving_str = request.POST.get("month_saving")
-
-        # Validate inputs
-        if not month_str or not month_saving_str:
-            messages.error(request, "⚠️ Please provide both the month and the saving amount.")
-            return redirect("add_individual_savings", id=id)
-
-        try:
-            # Parse month and amount
-            month = timezone.datetime.strptime(month_str, "%Y-%m-%d").date()
-            month_saving = Decimal(month_saving_str)
-
-            # 1️⃣ Skip if savings already exist for this month
-            if Savings.objects.filter(member=member, month=month).exists():
-                messages.warning(request, f"⚠️ Savings for **{member.member}** in {month.strftime('%B %Y')} already exist.")
-                return redirect("add_individual_savings", id=id)
-
-            try:
-                global_interest = InterestAmount.objects.latest("date_created").amount
-            except InterestAmount.DoesNotExist:
-                messages.error(request, "⚠️ No Subscription amount has been set. Please set one first.")
-                return redirect("add_individual_savings", id=id)
-
-            # 3️⃣ Check if saving amount is valid
-            if month_saving <= global_interest:
-                messages.error( request, f"⚠️ Savings must be greater than the interest amount (₦{global_interest:,.2f})." )
-                return redirect("add_individual_savings", id=id)
-
-            # 4️⃣ Calculate amount after interest
-            amount_after_interest = month_saving - global_interest
-            half_amount = amount_after_interest / 2
-
-            # 5️⃣ Create Savings record with NET savings
-            savings_record = Savings.objects.create(
-                member=member,
-                month=month,
-                month_saving=amount_after_interest,   # ✅ Save NET amount
-                original_amount=month_saving          # ✅ Keep original amount
-            )
-
-            # 6️⃣ Deduct Interest (only once)
-            Interest.objects.create( member=member, month=month,amount_deducted=global_interest)
-
-            # 7️⃣ Distribute Remaining Amount into Loanable and Investment (if not already distributed)
-            if not Loanable.objects.filter(member=member, month=month).exists():
-                current_loanable_total = Loanable.objects.filter(member=member).aggregate(
-                    total=Sum("amount")
-                )["total"] or Decimal("0.00")
-
-                Loanable.objects.create( member=member, month=month, amount=half_amount,
-                    total_amount=current_loanable_total + half_amount )
-
-            if not Investment.objects.filter(member=member, month=month).exists():
-                current_investment_total = Investment.objects.filter(member=member).aggregate(
-                    total=Sum("amount")
-                )["total"] or Decimal("0.00")
-
-                Investment.objects.create( member=member, month=month, amount=half_amount,
-                    total_amount=current_investment_total + half_amount)
-
-            # 8️⃣ Success Message
-            messages.success(
-                request,
-                f"✅ Savings of ₦{month_saving:,.2f} added for **{member.member}** "
-                f"({month.strftime('%B %Y')}). Interest deducted: ₦{global_interest:,.2f}. "
-                f"Loanable: ₦{half_amount:,.2f}, Investment: ₦{half_amount:,.2f}."
-            )
-
-            return redirect("add_individual_savings", id=id)
-
-        except (ValueError, DecimalException):
-            messages.error(request, "⚠️ Invalid date format or saving amount.")
-        except Exception as e:
-            messages.error(request, f"⚠️ Unexpected error: {e}")
-
-    context = {"member": member}
-    return render(request, "saving/add_individual_savings.html", context)
 
 
 
@@ -357,6 +274,91 @@ def process_member_savings(request, id):
 #     return render(request, "saving/upload_savings.html")
 
 
+@login_required
+def process_member_savings(request, id):
+    member = get_object_or_404(Member, id=id)
+
+    if request.method == "POST":
+        month_str = request.POST.get("month")
+        month_saving_str = request.POST.get("month_saving")
+
+        # Validate inputs
+        if not month_str or not month_saving_str:
+            messages.error(request, "⚠️ Please provide both the month and the saving amount.")
+            return redirect("add_individual_savings", id=id)
+
+        try:
+            # Parse month and amount
+            month = timezone.datetime.strptime(month_str, "%Y-%m-%d").date()
+            month_saving = Decimal(month_saving_str)
+
+            # 1️⃣ Skip if savings already exist for this month
+            if Savings.objects.filter(member=member, month=month).exists():
+                messages.warning(request, f"⚠️ Savings for **{member.member}** in {month.strftime('%B %Y')} already exist.")
+                return redirect("add_individual_savings", id=id)
+
+            try:
+                global_interest = InterestAmount.objects.latest("date_created").amount
+            except InterestAmount.DoesNotExist:
+                messages.error(request, "⚠️ No Subscription amount has been set. Please set one first.")
+                return redirect("add_individual_savings", id=id)
+
+            # 3️⃣ Check if saving amount is valid
+            if month_saving <= global_interest:
+                messages.error( request, f"⚠️ Savings must be greater than the interest amount (₦{global_interest:,.2f})." )
+                return redirect("add_individual_savings", id=id)
+
+            # 4️⃣ Calculate amount after interest
+            amount_after_interest = month_saving - global_interest
+            half_amount = amount_after_interest / 2
+
+            # 5️⃣ Create Savings record with NET savings
+            savings_record = Savings.objects.create(
+                member=member,
+                month=month,
+                month_saving=amount_after_interest,   # ✅ Save NET amount
+                original_amount=month_saving          # ✅ Keep original amount
+            )
+
+            # 6️⃣ Deduct Interest (only once)
+            Interest.objects.create( member=member, month=month,amount_deducted=global_interest)
+
+            # 7️⃣ Distribute Remaining Amount into Loanable and Investment (if not already distributed)
+            if not Loanable.objects.filter(member=member, month=month).exists():
+                current_loanable_total = Loanable.objects.filter(member=member).aggregate(
+                    total=Sum("amount")
+                )["total"] or Decimal("0.00")
+
+                Loanable.objects.create( member=member, month=month, amount=half_amount,
+                    total_amount=current_loanable_total + half_amount )
+
+            if not Investment.objects.filter(member=member, month=month).exists():
+                current_investment_total = Investment.objects.filter(member=member).aggregate(
+                    total=Sum("amount")
+                )["total"] or Decimal("0.00")
+
+                Investment.objects.create( member=member, month=month, amount=half_amount,
+                    total_amount=current_investment_total + half_amount)
+
+            # 8️⃣ Success Message
+            messages.success(
+                request,
+                f"✅ Savings of ₦{month_saving:,.2f} added for **{member.member}** "
+                f"({month.strftime('%B %Y')}). Interest deducted: ₦{global_interest:,.2f}. "
+                f"Loanable: ₦{half_amount:,.2f}, Investment: ₦{half_amount:,.2f}."
+            )
+
+            return redirect("add_individual_savings", id=id)
+
+        except (ValueError, DecimalException):
+            messages.error(request, "⚠️ Invalid date format or saving amount.")
+        except Exception as e:
+            messages.error(request, f"⚠️ Unexpected error: {e}")
+
+    context = {"member": member}
+    return render(request, "saving/add_individual_savings.html", context)
+
+
 @transaction.atomic
 def upload_savings(request):
     if request.method == "POST" and request.FILES.get("file"):
@@ -463,11 +465,34 @@ def upload_savings(request):
 
                 # Split into loanable & investment
                 half_amount = (final_amount / 2).quantize(Decimal("0.01"))
+
+                # Get current totals before adding new records
+                current_loanable_total = Loanable.objects.filter(member=member).aggregate(
+                    total=Sum("amount")
+                )["total"] or Decimal("0.00")
+
+                current_investment_total = Investment.objects.filter(member=member).aggregate(
+                    total=Sum("amount")
+                )["total"] or Decimal("0.00")
+
+                # Create updated loanable record
                 loanables_to_create.append(
-                    Loanable(member=member, month=month, amount=half_amount, total_amount=half_amount)
+                    Loanable(
+                        member=member,
+                        month=month,
+                        amount=half_amount,
+                        total_amount=current_loanable_total + half_amount
+                    )
                 )
+
+                # Create updated investment record
                 investments_to_create.append(
-                    Investment(member=member, month=month, amount=half_amount, total_amount=half_amount)
+                    Investment(
+                        member=member,
+                        month=month,
+                        amount=half_amount,
+                        total_amount=current_investment_total + half_amount
+                    )
                 )
 
             # Bulk insert
@@ -493,8 +518,7 @@ def upload_savings(request):
                 messages.warning(request, f"⚠️ {len(skipped_members_report)} members skipped. Download report for details.")
                 return response
 
-            # ✅ Success message
-            # total_uploaded_amount = df["Amount"].sum()
+        
             total_uploaded_amount = sum([s.month_saving for s in savings_to_create])
 
             total_interest_deducted = len(interests_to_create) * global_interest

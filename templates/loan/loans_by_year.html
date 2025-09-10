@@ -54,7 +54,7 @@
                         <tr class="border-bottom">
                             <th class="text-nowrap" style="min-width: 100px;">M/ID</th>
                             <th class="text-nowrap" style="min-width: 150px;">Full Name</th>
-                            <!-- <th>Amount</th> -->
+                            <th>Duration</th> 
                             <th class="text-nowrap" style="min-width: 150px;">Approved Amount</th>
                             <th class="text-nowrap" style="min-width: 150px;">Account Number</th>
                             <th class="text-nowrap" style="min-width: 150px;">Bank</th>
@@ -70,7 +70,7 @@
                             <td>{{ loan.member.member.member_number }}</td>
                             <td class="text-nowrap text-truncate" style="max-width: 250px;">
                                 {{loan.member.member.first_name }}-{{ loan.member.member.last_name }}</td>
-                            <!-- <td>₦{{ loan.amount }}</td> -->
+                             <td>{{ loan.loan_term_months }}</td>
                             <td class="text-nowrap text-truncate" style="max-width: 250px;">
                                 {% if loan.approved_amount %}
                                 ₦{{ loan.approved_amount }}

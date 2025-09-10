@@ -266,13 +266,13 @@ def loan_request_report(request):
 
     loan_requests = loan_requests.annotate(
     total_paid=Coalesce(Sum('repaybacks__amount_paid'), 0.00, output_field=DecimalField()),
+   
     balance_value=ExpressionWrapper(
         F('approved_amount') - Coalesce(Sum('repaybacks__amount_paid'), 0.00),
         output_field=DecimalField()
     ),
     total_price=Coalesce(F('approved_amount'), F('amount'), output_field=DecimalField())
     )
-
 
     # Calculate summary statistics
     summary = {
@@ -285,7 +285,6 @@ def loan_request_report(request):
         'paid_count': loan_requests.filter(status='Fullpaid').count(),
         'declined_count': loan_requests.filter(status='rejected').count(),
     }
-
     # Determine status choices for the filter dropdown
     status_choices = [('all', 'All Statuses')] + list(LoanRequest.status.field.choices)
 
@@ -293,12 +292,6 @@ def loan_request_report(request):
     distinct_application_dates = LoanRequest.objects.dates('application_date', 'month', order='DESC')
     months = [d for d in distinct_application_dates]
 
-    # Get unique loan types for the "Filter by Loan Type" dropdown
-    # Ensure LoanType model is imported as it's more direct to query LoanType itself
-    # rather than LoanRequest.objects.values_list, which can miss loan types with no requests.
-    # However, if you only want types that HAVE requests, your original line is fine.
-    # Using LoanType.objects.all() to get all available loan types is generally more robust
-    # for a filter dropdown.
     loan_types_qs = LoanType.objects.all().order_by("name")
 
     # Pagination
@@ -337,7 +330,6 @@ def filtered_loan_repayments(request):
         .filter(filters).order_by("-repayment_date")
     # Sum total repayment amount across all filtered records
     total_sum_paid = repayments_qs.aggregate(Sum("amount_paid"))["amount_paid__sum"] or 0
-
     # Enrich each repayment with total paid and balance
     enriched_repayments = []
     total_sum_remaining = 0 
@@ -350,6 +342,7 @@ def filtered_loan_repayments(request):
 
         enriched_repayments.append({
             "repayment": repay,"total_paid": total_paid,"balance_remaining": balance,})
+        
         
     # Add pagination
     paginator = Paginator(enriched_repayments, 100) 
@@ -374,11 +367,7 @@ def request_status_report(request):
 
     # --- 2. Base queryset with optimized prefetch ---
     queryset = ConsumableRequest.objects.select_related(
-        'user', 'approved_by', 'consumable_type'
-    ).prefetch_related(
-        'details__selling_item',  # ✅ changed from "item" to "selling_item"
-        'repayments'
-    )
+        'user', 'approved_by', 'consumable_type').prefetch_related('details__selling_item', 'repayments')
 
     # --- 3. Apply filters ---
     if status_filter != 'all':

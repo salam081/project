@@ -1,0 +1,162 @@
+{% extends 'base/base.html' %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-12 col-xl-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light text-dark">
+                    <h5 class="card-title mb-0 text-center">
+                        <i class="fas fa-money-bill-wave me-2"></i>Add Loan Payment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Search Section -->
+                    <form method="get" class="mb-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-3 text-muted">
+                                    <i class="fas fa-search me-2"></i>Search Member
+                                </h6>
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-8">
+                                        <label for="ippis-input" class="form-label fw-semibold">IPPIS Number</label>
+                                        <input type="text" 
+                                               id="ippis-input"
+                                               name="ippis" 
+                                               value="{{ request.GET.ippis }}" 
+                                               class="form-control form-control-lg" 
+                                               placeholder="Enter IPPIS number"
+                                               required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="submit" class="btn btn-success btn-lg w-100">
+                                            <i class="fas fa-search me-2"></i>Search
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    {% if selected_user %}
+                        <!-- Member Info -->
+                        <div class="alert alert-success border-0 shadow-sm mb-4">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-user-check fa-2x me-3"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-1">Member Found</h6>
+                                    <p class="mb-0">
+                                        <strong>{{ selected_user.first_name }} {{ selected_user.last_name }}</strong>
+                                        <span class="badge bg-dark ms-2">{{ selected_user.ippis }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Form -->
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-credit-card me-2"></i>Payment Details
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-4">
+                                        <div class="col-md-6">
+                                            <label for="loan-select" class="form-label fw-semibold">
+                                                <i class="fas fa-hand-holding-usd me-1"></i>Loan Request
+                                            </label>
+                                            <select name="loan_request" id="loan-select" class="form-select form-select-lg" required>
+                                                <option value="">-- Select Loan --</option>
+                                                {% for req in requests %}
+                                                    <option value="{{ req.id }}">
+                                                        Loan #{{ req.id }} — ₦{{ req.amount|floatformat:2 }}
+                                                        <br>(Paid: ₦{{ req.total_paid|default:0|floatformat:2 }}, 
+                                                        Remaining: ₦{{ req.remaining_balance|floatformat:2 }})
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="repayment-date" class="form-label fw-semibold">
+                                                <i class="fas fa-calendar-alt me-1"></i>Repayment Month
+                                            </label>
+                                            <input type="month" 
+                                                   id="repayment-date"
+                                                   name="repayment_date" 
+                                                   class="form-control form-control-lg" 
+                                                   required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="amount-paid" class="form-label fw-semibold">
+                                                <i class="fas fa-dollar-sign me-1"></i>Amount
+                                            </label>
+                                            <div class="input-group input-group-lg">
+                                                <span class="input-group-text">₦</span>
+                                                <input type="number" 
+                                                       id="amount-paid"
+                                                       name="amount_paid" 
+                                                       class="form-control" 
+                                                       step="0.01" 
+                                                       placeholder="0.00"
+                                                       required>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="comment" class="form-label fw-semibold">
+                                                <i class="fas fa-comment me-1"></i>Comment
+                                            </label>
+                                            <textarea name="comment" 
+                                                      id="comment"
+                                                      class="form-control" 
+                                                      rows="3" 
+                                                      placeholder="Optional comment or notes..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light">
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-outline-success btn-lg">
+                                            <i class="fas fa-plus-circle me-2"></i>Add Payment
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                        <!-- Loan Summary -->
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                        <h6 class="card-title text-success">Total Paid</h6>
+                                        <h4 class="text-success mb-0">₦{{ total_paid|floatformat:2 }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-danger">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-exclamation-circle fa-2x text-danger mb-2"></i>
+                                        <h6 class="card-title text-danger">Remaining Balance</h6>
+                                        <h4 class="text-danger mb-0">₦{{ remaining_balance|floatformat:2 }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <p class="text-muted fs-5">Enter an IPPIS number to search for a member</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

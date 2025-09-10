@@ -15,7 +15,7 @@
                         <select name="status" id="status" class="form-select">
                         <option value="">All Status</option>
                         {% for value, label in status_choices %}
-                            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                            <option value="{{ value }}" {% if current_status == value %} selected {% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
                     </div>
@@ -96,7 +96,7 @@
                                 </td>
                                 <td class="text-nowrap" style="min-width: 120px;">
                                 <span class="status-badge 
-                                    {% if request.status == 'Pending' %}status-pending
+                                    {% if request.status == 'pending' %}status-pending
                                     {% elif request.status == 'approved' %}status-active
                                     {% elif request.status == 'Fullpaid' %}status-completed
                                     {% elif request.status == 'rejected' %}status-cancelled

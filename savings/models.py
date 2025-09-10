@@ -27,15 +27,8 @@ class Savings(models.Model):
     def __str__(self):
         return f"{self.member} - {self.month.strftime('%B %Y')}: ₦{self.month_saving}"
 
-
-class InterestAmount(models.Model):
-    amount = models.DecimalField(max_digits=20, decimal_places=2)
-    date_created = models.DateTimeField(auto_now_add=True)
-    date_updated = models.DateTimeField(auto_now=True)
-    updated_by = models.ForeignKey("accounts.User", on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.amount}"
+    
+    
 
 class Interest(models.Model):
     member = models.ForeignKey("accounts.Member", on_delete=models.CASCADE)
@@ -68,3 +61,12 @@ class Investment(models.Model):
     def __str__(self):
         return f"{self.member} - {self.amount} - {self.month.strftime('%B %Y')}"
 
+
+class InterestAmount(models.Model):
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_updated = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey("accounts.User", on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.amount}"

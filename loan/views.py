@@ -807,3 +807,8 @@ def add_payment(request):
         return redirect(f"{request.path}?ippis={ippis}")
     context = {"requests": requests_list,"selected_user": selected_user,"total_paid": total_paid,"remaining_balance": remaining_balance,}
     return render(request, "loan/add_payment.html",context)
+
+
+
+
+

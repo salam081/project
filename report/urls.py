@@ -17,6 +17,14 @@ urlpatterns = [
     path('payment_analysis_report',views.payment_analysis_report,name='payment_analysis_report'),
     path('approval_workflow_report',views.approval_workflow_report,name='approval_workflow_report'),
 
+    
+
+    path('loan-payments/', views.loan_payment_tracking, name='loan_payment_tracking'),
+    path('loan-payments/<int:loan_id>/', views.loan_payment_detail, name='loan_payment_detail'),
+    
+    # You can also add these additional useful endpoints:
+    # path('loan-payments/export/', views.export_loan_payments, name='export_loan_payments'),  # Optional
+    # path('loan-payments/summary/', views.loan_payment_summary, name='loan_payment_summary'),  # Optional
 
    
 ]

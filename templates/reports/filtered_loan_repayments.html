@@ -77,37 +77,36 @@
                 <th class="text-nowrap text-truncate" style="max-width: 250px;">Repayment Date</th>
             </tr>
         </thead>
-        <tbody>
-            {% for item in page_obj %}
-            <tr>
-                <td>{{forloop.counter}}</td>
-                <!-- <td>{{ item.repayment.loan_request.member.ippis }}</td> -->
-                <td class="text-nowrap text-truncate" style="max-width: 250px;">{{ item.repayment.loan_request.member }}</td>
-                <!-- <td>{{ item.repayment.loan_request.loan_type.name }}</td> -->
-                 <td class="text-nowrap text-truncate" style="max-width: 250px;">
-                    {% if "short" in item.repayment.loan_request.loan_type.name|lower %}
-                        ST/Loan
-                    {% elif "long" in item.repayment.loan_request.loan_type.name|lower %}
-                        LT/Loan
-                    {% else %}
-                        {{ item.repayment.loan_request.loan_type.name }}
-                    {% endif %}
-                    </td>
+       <tbody>
+    {% for item in page_obj %}
+    <tr>
+        <td>{{ forloop.counter }}</td>
+        <td class="text-nowrap text-truncate" style="max-width: 250px;">
+            {{ item.repayment.loan_request.member }}
+        </td>
+        <td class="text-nowrap text-truncate" style="max-width: 250px;">
+            {% if "short" in item.repayment.loan_request.loan_type.name|lower %}
+                ST/Loan
+            {% elif "long" in item.repayment.loan_request.loan_type.name|lower %}
+                LT/Loan
+            {% else %}
+                {{ item.repayment.loan_request.loan_type.name }}
+            {% endif %}
+        </td>
+        <td>₦{{ item.repayment.amount_paid|floatformat:2 }}</td>
+        <td class="text-success">₦{{ item.total_paid|floatformat:2 }}</td>
+        <td class="text-danger">₦{{ item.balance_remaining|floatformat:2 }}</td>
+        <td class="text-nowrap text-truncate" style="max-width: 250px;">
+            {{ item.repayment.repayment_date|date:"F Y" }}
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="7" class="text-center text-primary fs-2">No repayments found.</td>
+    </tr>
+    {% endfor %}
+</tbody>
 
-                <!-- <td>₦{{ item.approved_amount|floatformat:2 }}</td> -->
-                <td >₦{{ item.repayment.amount_paid|floatformat:2 }}</td>
-                <td class="text-success">₦{{ item.total_paid|floatformat:2 }}</td>
-                <td class="text-danger">₦{{ item.balance_remaining|floatformat:2 }}</td>
-                <td class="text-nowrap text-truncate" style="max-width: 250px;">{{ item.repayment.repayment_date|date:"F Y" }}</td>
-            </tr>
-
-            {% empty %}
-            <tr>
-                <td colspan="7" class="text-center text-primary fs-2">No repayments found.</td>
-            </tr>
-            {% endfor %}
-            
-        </tbody>
     </table>
     </div>
     

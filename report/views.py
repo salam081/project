@@ -265,26 +265,55 @@ def loan_request_report(request):
         loan_requests = loan_requests.filter(loan_type__name=filters['loan_type'])
 
     loan_requests = loan_requests.annotate(
-    total_paid=Coalesce(Sum('repaybacks__amount_paid'), 0.00, output_field=DecimalField()),
-   
-    balance_value=ExpressionWrapper(
-        F('approved_amount') - Coalesce(Sum('repaybacks__amount_paid'), 0.00),
-        output_field=DecimalField()
-    ),
-    total_price=Coalesce(F('approved_amount'), F('amount'), output_field=DecimalField())
+        total_paid=Coalesce(Sum('repaybacks__amount_paid'), 0, output_field=DecimalField()),
+        balance_value=ExpressionWrapper(
+            F('approved_amount') - Coalesce(Sum('repaybacks__amount_paid'), 0),
+            output_field=DecimalField()
+        ),
+        total_price=Coalesce(F('approved_amount'), F('amount'), output_field=DecimalField())
     )
 
-    # Calculate summary statistics
+    # Compute summary with fresh queries
+    base_qs = LoanRequest.objects.all()
+
+    # Apply same filters as above before summary
+    if filters['status'] and filters['status'] != 'all':
+        base_qs = base_qs.filter(status=filters['status'])
+    if filters['date_from']:
+        base_qs = base_qs.filter(application_date__gte=filters['date_from'])
+    if filters['date_to']:
+        base_qs = base_qs.filter(application_date__lte=filters['date_to'])
+    if filters['month']:
+        try:
+            year, month = map(int, filters['month'].split('-'))
+            base_qs = base_qs.filter(application_date__year=year, application_date__month=month)
+        except ValueError:
+            pass
+    if filters['loan_type']:
+        base_qs = base_qs.filter(loan_type__name=filters['loan_type'])
+
+        # Compute totals
+    total_value = base_qs.aggregate(
+        total=Coalesce(Sum('approved_amount'), 0, output_field=DecimalField())
+    )['total']
+
+    total_paid = LoanRepayback.objects.filter(
+        loan_request__in=base_qs
+    ).aggregate(
+        total=Coalesce(Sum('amount_paid'), 0, output_field=DecimalField())
+    )['total']
+
     summary = {
-        'total_requests': loan_requests.count(),
-        'total_value': loan_requests.aggregate(total_approved=Coalesce(Sum('approved_amount'), 0.00, output_field=DecimalField()))['total_approved'],
-        'total_paid': loan_requests.aggregate(total_repaid=Coalesce(Sum('repaybacks__amount_paid'), 0.00, output_field=DecimalField()))['total_repaid'],
-        'total_balance': loan_requests.aggregate(total_outstanding=Coalesce(Sum('balance_value'), 0.00, output_field=DecimalField()))['total_outstanding'],
-        'pending_count': loan_requests.filter(status='pending').count(),
-        'approved_count': loan_requests.filter(status='approved').count(),
-        'paid_count': loan_requests.filter(status='Fullpaid').count(),
-        'declined_count': loan_requests.filter(status='rejected').count(),
+        'total_requests': base_qs.count(),
+        'total_value': total_value,
+        'total_paid': total_paid,
+        'total_balance': total_value - total_paid,   # ✅ compute balance safely
+        'pending_count': base_qs.filter(status='pending').count(),
+        'approved_count': base_qs.filter(status='approved').count(),
+        'paid_count': base_qs.filter(status='Fullpaid').count(),
+        'declined_count': base_qs.filter(status='rejected').count(),
     }
+
     # Determine status choices for the filter dropdown
     status_choices = [('all', 'All Statuses')] + list(LoanRequest.status.field.choices)
 
@@ -311,48 +340,178 @@ def loan_request_report(request):
     return render(request, 'reports/loan_request_report.html', context)
 
 
-
+@login_required
 def filtered_loan_repayments(request):
-    years = LoanRequest.objects.annotate(year=ExtractYear("application_date")) \
-        .values_list("year", flat=True).distinct().order_by("-year")
-    loan_types = LoanRequest.objects.values_list("loan_type__name", flat=True).distinct().order_by("loan_type__name")
+    # 1. Get filter options for dropdowns (unfiltered)
+    years = (
+        LoanRequest.objects.annotate(year=ExtractYear("application_date"))
+        .values_list("year", flat=True)
+        .distinct()
+        .order_by("-year")
+    )
+    loan_types = (
+        LoanType.objects.filter(available=True)
+        .values_list("name", flat=True)
+        .order_by("name")
+    )
+    loan_statuses = ['approved', 'Fullpaid']
 
+    # 2. Get user's filter selections from the request
     selected_year = request.GET.get("year")
     selected_type = request.GET.get("loan_type")
+    selected_status = request.GET.get("status")
 
-    filters = Q()
+    # 3. Build the master filter (Q object)
+    # Start the filter with the base status condition
+    filters = Q(status__in=['approved', 'Fullpaid'])
+    
     if selected_year:
-        filters &= Q(loan_request__application_date__year=selected_year)
+        filters &= Q(application_date__year=selected_year)
     if selected_type:
-        filters &= Q(loan_request__loan_type__name=selected_type)
+        filters &= Q(loan_type__name=selected_type)
+    if selected_status:
+        # Add the selected status filter to the Q object
+        filters &= Q(status=selected_status)
 
-    repayments_qs = LoanRepayback.objects.select_related("loan_request__member", "loan_request__loan_type") \
-        .filter(filters).order_by("-repayment_date")
-    # Sum total repayment amount across all filtered records
-    total_sum_paid = repayments_qs.aggregate(Sum("amount_paid"))["amount_paid__sum"] or 0
-    # Enrich each repayment with total paid and balance
-    enriched_repayments = []
-    total_sum_remaining = 0 
-    for repay in repayments_qs:
-        loan = repay.loan_request
-        total_paid = LoanRepayback.objects.filter(loan_request=loan).aggregate(Sum("amount_paid"))["amount_paid__sum"] or 0
-        approved = loan.approved_amount or 0
-        balance = approved - total_paid
-        total_sum_remaining += balance  
+    # 4. Create the base filtered queryset. This is the key.
+    # It aggregates the total paid amount for each loan.
+    base_queryset = (
+        LoanRequest.objects.filter(filters)
+        .annotate(
+            total_paid_by_loan=Coalesce(Sum("repaybacks__amount_paid"), Decimal("0.00"), output_field=DecimalField())
+        )
+        .order_by("-application_date")
+    )
 
-        enriched_repayments.append({
-            "repayment": repay,"total_paid": total_paid,"balance_remaining": balance,})
+    # 5. Calculate summary statistics from the filtered queryset
+    summary_stats = base_queryset.aggregate(
+        total_loans=Count('id'),
+        total_approved_amount=Coalesce(Sum('approved_amount'), Decimal('0.00'), output_field=DecimalField()),
+        total_amount_paid=Coalesce(Sum('total_paid_by_loan'), Decimal('0.00'), output_field=DecimalField()),
+    )
+    summary_stats['total_outstanding'] = summary_stats['total_approved_amount'] - summary_stats['total_amount_paid']
+
+    # 6. Process loan data for the main table (for pagination)
+    processed_loans = []
+    for loan in base_queryset:
+        approved_amount = loan.approved_amount or Decimal('0.00')
+        balance_remaining = approved_amount - loan.total_paid_by_loan
+        payment_percentage = (loan.total_paid_by_loan / approved_amount * 100) if approved_amount > 0 else 0
         
-        
-    # Add pagination
-    paginator = Paginator(enriched_repayments, 100) 
-    page_number = request.GET.get("page")
+        if balance_remaining <= 0:
+            payment_status, status_class = "Fully Paid", "success"
+        elif loan.total_paid_by_loan > 0:
+            payment_status, status_class = "Partial Payment", "warning"
+        else:
+            payment_status, status_class = "No Payment", "danger"
+            
+        processed_loans.append({
+            'loan': loan,
+            'total_paid': loan.total_paid_by_loan,
+            'balance_remaining': balance_remaining,
+            'payment_percentage': round(payment_percentage, 1),
+            'payment_status': payment_status,
+            'status_class': status_class,
+        })
+
+    # 7. Handle pagination
+    paginator = Paginator(processed_loans, 25)
+    page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-
-    context = {"page_obj": page_obj,"years": years, "loan_types": loan_types,
-                "selected_year": selected_year, "selected_type": selected_type,
-                "total_sum_paid": total_sum_paid,"total_sum_remaining": total_sum_remaining,}
+    
+    # 8. Pass all data to the template
+    context = {
+        'page_obj': page_obj,
+        'years': years,
+        'loan_types': loan_types,
+        'loan_statuses': loan_statuses,
+        'selected_year': selected_year,
+        'selected_type': selected_type,
+        'selected_status': selected_status,
+        'summary_stats': summary_stats,
+    }
+    
     return render(request, "reports/filtered_loan_repayments.html", context)
+
+# @login_required
+# def filtered_loan_repayments(request):
+#     # ---- Filter options ----
+#     years = (
+#         LoanRequest.objects.annotate(year=ExtractYear("application_date"))
+#         .values_list("year", flat=True)
+#         .distinct()
+#         .order_by("-year")
+#     )
+
+#     loan_types = (
+#         LoanRequest.objects.values_list("loan_type__name", flat=True)
+#         .distinct()
+#         .order_by("loan_type__name")
+#     )
+
+#     selected_year = request.GET.get("year")
+#     selected_type = request.GET.get("loan_type")
+
+#     filters = Q()
+#     if selected_year:
+#         filters &= Q(loan_request__application_date__year=selected_year)
+#     if selected_type:
+#         filters &= Q(loan_request__loan_type__name=selected_type)
+
+#     # ---- Repayments queryset ----
+#     repayments = (
+#         LoanRepayback.objects.filter(filters)
+#         .select_related("loan_request__member", "loan_request__loan_type")
+#         .order_by("loan_request_id", "repayment_date")
+#     )
+
+#     # ---- Totals ----
+#     total_sum_paid = repayments.aggregate(
+#         total=Coalesce(Sum("amount_paid"), Decimal("0.00"), output_field=DecimalField())
+#     )["total"]
+
+#     # ---- Enriched repayments with running totals ----
+#     enriched_repayments = []
+#     loan_running_totals = {}  # per-loan cumulative tracker
+#     total_sum_remaining = Decimal("0.00")
+
+    
+#     for repay in repayments:
+#         loan_id = repay.loan_request
+
+#         # Running total for this loan
+#         prev_total = loan_running_totals.get(loan_id, Decimal("0.00"))
+#         running_total = prev_total + (repay.amount_paid or Decimal("0.00"))
+#         loan_running_totals[loan_id] = running_total
+
+#         # Use the stored balance_remaining from the model
+#         balance = repay.balance_remaining or Decimal("0.00")
+#         total_sum_remaining += balance
+
+#         enriched_repayments.append({
+#             "repayment": repay,
+#             "amount_paid": repay.amount_paid,
+#             "total_paid": running_total,
+#             "balance_remaining": balance,
+#         })
+
+#     # ---- Pagination ----
+#     paginator = Paginator(enriched_repayments, 100)
+#     page_number = request.GET.get("page")
+#     page_obj = paginator.get_page(page_number)
+
+#     # ---- Context ----
+#     context = {
+#         "page_obj": page_obj,
+#         "years": years,
+#         "loan_types": loan_types,
+#         "selected_year": selected_year,
+#         "selected_type": selected_type,
+#         "total_sum_paid": total_sum_paid,
+#         "total_sum_remaining": total_sum_remaining,
+#     }
+#     return render(request, "reports/filtered_loan_repayments.html", context)
+
 
 
 
@@ -963,111 +1122,9 @@ from django.db.models import Q, Sum, F
 from datetime import datetime
 from django.utils.dateparse import parse_date
 
-# Import your models (make sure these are correct for your project)
-# from models import (
-#     PurchasedItem, ConsumableRequestDetail, ProjectFinanceRequest, 
-#     LoanRequest, Savings, Interest, PaybackConsumable, 
-#     ProjectFinancePayment, ConsumableFormFee, LoanRepayback, LoanRequestFee
-# )
+
 
 logger = logging.getLogger(__name__)
-
-# @login_required
-# def consolidated_report(request):
-#     """Generate consolidated financial report with date filtering"""
-#     date_from = request.GET.get('date_from')
-#     date_to = request.GET.get('date_to')
-    
-#     # Parse and validate dates
-#     parsed_date_from = None
-#     parsed_date_to = None
-    
-#     if date_from:
-#         try:
-#             parsed_date_from = parse_date(date_from)
-#             if parsed_date_from is None:
-#                 raise ValueError("Invalid date format")
-#         except (ValueError, TypeError):
-#             context = {
-#                 'error': 'Invalid start date format. Please use YYYY-MM-DD format.',
-#                 'date_from': date_from,
-#                 'date_to': date_to,
-#             }
-#             return render(request, "reports/consolidated_report.html", context)
-    
-#     if date_to:
-#         try:
-#             parsed_date_to = parse_date(date_to)
-#             if parsed_date_to is None:
-#                 raise ValueError("Invalid date format")
-#         except (ValueError, TypeError):
-#             context = {
-#                 'error': 'Invalid end date format. Please use YYYY-MM-DD format.',
-#                 'date_from': date_from,
-#                 'date_to': date_to,
-#             }
-#             return render(request, "reports/consolidated_report.html", context)
-    
-#     # Check if start date is after end date
-#     if parsed_date_from and parsed_date_to and parsed_date_from > parsed_date_to:
-#         context = {
-#             'error': 'Start date cannot be later than end date',
-#             'date_from': date_from,
-#             'date_to': date_to,
-#         }
-#         return render(request, "reports/consolidated_report.html", context)
-
-#     try:
-#         filters = {}
-#         if parsed_date_from:
-#             filters['date_from'] = parsed_date_from
-#         if parsed_date_to:
-#             filters['date_to'] = parsed_date_to
-
-#         # Calculate Total Expenditure (Money going out)
-#         expenditure_data = calculate_total_expenditure(filters)
-        
-#         # Calculate Total Income (Money coming in)
-#         income_data = calculate_total_income(filters)
-        
-#         # Calculate totals with proper error handling
-#         total_expenditure = Decimal('0')
-#         total_income = Decimal('0')
-        
-#         try:
-#             total_expenditure = sum(expenditure_data.values())
-#             total_income = sum(income_data.values())
-#         except (TypeError, ValueError) as e:
-#             logger.error(f"Error calculating totals: {str(e)}")
-#             total_expenditure = Decimal('0')
-#             total_income = Decimal('0')
-        
-#         # Calculate net position
-#         net_position = total_income - total_expenditure
-        
-#         filters_applied = bool(date_from or date_to)
-        
-#         context = {
-#             'total_expenditure': total_expenditure,
-#             'total_income': total_income,
-#             'net_position': net_position,
-#             'date_from': date_from,
-#             'date_to': date_to,
-#             'filters_applied': filters_applied,
-#             **expenditure_data,  # Unpack expenditure breakdown
-#             **income_data,       # Unpack income breakdown
-#         }
-        
-#         return render(request, "reports/consolidated_report.html", context)
-        
-#     except Exception as e:
-#         logger.error(f"Error generating consolidated report: {str(e)}", exc_info=True)
-#         context = {
-#             'error': 'An error occurred while generating the report. Please try again.',
-#             'date_from': date_from,
-#             'date_to': date_to,
-#         }
-#         return render(request, "reports/consolidated_report.html", context)
 
 
 
@@ -1399,6 +1456,193 @@ def calculate_total_income(filters):
 
 
 
+#======================= Loan part ====================
+
+
+from django.db.models import Sum, Count, Q, DecimalField
+from django.db.models.functions import Coalesce, ExtractYear
+from django.core.paginator import Paginator
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from decimal import Decimal
+
+@login_required
+def loan_payment_tracking(request):
+    # Base queryset: only approved or fully paid loans with approved amounts
+    all_loans = LoanRequest.objects.filter(
+        status__in=['approved', 'Fullpaid'],
+        approved_amount__isnull=False
+    )
+
+    # Filter options
+    years = all_loans.annotate(year=ExtractYear("application_date")).values_list("year", flat=True).distinct().order_by("-year")
+    loan_types = LoanType.objects.filter(available=True).values_list("name", flat=True).order_by("name")
+    loan_statuses = [('approved', 'Approved'), ('Fullpaid', 'Fully Paid')]
+
+    # Get filters
+    selected_year = request.GET.get("year", "").strip()
+    selected_type = request.GET.get("loan_type", "").strip()
+    selected_status = request.GET.get("status", "").strip()
+    selected_member = request.GET.get("member", "").strip()
+
+    # Apply filters
+    queryset = all_loans
+    if selected_year.isdigit():
+        queryset = queryset.filter(application_date__year=int(selected_year))
+    if selected_type:
+        queryset = queryset.filter(loan_type__name=selected_type)
+    if selected_status in ['approved', 'Fullpaid']:
+        queryset = queryset.filter(status=selected_status)
+    if selected_member:
+        queryset = queryset.filter(
+            Q(member__member__first_name__icontains=selected_member) |
+            Q(member__member__last_name__icontains=selected_member) |
+            Q(member__ippis__icontains=selected_member)
+        )
+
+    # Optimize queryset
+    base_queryset = queryset.select_related(
+        'member__member', 'loan_type', 'guarantor__member', 'created_by', 'approved_by'
+    ).prefetch_related('repaybacks').order_by('-application_date')
+
+    # Annotate each loan with total_paid
+    annotated_loans = base_queryset.annotate(
+        total_paid=Coalesce(Sum('repaybacks__amount_paid'), Decimal('0.00'))
+    )
+
+    # Summary stats
+    total_approved = annotated_loans.aggregate(
+        total=Coalesce(Sum('approved_amount'), Decimal('0.00'))
+    )['total']
+    total_paid = annotated_loans.aggregate(
+        total=Coalesce(Sum('total_paid'), Decimal('0.00'))
+    )['total']
+    total_outstanding = total_approved - total_paid
+
+    summary_stats = {
+        'total_loans': annotated_loans.count(),
+        'total_approved_amount': total_approved,
+        'total_amount_paid': total_paid,
+        'total_outstanding': total_outstanding
+    }
+
+    # Process loans for display
+    processed_loans = []
+    for loan in annotated_loans:
+        approved_amount = loan.approved_amount or Decimal('0.00')
+        total_paid = loan.total_paid or Decimal('0.00')
+        balance_remaining = approved_amount - total_paid
+        payment_percentage = (total_paid / approved_amount * 100) if approved_amount > 0 else 0
+
+        if balance_remaining <= 0:
+            payment_status, status_class = "Fully Paid", "success"
+        elif total_paid > 0:
+            payment_status, status_class = "Partial Payment", "warning"
+        else:
+            payment_status, status_class = "No Payment", "danger"
+
+        last_payment = loan.repaybacks.order_by('-repayment_date', '-id').first()
+
+        processed_loans.append({
+            'loan': loan,
+            'approved_amount': approved_amount,
+            'total_paid': total_paid,
+            'balance_remaining': balance_remaining,
+            'payment_percentage': round(float(payment_percentage), 1),
+            'payment_status': payment_status,
+            'status_class': status_class,
+            'payment_count': loan.repaybacks.count(),
+            'last_payment': last_payment,
+        })
+
+    # Recent payments
+    recent_payments = LoanRepayback.objects.select_related(
+        'loan_request__member__member', 'loan_request__loan_type'
+    ).filter(loan_request__in=base_queryset).order_by('-repayment_date', '-id')[:20]
+
+    # Pagination
+    paginator = Paginator(processed_loans, 25)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    # Final context
+    context = {
+        'page_obj': page_obj,
+        'years': list(years),
+        'loan_types': list(loan_types),
+        'loan_statuses': loan_statuses,
+        'selected_year': selected_year,
+        'selected_type': selected_type,
+        'selected_status': selected_status,
+        'selected_member': selected_member,
+        'summary_stats': summary_stats,
+        'recent_payments': recent_payments,
+        'debug_info': {
+            'total_before_filter': all_loans.count(),
+            'total_after_filter': base_queryset.count(),
+            'filters_applied': {
+                'year': selected_year,
+                'type': selected_type,
+                'status': selected_status,
+                'member': selected_member,
+            }
+        }
+    }
+
+    return render(request, "reports/loan_payment_tracking.html", context)
+
+
+@login_required
+def loan_payment_detail(request, loan_id):
+    """Loan payment detail view"""
+    loan = get_object_or_404(
+        LoanRequest.objects.select_related(
+            'member__member', 'loan_type', 'guarantor__member', 
+            'created_by', 'approved_by'
+        ),
+        id=loan_id,
+        status__in=['approved', 'Fullpaid']
+    )
+    
+    # Get all payments for this loan
+    payments = loan.repaybacks.all().order_by('repayment_date', 'id')
+    
+    # Calculate running totals
+    running_total = Decimal('0.00')
+    payment_history = []
+    
+    for payment in payments:
+        running_total += payment.amount_paid
+        approved_amount = loan.approved_amount or Decimal('0.00')
+        remaining_balance = approved_amount - running_total
+        
+        payment_history.append({
+            'payment': payment, 
+            'running_total': running_total, 
+            'remaining_balance': remaining_balance
+        })
+
+    # Calculate loan metrics
+    approved_amount = loan.approved_amount or Decimal('0.00')
+    total_paid = Decimal(str(loan.total_repaid)) if loan.total_repaid else Decimal('0.00')
+    balance_remaining = approved_amount - total_paid
+    
+    if approved_amount > 0:
+        payment_percentage = (total_paid / approved_amount * 100)
+    else:
+        payment_percentage = 0
+    
+    context = {
+        'loan': loan, 
+        'payment_history': payment_history,
+        'approved_amount': approved_amount,
+        'total_paid': total_paid,
+        'balance_remaining': balance_remaining,
+        'payment_percentage': round(float(payment_percentage), 1),
+        'expected_monthly': loan.monthly_payment or Decimal('0.00'),
+    }
+    
+    return render(request, "reports/loan_payment_detail.html", context)
 
 
 

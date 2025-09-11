@@ -15,7 +15,7 @@
         
                 </div>
              <!-- Add New Form -->
-                    <div class="col-lg-10 mb-4">
+                    <div class="col-lg-12 mb-4">
                         <div class="card">
                             <div class="card-header bg-primary text-white">
                                 <h5 class="card-title mb-0">
@@ -57,7 +57,7 @@
                 <div class="row">
                   
                     <!-- Existing Types List -->
-                    <div class="col-lg-10">
+                    <div class="col-lg-12">
                         <div class="card">
                             <div class="card-header bg-primary text-white">
                                 <h5 class="card-title mb-0">
@@ -81,7 +81,7 @@
                                             <tbody>
                                                 {% for consumable_type in consumable_types %}
                                                     <tr>
-                                                        <td>
+                                                        <td class="text-nowrap" style="min-width: 120px;">
                                                             <strong>{{ consumable_type.name }}</strong>
                                                         </td>
                                                         {% comment %} <td>
@@ -95,18 +95,18 @@
                                                         </td> {% endcomment %}
                                                        
                                                         
-                                                        <td>
+                                                        <td class="text-nowrap" style="min-width: 120px;">
                                                             {% if consumable_type.available %}
-                                                                <span class="badge bg-success">
+                                                                <span class="status-badge bg-success">
                                                                     <i class="fas fa-check-circle me-1"></i>Available
                                                                 </span>
                                                             {% else %}
-                                                                <span class="badge bg-danger">
+                                                                <span class="status-badge bg-danger">
                                                                     <i class="fas fa-times-circle me-1"></i>Unavailable
                                                                 </span>
                                                             {% endif %}
                                                         </td>
-                                                        <td>
+                                                        <td class="text-nowrap" style="min-width: 120px;">
                                                             <!-- Edit Button -->
                                                             <button type="button" class="btn btn-outline-primary btn-sm me-1" 
                                                                     data-bs-toggle="collapse" 

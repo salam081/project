@@ -39,7 +39,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card col-12">
         <div class="card-header bg-secondary text-white">
             <h5 class="mb-0">Existing Loan Types</h5>
         </div>
@@ -51,8 +51,8 @@
                         <tr>
                             <th scope="col">Name</th>
                             <th scope="col">Description</th>
-                            <th scope="col">Max Amount</th>
-                            <th scope="col">Max Term</th>
+                            <th class="text-nowrap" style="min-width: 120px;">Max Amount</th>
+                            <th class="text-nowrap" style="min-width: 120px;">Max Term</th>
                             <th scope="col">Status</th>
                             <th scope="col">Actions</th>
                         </tr>
@@ -60,15 +60,15 @@
                     <tbody>
                         {% for loan_type in loan_types %}
                         <tr>
-                            <td>{{ loan_type.name }}</td>
-                            <td>{{ loan_type.description|default:"N/A" }}</td>
-                            <td>${{ loan_type.max_amount|default:"N/A" }}</td>
+                            <td class="text-nowrap" style="min-width: 120px;">{{ loan_type.name }}</td>
+                            <td class="text-nowrap" style="min-width: 120px;">{{ loan_type.description|default:"N/A" }}</td>
+                            <td>{{ loan_type.max_amount|default:"N/A" }}</td>
                             <td>{{ loan_type.max_loan_term_months|default:"N/A" }} months</td>
                             <td>
                                 {% if loan_type.available %}
-                                    <span class="badge bg-success">Available</span>
+                                    <span class="status-badge bg-success">Available</span>
                                 {% else %}
-                                    <span class="badge bg-danger">Unavailable</span>
+                                    <span class="status-badge bg-danger">Unavailable</span>
                                 {% endif %}
                             </td>
                             <td>

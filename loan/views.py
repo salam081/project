@@ -232,7 +232,11 @@ def is_admin(user):
 @user_passes_test(is_admin)
 def approve_loan_request(request, id):
     loan_request = get_object_or_404(LoanRequest, id=id, status='pending')
-
+    member = loan_request.member
+    loanable = Loanable.objects.filter(member=member).aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal("0.00")
+    print(loanable)
     # Check if guarantor has accepted
     if not loan_request.guarantor_accepted:
         messages.error(request, "This loan cannot be approved because the guarantor has not accepted yet.")
@@ -254,19 +258,16 @@ def approve_loan_request(request, id):
             if (
                 loan_request.loan_type 
                 and loan_request.loan_type.max_amount is not None 
-                and approved_amount > loan_request.loan_type.max_amount
-            ):
-                messages.error(
-                    request,
-                    f"Approved amount cannot exceed the maximum allowed: {loan_request.loan_type.max_amount}"
-                )
-                return redirect('approve_loan_request', id=id)
+                and approved_amount > loan_request.loan_type.max_amount):
+                    messages.error( request,f"Approved amount cannot exceed the maximum allowed: {loan_request.loan_type.max_amount}" )
+                    return redirect('approve_loan_request', id=id)
 
             loan_request.approved_amount = approved_amount
             loan_request.approval_date = timezone.now().date()
             loan_request.status = 'approved'
             loan_request.approved_by = request.user
             loan_request.save()
+            
 
             messages.success(request,f"Loan request ID {loan_request.id} has been approved for ₦{loan_request.approved_amount}.")
             return redirect('admin_loan_requests')
@@ -275,7 +276,7 @@ def approve_loan_request(request, id):
             messages.error(request, "Invalid approved amount.")
             return redirect('approve_loan_request', id=id)
 
-    context = {'loan_request': loan_request}
+    context = {'loan_request': loan_request,'loanable':loanable}
     return render(request, 'loan/approve_loan.html', context)
 
 
@@ -452,103 +453,94 @@ def loans_by_year(request, year, loan_type_filter):
 # ====== make payment for one member =========
 
 @login_required
-def add_single_loan_payment(request):
-    # Group existing loans by year and loan type
-    loans = LoanRequest.objects.annotate(year=ExtractYear('application_date')) \
-        .values('year', 'loan_type__name').distinct().order_by('-year', 'loan_type__name')
+def add_payment(request):
+    requests_list = []
+    selected_user = None
+    ippis = request.GET.get("ippis") or request.POST.get("ippis")
 
-    year_to_loan_types = defaultdict(list)
-    for loan in loans:
-        year_to_loan_types[loan['year']].append(loan['loan_type__name'])
+    total_paid = Decimal("0.00")
+    remaining_balance = Decimal("0.00")
+
+    if ippis:
+        try:
+            member_obj = Member.objects.filter(ippis=int(ippis)).first()
+            if member_obj and member_obj.member:
+                selected_user = member_obj.member
+                requests_list = LoanRequest.objects.filter(
+                    member__member=selected_user
+                ).exclude(status__in=['Fullpaid', 'Declined'])
+
+                # Calculate total paid & balance for the selected user
+                for req in requests_list:
+                    paid = LoanRepayback.objects.filter(loan_request=req).aggregate(total=Sum('amount_paid'))['total'] or Decimal("0.00")
+                    req.total_paid = paid
+                    req.remaining_balance = req.amount - paid  # assuming LoanRequest has `amount`
+                    total_paid += paid
+                    remaining_balance += req.remaining_balance
+        except Exception as e:
+            messages.error(request, f"Error fetching member: {e}")
 
     if request.method == "POST":
-        ippis = request.POST.get("ippis")
         amount_paid = request.POST.get("amount_paid")
-        repayment_date = request.POST.get("repayment_date")
-        selected_year = request.POST.get("selected_year")
-        selected_type = request.POST.get("selected_type")
+        month = request.POST.get("repayment_date")
+        request_id = request.POST.get("loan_request")
+        comment = request.POST.get("comment")
 
-        # Validate input
-        if not ippis or not amount_paid or not repayment_date or not selected_year or not selected_type:
+        # Validate required fields
+        if not (ippis and amount_paid and month and request_id):
             messages.error(request, "All fields are required.")
-            return redirect(request.path)
+            return redirect(f"{request.path}?ippis={ippis}")
 
         try:
-            ippis = int(ippis)
             amount_paid = Decimal(amount_paid)
-            repayment_date = parse_date(repayment_date)
-            selected_year = int(selected_year)
-
             if amount_paid <= 0:
-                raise ValueError("Amount must be positive.")
-            if not repayment_date:
-                raise ValueError("Invalid date format.")
-        except Exception as e:
+                raise ValueError("Amount must be positive")
+            month_date = datetime.strptime(month, "%Y-%m").date()
+            request_id = int(request_id)
+        except (ValueError, TypeError) as e:
             messages.error(request, f"Invalid input: {e}")
-            return redirect(request.path)
+            return redirect(f"{request.path}?ippis={ippis}")
 
-        # Get member
-        member = Member.objects.filter(ippis=ippis).first()
-        if not member:
-            messages.error(request, f"No member found with IPPIS: {ippis}")
-            return redirect(request.path)
-
-        # Find loan request matching selected type and year
         loan_request = LoanRequest.objects.filter(
-            member=member,
-            loan_type__name=selected_type,
-            application_date__year=selected_year,
-            status='approved'
+            id=request_id, member__member=selected_user
         ).first()
 
         if not loan_request:
-            messages.error(request, "No matching approved loan request found for this member.")
-            return redirect(request.path)
+            messages.error(request, "Selected loan request not found.")
+            return redirect(f"{request.path}?ippis={ippis}")
 
-        # Check if a payment already exists for this month
-        already_paid = LoanRepayback.objects.filter(
-            loan_request=loan_request,
-            repayment_date__year=repayment_date.year,
-            repayment_date__month=repayment_date.month
-        ).exists()
-
-        if already_paid:
-            messages.warning(request, f"A repayment already exists for {repayment_date.strftime('%B %Y')}.")
-            return redirect(request.path)
-
-        # Calculate remaining balance
-        total_paid = LoanRepayback.objects.filter(loan_request=loan_request) \
-            .aggregate(total=Sum("amount_paid"))["total"] or Decimal("0.00")
-
-        remaining_balance = loan_request.approved_amount - total_paid
+        total_paid = LoanRepayback.objects.filter(loan_request=loan_request).aggregate(total=Sum('amount_paid'))['total'] or Decimal("0.00")
+        remaining_balance = loan_request.amount - total_paid
 
         if amount_paid > remaining_balance:
-            messages.error(request, f"Payment exceeds the remaining balance of ₦{remaining_balance}.")
-            return redirect(request.path)
+            messages.error(request, "Payment exceeds remaining balance.")
+            return redirect(f"{request.path}?ippis={ippis}")
 
-        # Save repayment
+        # Check for existing payment for the same month
+        if LoanRepayback.objects.filter(loan_request=loan_request,repayment_date__year=month_date.year,
+            repayment_date__month=month_date.month).exists():
+            messages.warning(request, f"Payment already exists for {month_date.strftime('%B %Y')}.")
+            return redirect(f"{request.path}?ippis={ippis}")
+
+        # Create payment transaction
         with transaction.atomic():
-            new_total_paid = total_paid + amount_paid
-            balance_remaining = loan_request.approved_amount - new_total_paid
-
             LoanRepayback.objects.create(
-                loan_request=loan_request,
-                amount_paid=amount_paid,
-                repayment_date=repayment_date,
-                balance_remaining=balance_remaining,
-                created_by=request.user
-            )
+                loan_request=loan_request,amount_paid=amount_paid,
+                repayment_date=month_date,comment=comment,
+                balance_remaining=remaining_balance - amount_paid,
+                created_by=request.user)
 
-            if new_total_paid >= loan_request.approved_amount:
+            # Update status if fully paid
+            total_after_payment = total_paid + amount_paid
+            if total_after_payment >= loan_request.amount:
                 loan_request.status = 'Fullpaid'
-                loan_request.save()
+                loan_request.save(update_fields=['status'])
 
-        messages.success(request, f"Repayment of ₦{amount_paid} added for {member}.")
-        return redirect(request.path)
+        messages.success(request,f"Payment of ₦{amount_paid:,.2f} recorded for {selected_user.first_name} ({ippis}).")
+        return redirect(f"{request.path}?ippis={ippis}")
+    context = {"requests": requests_list,"selected_user": selected_user,"total_paid": total_paid,"remaining_balance": remaining_balance,}
+    return render(request, "loan/add_payment.html",context)
 
-    return render(request, "loan/add_single_loan_payment.html", {
-        "year_to_loan_types": dict(year_to_loan_types),
-    })
 
 
 def get_loan_types_for_year(request):
@@ -719,94 +711,6 @@ def admin_repayment_tracking(request):
 
 
 
-@login_required
-def add_payment(request):
-    requests_list = []
-    selected_user = None
-    ippis = request.GET.get("ippis") or request.POST.get("ippis")
-
-    total_paid = Decimal("0.00")
-    remaining_balance = Decimal("0.00")
-
-    if ippis:
-        try:
-            member_obj = Member.objects.filter(ippis=int(ippis)).first()
-            if member_obj and member_obj.member:
-                selected_user = member_obj.member
-                requests_list = LoanRequest.objects.filter(
-                    member__member=selected_user
-                ).exclude(status__in=['Fullpaid', 'Declined'])
-
-                # Calculate total paid & balance for the selected user
-                for req in requests_list:
-                    paid = LoanRepayback.objects.filter(loan_request=req).aggregate(total=Sum('amount_paid'))['total'] or Decimal("0.00")
-                    req.total_paid = paid
-                    req.remaining_balance = req.amount - paid  # assuming LoanRequest has `amount`
-                    total_paid += paid
-                    remaining_balance += req.remaining_balance
-        except Exception as e:
-            messages.error(request, f"Error fetching member: {e}")
-
-    if request.method == "POST":
-        amount_paid = request.POST.get("amount_paid")
-        month = request.POST.get("repayment_date")
-        request_id = request.POST.get("loan_request")
-        comment = request.POST.get("comment")
-
-        # Validate required fields
-        if not (ippis and amount_paid and month and request_id):
-            messages.error(request, "All fields are required.")
-            return redirect(f"{request.path}?ippis={ippis}")
-
-        try:
-            amount_paid = Decimal(amount_paid)
-            if amount_paid <= 0:
-                raise ValueError("Amount must be positive")
-            month_date = datetime.strptime(month, "%Y-%m").date()
-            request_id = int(request_id)
-        except (ValueError, TypeError) as e:
-            messages.error(request, f"Invalid input: {e}")
-            return redirect(f"{request.path}?ippis={ippis}")
-
-        loan_request = LoanRequest.objects.filter(
-            id=request_id, member__member=selected_user
-        ).first()
-
-        if not loan_request:
-            messages.error(request, "Selected loan request not found.")
-            return redirect(f"{request.path}?ippis={ippis}")
-
-        total_paid = LoanRepayback.objects.filter(loan_request=loan_request).aggregate(total=Sum('amount_paid'))['total'] or Decimal("0.00")
-        remaining_balance = loan_request.amount - total_paid
-
-        if amount_paid > remaining_balance:
-            messages.error(request, "Payment exceeds remaining balance.")
-            return redirect(f"{request.path}?ippis={ippis}")
-
-        # Check for existing payment for the same month
-        if LoanRepayback.objects.filter(loan_request=loan_request,repayment_date__year=month_date.year,
-            repayment_date__month=month_date.month).exists():
-            messages.warning(request, f"Payment already exists for {month_date.strftime('%B %Y')}.")
-            return redirect(f"{request.path}?ippis={ippis}")
-
-        # Create payment transaction
-        with transaction.atomic():
-            LoanRepayback.objects.create(
-                loan_request=loan_request,amount_paid=amount_paid,
-                repayment_date=month_date,comment=comment,
-                balance_remaining=remaining_balance - amount_paid,
-                created_by=request.user)
-
-            # Update status if fully paid
-            total_after_payment = total_paid + amount_paid
-            if total_after_payment >= loan_request.amount:
-                loan_request.status = 'Fullpaid'
-                loan_request.save(update_fields=['status'])
-
-        messages.success(request,f"Payment of ₦{amount_paid:,.2f} recorded for {selected_user.first_name} ({ippis}).")
-        return redirect(f"{request.path}?ippis={ippis}")
-    context = {"requests": requests_list,"selected_user": selected_user,"total_paid": total_paid,"remaining_balance": remaining_balance,}
-    return render(request, "loan/add_payment.html",context)
 
 
 

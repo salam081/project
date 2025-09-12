@@ -60,6 +60,7 @@
                                 <th>Member</th>
                                 <th>IPPIS</th>
                                 <th class="text-nowrap" style="min-width: 120px;">Loan Type</th>
+                                <th class="text-nowrap" style="min-width: 120px;">Loan Duration</th>
                                 <th class="text-nowrap" style="min-width: 120px;">Requests Amount</th>
                                 <th class="text-nowrap" style="min-width: 120px;">Approved Amount</th>
                                 <th>Status</th>
@@ -85,6 +86,9 @@
                                 <td>{{ request.member.ippis }}</td>
                                 <td class="text-nowrap" style="min-width: 120px;">
                                     <span >{{ request.loan_type.name }}</span>
+                                </td>
+                                <td class="text-nowrap" style="min-width: 120px;">
+                                    <span >{{ request.loan_term_months }} month</span>
                                 </td>
                                 <td>₦{{ request.amount|floatformat:2 }}</td>
                                 <td>
@@ -117,7 +121,7 @@
                                          <a href="{% url 'loan_request_detail' request.id %}" class="btn btn-sm btn-outline-info" title="View Details">
                                             <i class="fas fa-book "></i>
                                         </a>   
-                                            <a href="{% url 'add_single_loan_payment' %}" class="btn btn-sm btn-outline-success" title="Add Repayment">
+                                            <a href="{% url 'add_payment' %}" class="btn btn-sm btn-outline-success" title="Add Repayment">
                                                 <i class="fas fa-money-bill "></i>
                                             </a>
                                             

@@ -137,7 +137,7 @@ def user_registration(request):
         Member.objects.create( member=user,ippis=ippis, total_savings=0)
 
         messages.success(request, "Registration successful! Default password is 'pass'.")
-        return redirect('all_member')
+        return redirect('all_members')
 
     genders = Gender.objects.all()  
     return render(request, "accounts/user_register.html", {"genders": genders})

@@ -43,6 +43,7 @@
                     </div>
                     <small class="text-muted">{{ payment_percentage }}% Complete</small>
                 </div>
+                <strong>Print By{{created_by}}</strong>
             </div>
         </div>
     </div>
@@ -57,10 +58,10 @@
                     <thead class="table-primary">
                         <tr>
                             <th>#</th>
-                            <th>Repayment Date</th>
-                            <th>Amount Paid</th>
-                            <th>Running Total</th>
-                            <th>Remaining Balance</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Repayment Date</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Amount Paid</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Running Total</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Remaining Balance</th>
                             <th>Comment</th>
                         </tr>
                     </thead>
@@ -68,11 +69,11 @@
                         {% for entry in payment_history %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>{{ entry.payment.repayment_date|date:"M d, Y" }}</td>
+                            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ entry.payment.repayment_date|date:"M d, Y" }}</td>
                             <td>₦{{ entry.payment.amount_paid|floatformat:2|intcomma }}</td>
                             <td class="text-success">₦{{ entry.running_total|floatformat:2|intcomma }}</td>
                             <td class="text-danger">₦{{ entry.remaining_balance|floatformat:2|intcomma }}</td>
-                            <td>{{ entry.payment.comment|default:"—" }}</td>
+                            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ entry.payment.comment|default:"—" }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

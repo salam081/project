@@ -830,7 +830,7 @@ def make_finance_payment(request, id):
 
             messages.success(
                 request,f"Payment of ₦{payment.amount_paid} for {payment.month.strftime('%B %Y')} recorded successfully!")
-            return redirect("admin_project_finance_requests", id=finance_request.id)
+            return redirect("make_finance_payment", id=finance_request.id)
         else:
             messages.error(request, "Please correct the errors below.")
     else:

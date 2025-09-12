@@ -67,7 +67,7 @@
                 <tbody>
                     {% for loan in pending_guarantor_loans %}
         <tr>
-            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.member }}</td>
+            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.member.member.first_name }}  {{ loan.member.member.last_name }}</td>
             <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.loan_type }}</td>
             <td>₦{{ loan.amount }}</td>
             <td>

@@ -196,6 +196,156 @@ def ajax_load_bank_code(request):
 
 
 
+# @login_required
+# def loan_request_view(request):
+#     settings = LoanSettings.objects.first()
+#     if not settings or not settings.allow_loan_requests:
+#         return render(request, "member/loan_request.html", {
+#             "loan_types": LoanType.objects.all(),
+#             "bank_names": BankName.objects.all(),
+#         })
+
+#     member = getattr(request.user, 'member', None)
+#     if not member:
+#         messages.error(request, "You must be a registered member to request a loan.")
+#         return redirect("dashboard")
+
+#     loan_types = LoanType.objects.filter(available=True)
+#     bank_names = BankName.objects.all()
+
+#     # ✅ Get the total loanable balance for the member
+#     loanable_amount = Loanable.objects.filter(member=member).aggregate(
+#         total=Sum('amount')
+#     )['total'] or Decimal("0.00")
+    
+#     print('loanable_amount',loanable_amount)
+
+#     if loanable_amount <= 0:
+#         messages.error(request, "You don't have any loanable amount yet. Contact admin.")
+#         return redirect("member_dashboard")
+
+#     # ✅ Pre-compute eligible amounts for each loan type
+#     eligible_amounts = {}
+#     for loan_type in loan_types:
+#         name_lower = loan_type.name.lower()
+#         if 'short term' in name_lower:
+#             eligible = loanable_amount / 2
+#         elif 'long term' in name_lower:
+#             eligible = loanable_amount * 2
+#         else:
+#             eligible = loanable_amount
+
+#         # ✅ Respect LoanType.max_amount if set
+#         if loan_type.max_amount and eligible > loan_type.max_amount:
+#             eligible = loan_type.max_amount
+
+#         eligible_amounts[loan_type.id] = eligible
+
+#     if request.method == "POST":
+#         loan_type_id = request.POST.get('loan_type')
+#         amount = request.POST.get('amount')
+#         loan_term_months = request.POST.get('loan_term_months')
+#         file_one = request.FILES.get('file_one')
+#         bank_name_id = request.POST.get('bank_name')
+#         bank_code_id = request.POST.get('bank_code')
+#         account_number = request.POST.get('account_number')
+#         guarantor_ippis = request.POST.get('guarantor_ippis')
+
+#         # ✅ Convert amount safely to decimal
+#         try:
+#             amount = Decimal(amount)
+#         except:
+#             messages.error(request, "Invalid amount entered.")
+#             return redirect('loan_request')
+
+#         # ✅ Validate loan type
+#         try:
+#             selected_loan_type = LoanType.objects.get(id=loan_type_id)
+#         except LoanType.DoesNotExist:
+#             messages.error(request, "Invalid loan type selected.")
+#             return redirect('loan_request')
+
+#         selected_type_name = selected_loan_type.name.lower()
+
+#         # ✅ Check active loans
+#         active_loans = LoanRequest.objects.filter(
+#             member=member,
+#             status__in=['pending', 'approved']
+#         ).select_related('loan_type')
+
+#         has_active_short = any('short term' in loan.loan_type.name.lower() for loan in active_loans)
+#         has_active_long = any('long term' in loan.loan_type.name.lower() for loan in active_loans)
+
+#         if 'short term' in selected_type_name and (has_active_short or has_active_long):
+#             messages.error(request, "You cannot request a SHORT TERM loan while you have an active Short or Long Term loan.")
+#             return redirect('loan_request')
+
+#         if 'long term' in selected_type_name and has_active_long:
+#             messages.error(request, "You cannot request a LONG TERM loan while you have an active Long Term loan.")
+#             return redirect('loan_request')
+
+#         # ✅ Check loan request form fee payment
+#         now = timezone.now()
+#         paid = LoanRequestFee.objects.filter(
+#             member=member,
+#             created_at__year=now.year,
+#             created_at__month=now.month
+#         ).exists()
+
+#         if not paid:
+#             messages.error(request, "You must pay the loan request form fee before requesting a loan.")
+#             return redirect('loan_request')
+
+#         # ✅ Guarantor validation
+#         try:
+#             guarantor_member = Member.objects.get(ippis=guarantor_ippis)
+#         except Member.DoesNotExist:
+#             messages.error(request, "Guarantor IPPIS is not registered.")
+#             return redirect('loan_request')
+
+#         if guarantor_member == member:
+#             messages.error(request, "You cannot be your own guarantor.")
+#             return redirect('loan_request')
+
+#         # ✅ Get eligible amount for the selected loan type
+#         eligible_amount = eligible_amounts.get(selected_loan_type.id, loanable_amount)
+
+#         # ✅ Reject request if requested amount > eligible amount
+#         if amount > eligible_amount:
+#             messages.error(
+#                 request,
+#                 f"You cannot request more than ₦{eligible_amount:,.2f} for this loan type. "
+#                 f"Your current total loanable balance is ₦{loanable_amount:,.2f}."
+#             )
+#             return redirect('loan_request')
+
+#         # ✅ Create the loan request
+#         LoanRequest.objects.create(
+#             member=member,
+#             loan_type=selected_loan_type,
+#             amount=amount,
+#             loan_term_months=loan_term_months,
+#             approved_amount=None,
+#             file_one=file_one,
+#             bank_name_id=bank_name_id,
+#             bank_code_id=bank_code_id,
+#             account_number=account_number,
+#             guarantor=guarantor_member,
+#             created_by=request.user,
+#         )
+
+#         messages.success(request, "Loan request submitted successfully!")
+#         return redirect('my_loan_requests')
+
+#     context = {
+#         "loan_types": loan_types,
+#         "bank_names": bank_names,
+#         "settings": settings,
+#         "loanable": loanable_amount,           
+#         "eligible_amounts": eligible_amounts,   
+#     }
+#     return render(request, "member/loan_request.html", context)
+
 @login_required
 def loan_request_view(request):
     settings = LoanSettings.objects.first()
@@ -213,18 +363,15 @@ def loan_request_view(request):
     loan_types = LoanType.objects.filter(available=True)
     bank_names = BankName.objects.all()
 
-    # ✅ Get the total loanable balance for the member
     loanable_amount = Loanable.objects.filter(member=member).aggregate(
         total=Sum('amount')
     )['total'] or Decimal("0.00")
-    
-    print('loanable_amount',loanable_amount)
 
     if loanable_amount <= 0:
         messages.error(request, "You don't have any loanable amount yet. Contact admin.")
         return redirect("member_dashboard")
 
-    # ✅ Pre-compute eligible amounts for each loan type
+    # ✅ Pre-compute eligible amounts
     eligible_amounts = {}
     for loan_type in loan_types:
         name_lower = loan_type.name.lower()
@@ -235,7 +382,6 @@ def loan_request_view(request):
         else:
             eligible = loanable_amount
 
-        # ✅ Respect LoanType.max_amount if set
         if loan_type.max_amount and eligible > loan_type.max_amount:
             eligible = loan_type.max_amount
 
@@ -251,14 +397,12 @@ def loan_request_view(request):
         account_number = request.POST.get('account_number')
         guarantor_ippis = request.POST.get('guarantor_ippis')
 
-        # ✅ Convert amount safely to decimal
         try:
             amount = Decimal(amount)
         except:
             messages.error(request, "Invalid amount entered.")
             return redirect('loan_request')
 
-        # ✅ Validate loan type
         try:
             selected_loan_type = LoanType.objects.get(id=loan_type_id)
         except LoanType.DoesNotExist:
@@ -267,7 +411,7 @@ def loan_request_view(request):
 
         selected_type_name = selected_loan_type.name.lower()
 
-        # ✅ Check active loans
+        # ✅ Active loan restrictions
         active_loans = LoanRequest.objects.filter(
             member=member,
             status__in=['pending', 'approved']
@@ -284,16 +428,15 @@ def loan_request_view(request):
             messages.error(request, "You cannot request a LONG TERM loan while you have an active Long Term loan.")
             return redirect('loan_request')
 
-        # ✅ Check loan request form fee payment
-        now = timezone.now()
-        paid = LoanRequestFee.objects.filter(
-            member=member,
-            created_at__year=now.year,
-            created_at__month=now.month
-        ).exists()
-
-        if not paid:
-            messages.error(request, "You must pay the loan request form fee before requesting a loan.")
+        # ✅ Check loan request fee (must be PAID for this loan type and not used yet)
+        try:
+            fee = LoanRequestFee.objects.get(
+                member=member,
+                loan_type=selected_loan_type,
+                status="paid"
+            )
+        except LoanRequestFee.DoesNotExist:
+            messages.error(request, f"You must pay the request fee for {selected_loan_type.name} before requesting this loan.")
             return redirect('loan_request')
 
         # ✅ Guarantor validation
@@ -307,10 +450,8 @@ def loan_request_view(request):
             messages.error(request, "You cannot be your own guarantor.")
             return redirect('loan_request')
 
-        # ✅ Get eligible amount for the selected loan type
+        # ✅ Eligible amount check
         eligible_amount = eligible_amounts.get(selected_loan_type.id, loanable_amount)
-
-        # ✅ Reject request if requested amount > eligible amount
         if amount > eligible_amount:
             messages.error(
                 request,
@@ -334,120 +475,21 @@ def loan_request_view(request):
             created_by=request.user,
         )
 
+        # ✅ Mark fee as used
+        fee.status = "used"
+        fee.save()
+
         messages.success(request, "Loan request submitted successfully!")
         return redirect('my_loan_requests')
 
-    context = {
+    return render(request, "member/loan_request.html", {
         "loan_types": loan_types,
         "bank_names": bank_names,
         "settings": settings,
-        "loanable": loanable_amount,           
-        "eligible_amounts": eligible_amounts,   
-    }
-    return render(request, "member/loan_request.html", context)
+        "loanable": loanable_amount,
+        "eligible_amounts": eligible_amounts,
+    })
 
-
-# @login_required
-# def loan_request_view(request):
-#     settings = LoanSettings.objects.first()
-#     if not settings or not settings.allow_loan_requests:
-#         return render(request, "member/loan_request.html", {
-#             "loan_types": LoanType.objects.all(),
-#             "bank_names": BankName.objects.all(),
-#         })
-#     current_month = datetime.now().strftime('%b')
-#     member = getattr(request.user, 'member', None)
-#     if not member:
-#         messages.error(request, "You must be a registered member to request a loan.")
-#         return redirect("dashboard")
-
-#     loan_types = LoanType.objects.filter(available=True)
-#     # loan_types = LoanType.objects.filter(name__icontains=current_month)
-#     # loan_types = LoanType.objects.filter(name__icontains=current_month, available=True)
-
-#     bank_names = BankName.objects.all()
-
-#     if request.method == "POST":
-#         loan_type_id = request.POST.get('loan_type')
-#         amount = request.POST.get('amount')
-#         loan_term_months = request.POST.get('loan_term_months')
-#         file_one = request.FILES.get('file_one')
-#         bank_name_id = request.POST.get('bank_name')
-#         bank_code_id = request.POST.get('bank_code')
-#         account_number = request.POST.get('account_number')
-#         guarantor_ippis = request.POST.get('guarantor_ippis')
-#         # form_fee = request.POST.get('form_fee')
-
-#         # Validate loan type
-#         try:
-#             selected_loan_type = LoanType.objects.get(id=loan_type_id)
-#         except LoanType.DoesNotExist:
-#             messages.error(request, "Invalid loan type selected.")
-#             return redirect('loan_request')
-
-#         selected_type_name = selected_loan_type.name.lower()
-
-#         # Check active loans
-#         active_loans = LoanRequest.objects.filter(
-#             member=member,
-#             status__in=['pending', 'approved']
-#         ).select_related('loan_type')
-
-#         has_active_short = any('short term' in loan.loan_type.name.lower() for loan in active_loans)
-#         has_active_long = any('long term' in loan.loan_type.name.lower() for loan in active_loans)
-
-#         # Validation rules
-#         if 'short term' in selected_type_name and (has_active_short or has_active_long):
-#             messages.error(request, "You cannot request a SHORT TERM loan while you have an active Short or Long Term loan.")
-#             return redirect('loan_request')
-
-#         if 'long term' in selected_type_name and has_active_long:
-#             messages.error(request, "You cannot request a LONG TERM loan while you have an active Long Term loan.")
-#             return redirect('loan_request')
-        
-#         now = timezone.now()
-#         paid = LoanRequestFee.objects.filter(
-#             member=request.user.member,  # or however you access the member
-#             created_at__year=now.year,
-#             created_at__month=now.month
-#         ).exists()
-
-#         if not paid:
-#             messages.error(request, "You must pay the loan request form fee  before requesting a loan.")
-#             return redirect('loan_request')
-            
-#         # Guarantor validation
-#         try:
-#             guarantor_member = Member.objects.get(ippis=guarantor_ippis)
-#         except Member.DoesNotExist:
-#             messages.error(request, "Guarantor IPPIS is not registered.")
-#             return redirect('loan_request')
-
-#         if guarantor_member == member:
-#             messages.error(request, "You cannot be your own guarantor.")
-#             return redirect('loan_request')
-
-
-#         # Create the loan request
-#         LoanRequest.objects.create(
-#             member=member,loan_type=selected_loan_type,
-#             amount=amount,loan_term_months=loan_term_months,
-#             approved_amount=None,file_one=file_one,
-#             bank_name_id=bank_name_id, bank_code_id=bank_code_id,
-#             account_number=account_number, guarantor=guarantor_member,
-#             created_by=request.user,
-#         )
-#         # LoanFormFee.objects.create(form_fee = '500',paid_by=request.user,)
-        
-#         messages.success(request, "Loan request submitted successfully!")
-#         return redirect('my_loan_requests')
-
-#     context = {
-#         "loan_types": loan_types,
-#         "bank_names": bank_names,
-#         "settings": settings,
-#     }
-#     return render(request, "member/loan_request.html", context)
 
 @login_required
 def show_guarantor_approval(request, pk):
@@ -551,7 +593,8 @@ def request_consumable(request):
         if not selected_item_ids:
             messages.error(request, "You must select at least one item.")
             return redirect("request_consumable")
-
+        
+        
         # Collect quantities
         item_details = {}
         for item_id in selected_item_ids:
@@ -572,7 +615,17 @@ def request_consumable(request):
                 except ConsumableType.DoesNotExist:
                     messages.error(request, "The selected consumable type does not exist.")
                     return redirect('request_consumable')
-
+                
+                try:
+                   fee = ConsumableFormFee.objects.get(
+                    member=request.user.member,
+                    consumable_type=consumable_type_obj,
+                    status="paid"
+                )
+                except ConsumableFormFee.DoesNotExist:
+                    messages.error(request, f"You must pay the request fee for {consumable_type_obj.name} before requesting this loan.")
+                    return redirect('loan_request')
+                
                 loan_term_months = int(loan_term_months)
 
                 # Create main ConsumableRequest
@@ -582,6 +635,8 @@ def request_consumable(request):
                     file_payslpt=payslip_file,
                     status='Pending'
                 )
+                fee.status = "used"
+                fee.save()
 
                 # Process selected SellingPlan items
                 for item_id, details in item_details.items():
@@ -716,6 +771,8 @@ def cancel_consumable_request(request, id):
 @login_required
 def member_withdrawal_request(request):
     member = get_object_or_404(Member, member=request.user)
+    sav = member.total_savings
+    print(sav)
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
         if Withdrawal.objects.filter(member=member, status='Pending').exists():

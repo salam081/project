@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django_countries.fields import CountryField
-from savings.models import *
+from savings.models import Savings, Loanable, Investment
 from decimal import Decimal
 
 # Create your models here.

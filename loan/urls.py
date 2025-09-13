@@ -4,6 +4,7 @@ from .import views
 urlpatterns = [
     path('loan/settings/', views.admin_loan_settings, name='admin_loan_settings'),
     path('loan-type/add/', views.add_loan_type, name='add_loan_type'),
+    path('loan-request-fee/', views.loan_request_fee_payment, name='loan_request_fee_payment'),
     path('admin_loan_requests_list', views.admin_loan_requests_list, name='admin_loan_requests'),
     path('loan_request_detail/<str:id>/',views.loan_request_detail, name='loan_request_detail'),
     path('add_payment/',views.add_payment,name='add_payment'),
@@ -19,7 +20,7 @@ urlpatterns = [
     # path('loan-type/delete/<int:pk>/', views.delete_loan_type, name='delete_loan_type'),
     path('loan_years_list/', views.loan_years_list, name='loan_years_list'),
     path('loans_by_year/<int:year>/<str:loan_type_filter>/', views.loans_by_year, name='loans_by_year'),
-    path('loan_fee',views.loan_fee,name="loan_fee"),
+    # path('loan_fee',views.loan_fee,name="loan_fee"),
     path('loan/repayments/', views.admin_repayment_tracking, name='admin_repayment_tracking'),
    
 

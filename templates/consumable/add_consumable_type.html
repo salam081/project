@@ -28,12 +28,12 @@
                                     {% csrf_token %}
                                     
                                     <div class="mb-3">
-                                        <label for="name" class="form-label">
-                                            <i class="fas fa-tag me-1"></i>
-                                            Name *
-                                        </label>
-                                        <input type="text" class="form-control" id="name" name="name" 
-                                               placeholder="Consumable Type Name" required maxlength="100">
+                                        <label for="name" class="form-label"> <i class="fas fa-tag me-1"></i> Name * </label>
+                                        <input type="text" class="form-control" id="name" name="name"  placeholder="Consumable Type Name" required maxlength="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="request_fee" class="form-label"> <i class="fas fa-tag me-1"></i> Request Fee * </label>
+                                        <input type="text" class="form-control" id="request_fee" name="request_fee"  placeholder="Consumable Type Request Fee" required maxlength="100">
                                     </div>
 
                                     <div class="mb-3">
@@ -73,7 +73,7 @@
                                             <thead class="table">
                                                 <tr>
                                                     <th>Name</th>
-                                                    {% comment %} <th>Description</th> {% endcomment %}
+                                                    <th>Form Fee</th>
                                                     <th>Status</th>
                                                     <th>Actions</th>
                                                 </tr>
@@ -83,6 +83,9 @@
                                                     <tr>
                                                         <td class="text-nowrap" style="min-width: 120px;">
                                                             <strong>{{ consumable_type.name }}</strong>
+                                                        </td>
+                                                        <td>
+                                                            <strong>{{consumable_type.request_fee}}</strong>
                                                         </td>
                                                         {% comment %} <td>
                                                             <span class="text-muted">
@@ -131,6 +134,7 @@
                                                     </tr>
                                                     
                                                     <!-- Collapsible Edit Form -->
+                                                     <!-- Collapsible Edit Form -->
                                                     <tr>
                                                         <td colspan="6" class="p-0">
                                                             <div class="collapse" id="edit-{{ consumable_type.id }}">
@@ -139,30 +143,37 @@
                                                                         {% csrf_token %}
                                                                         <input type="hidden" name="consumable_type_id" value="{{ consumable_type.id }}">
                                                                         <input type="hidden" name="action" value="edit">
-                                                                        
+
                                                                         <div class="row g-3">
                                                                             <div class="col-md-6">
                                                                                 <label class="form-label">Name *</label>
                                                                                 <input type="text" class="form-control" name="name" 
-                                                                                       value="{{ consumable_type.name }}" required>
+                                                                                    value="{{ consumable_type.name }}" required>
                                                                             </div>
-                                                                           
                                                                             <div class="col-md-6">
-                                                                                <label class="form-label">&nbsp;</label>
+                                                                                <label class="form-label">Request Fee *</label>
+                                                                                <input type="text" class="form-control" name="request_fee" 
+                                                                                    value="{{ consumable_type.request_fee }}" required>
+                                                                            </div>
+
+                                                                            <div class="col-12">
+                                                                                <label class="form-label">Description</label>
+                                                                                <textarea class="form-control" name="description" rows="3">
+                                                                                    {{ consumable_type.description }}
+                                                                                </textarea>
+                                                                            </div>
+
+                                                                            <div class="col-md-12 mt-3">
                                                                                 <div class="d-flex gap-2">
                                                                                     <button type="submit" class="btn btn-success">
-                                                                                        <i class="fas fa-save me-1"></i>Save Changes
+                                                                                        <i class="fas fa-save me-1"></i> Save Changes
                                                                                     </button>
                                                                                     <button type="button" class="btn btn-secondary" 
                                                                                             data-bs-toggle="collapse" 
                                                                                             data-bs-target="#edit-{{ consumable_type.id }}">
-                                                                                        <i class="fas fa-times me-1"></i>Cancel
+                                                                                        <i class="fas fa-times me-1"></i> Cancel
                                                                                     </button>
                                                                                 </div>
-                                                                            </div>
-                                                                            <div class="col-12">
-                                                                                <label class="form-label">Description</label>
-                                                                                <textarea class="form-control" name="description" rows="3">{{ consumable_type.description }}</textarea>
                                                                             </div>
                                                                         </div>
                                                                     </form>
@@ -170,6 +181,7 @@
                                                             </div>
                                                         </td>
                                                     </tr>
+
                                                 {% endfor %}
                                             </tbody>
                                         </table>

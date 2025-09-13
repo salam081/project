@@ -34,6 +34,7 @@ class LoanType(models.Model):
     description = models.TextField(blank=True, null=True) 
     max_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True) 
     max_loan_term_months = models.PositiveIntegerField(null=True, blank=True) 
+    request_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     available = models.BooleanField(default=True)
     created_by = models.ForeignKey(User,on_delete=models.CASCADE)
     
@@ -107,12 +108,33 @@ class LoanRepayback(models.Model):
     
 
 
+
 class LoanRequestFee(models.Model):
+    STATUS_CHOICES = [
+        ("paid", "Paid"),              # fee paid but no request yet
+        ("used", "Used for Loan"),     # fee already linked to a loan request
+        ("expired", "Expired/Closed"), # optional, if you want expiration
+    ]
+
     member = models.ForeignKey(Member, on_delete=models.CASCADE)  
+    loan_type = models.ForeignKey(LoanType, on_delete=models.CASCADE) 
+    loan_amount = models.DecimalField(max_digits=10, decimal_places=2) 
     form_fee = models.DecimalField(max_digits=10, decimal_places=2)
-    loan_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE, blank=True,null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="paid")  
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-       return f"Loan Fee - {self.member.member.first_name} with  ({self.member.ippis})"
+        return f"{self.member.member.first_name} - {self.loan_type} Fee ({self.form_fee}) - {self.status}"
+
+
+# class LoanRequestFee(models.Model):
+#     member = models.ForeignKey(Member, on_delete=models.CASCADE)  
+#     loan_type = models.ForeignKey(LoanType, on_delete=models.CASCADE) 
+#     loan_amount = models.DecimalField(max_digits=10, decimal_places=2) 
+#     form_fee = models.DecimalField(max_digits=10, decimal_places=2)
+#     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"{self.member.member.first_name} - {self.loan_type} Fee ({self.form_fee})"

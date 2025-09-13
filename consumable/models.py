@@ -29,6 +29,7 @@ class Item(models.Model):
 class ConsumableType(models.Model):
     name = models.CharField(max_length=100) 
     description = models.TextField(blank=True, null=True) 
+    request_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     available = models.BooleanField(default=True)
     created_by = models.ForeignKey(User,on_delete=models.CASCADE)
     
@@ -117,8 +118,15 @@ class PaybackConsumable(models.Model):
 
 
 class ConsumableFormFee(models.Model):
+    STATUS_CHOICES = [
+        ("paid", "Paid"),             
+        ("used", "Used for Loan"),     
+        ("expired", "Expired/Closed"), # optional, if you want expiration
+    ]
     member = models.ForeignKey(Member,on_delete=models.CASCADE,related_name='consumable_fee')
+    consumable_type = models.ForeignKey(ConsumableType, on_delete=models.CASCADE)
     form_fee = models.DecimalField(max_digits=10, decimal_places=2)  
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="paid")
     created_by = models.ForeignKey(User,on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 

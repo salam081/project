@@ -147,7 +147,7 @@
                                 <b class="fw-bold">{{ loan_request.loan_type.name }}</b>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-muted mb-1">Loan Term</label>
+                                <label class="form-label text-muted mb-1">Duration</label>
                                 <b class="fw-bold">{{ loan_request.loan_term_months }} months</b>
                             </div>
                             {% if loan_request.approval_date %}
@@ -216,7 +216,7 @@
                                     </div>
                                     <p>{{payment.comment}}</p>
                                 </div>
-                                <strong>Recived By: {{payment.created_by.first_name}}  {{payment.created_by.last_name}}</strong>
+                                <strong>Payment Recived By: {{payment.created_by.first_name}}  {{payment.created_by.last_name}}</strong>
                                 <p>Paid At: {{payment.created_at}}</p>
                             {% endfor %}
                         </div>

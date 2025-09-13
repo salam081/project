@@ -67,6 +67,7 @@ def add_loan_type(request):
         max_amount = request.POST.get('max_amount') or None
         max_loan_term_months = request.POST.get('max_loan_term_months') or None
         loan_type_id = request.POST.get('loan_type_id')
+        request_fee = request.POST.get('request_fee')
         action = request.POST.get('action')  # 'toggle' or 'edit'
 
         if loan_type_id:
@@ -81,6 +82,7 @@ def add_loan_type(request):
             elif action == 'edit':
                 loan_type.name = name
                 loan_type.description = description
+                loan_type.request_fee = request_fee
                 loan_type.max_amount = max_amount
                 loan_type.max_loan_term_months = max_loan_term_months
                 loan_type.save()
@@ -88,7 +90,7 @@ def add_loan_type(request):
                 return redirect('add_loan_type')
 
         else:
-            LoanType.objects.create(name=name,description=description, max_amount=max_amount,
+            LoanType.objects.create(name=name,description=description, request_fee=request_fee, max_amount=max_amount,
                 max_loan_term_months=max_loan_term_months,available=True, created_by=request.user)
             messages.success(request, 'Loan type created successfully.')
             return redirect('add_loan_type')
@@ -97,40 +99,57 @@ def add_loan_type(request):
     return render(request, 'loan/add_loan_type.html', context)
 
 
+def loan_request_fee_payment(request):
+    member_info = None
+    loan_types = LoanType.objects.filter(available=True)
 
-def loan_fee(request):
-    if request.method == 'POST':
-        ippis = request.POST.get('ippis')
-        form_fee = request.POST.get('form_fee')
-        loan_amount = request.POST.get('loan_amount')
+    if request.method == "POST":
+        if "search_member" in request.POST:  # step 1: search
+            ippis = request.POST.get("ippis")
+            try:
+                member = Member.objects.get(ippis=ippis)
+            except Member.DoesNotExist:
+                messages.error(request, f"No member found with IPPIS {ippis}.")
+                member = None
 
-        # Validate IPPIS input
-        if not ippis or not ippis.isdigit():
-            messages.error(request, "Please enter a valid IPPIS number.")
-            return redirect('loan_fee')
+            if member:
+                latest_loanable = Loanable.objects.filter(member=member).order_by('-month').first()
+                total_loanable = latest_loanable.total_amount if latest_loanable else Decimal("0.00")
 
-        ippis = int(ippis)  # Convert to integer
+                member_info = {
+                    "id": member.id,
+                    "name": f"{member.member.first_name} {member.member.last_name}",
+                    "ippis": member.ippis,
+                    "total_loanable": total_loanable,
+                }
 
-        try:
-            member = Member.objects.get(ippis=ippis)
-        except Member.DoesNotExist:
-            messages.error(request, f"No member found with IPPIS {ippis}.")
-            return redirect('loan_fee')
+        elif "make_payment" in request.POST:  # step 2: make payment
+            member_id = request.POST.get("member_id")
+            loan_type_id = request.POST.get("loan_type")
+            loan_amount = Decimal(request.POST.get("loan_amount") or "0.00")
 
-        # Create the loan request fee record
-        LoanRequestFee.objects.create(
-            member=member,
-            form_fee=form_fee,
-            loan_amount=loan_amount,
-            created_by=request.user
-        )
+            member = get_object_or_404(Member, id=member_id)
+            loan_type = get_object_or_404(LoanType, id=loan_type_id)
 
-        messages.success(request, "Payment recorded successfully.")
-        return redirect('loan_fee')
+            # Prevent duplicate fee payments
+            if LoanRequestFee.objects.filter(member=member, loan_type=loan_type).exists():
+                messages.warning(request, f"{member} has already paid the request fee for {loan_type.name}.")
+                return redirect("loan_request_fee_payment")
 
-    # Aggregates
-    loan = LoanRequestFee.objects.aggregate(total=Sum('loan_amount'))['total'] or 0
-    fee = LoanRequestFee.objects.aggregate(total=Sum('form_fee'))['total'] or 0
+            # ✅ Create the record
+            LoanRequestFee.objects.create(
+                member=member,
+                loan_type=loan_type,
+                form_fee=loan_type.request_fee,
+                loan_amount=loan_amount,
+                created_by=request.user
+            )
+            messages.success(request, f"Loan request fee of ₦{loan_type.request_fee} recorded for {member}.")
+            return redirect("loan_request_fee_payment")
+
+    # ✅ Aggregates always calculated (whether search, payment, or first load)
+    loan = LoanRequestFee.objects.aggregate(total=Sum('loan_amount'))['total'] or Decimal("0.00")
+    fee = LoanRequestFee.objects.aggregate(total=Sum('form_fee'))['total'] or Decimal("0.00")
     loan_req_form = LoanRequestFee.objects.count()
 
     # Fetch all loan request fees with member details
@@ -147,8 +166,63 @@ def loan_fee(request):
         "loan_req_form": loan_req_form,
         "members": members,
         "page_obj": page_obj,
+        "loan_types": loan_types,
+        "member_info": member_info,  # ✅ keep this so search results still show
     }
-    return render(request, "loan/loan_fee.html", context)
+    return render(request, "loan/loan_request_fee.html", context)
+
+
+# def loan_fee(request):
+#     if request.method == 'POST':
+#         ippis = request.POST.get('ippis')
+#         form_fee = request.POST.get('form_fee')
+#         loan_amount = request.POST.get('loan_amount')
+
+#         # Validate IPPIS input
+#         if not ippis or not ippis.isdigit():
+#             messages.error(request, "Please enter a valid IPPIS number.")
+#             return redirect('loan_fee')
+
+#         ippis = int(ippis)  # Convert to integer
+
+#         try:
+#             member = Member.objects.get(ippis=ippis)
+#         except Member.DoesNotExist:
+#             messages.error(request, f"No member found with IPPIS {ippis}.")
+#             return redirect('loan_fee')
+
+#         # Create the loan request fee record
+#         LoanRequestFee.objects.create(
+#             member=member,
+#             form_fee=form_fee,
+#             loan_amount=loan_amount,
+#             created_by=request.user
+#         )
+
+#         messages.success(request, "Payment recorded successfully.")
+#         return redirect('loan_fee')
+
+    # # Aggregates
+    # loan = LoanRequestFee.objects.aggregate(total=Sum('loan_amount'))['total'] or 0
+    # fee = LoanRequestFee.objects.aggregate(total=Sum('form_fee'))['total'] or 0
+    # loan_req_form = LoanRequestFee.objects.count()
+
+    # # Fetch all loan request fees with member details
+    # members = LoanRequestFee.objects.select_related('member')
+
+    # # Pagination
+    # page_number = request.GET.get('page')
+    # paginator = Paginator(members, 100)
+    # page_obj = paginator.get_page(page_number)
+
+#     context = {
+#         "fee": fee,
+#         "loan": loan,
+#         "loan_req_form": loan_req_form,
+#         "members": members,
+#         "page_obj": page_obj,
+#     }
+#     return render(request, "loan/loan_fee.html", context)
 
 
 
@@ -472,11 +546,17 @@ def add_payment(request):
 
                 # Calculate total paid & balance for the selected user
                 for req in requests_list:
-                    paid = LoanRepayback.objects.filter(loan_request=req).aggregate(total=Sum('amount_paid'))['total'] or Decimal("0.00")
+                    paid = LoanRepayback.objects.filter(loan_request=req).aggregate(
+                        total=Sum('amount_paid')
+                    )['total'] or Decimal("0.00")
+
+                    approved = req.approved_amount or Decimal("0.00")  # use approved amount
                     req.total_paid = paid
-                    req.remaining_balance = req.amount - paid  # assuming LoanRequest has `amount`
+                    req.remaining_balance = approved - paid
+
                     total_paid += paid
                     remaining_balance += req.remaining_balance
+
         except Exception as e:
             messages.error(request, f"Error fetching member: {e}")
 
@@ -509,18 +589,23 @@ def add_payment(request):
             messages.error(request, "Selected loan request not found.")
             return redirect(f"{request.path}?ippis={ippis}")
 
-        total_paid = LoanRepayback.objects.filter(loan_request=loan_request).aggregate(total=Sum('amount_paid'))['total'] or Decimal("0.00")
-        remaining_balance = loan_request.amount - total_paid
+
+        total_paid = LoanRepayback.objects.filter(
+            loan_request=loan_request
+        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal("0.00")
+
+        approved_amount = loan_request.approved_amount or Decimal("0.00")
+        remaining_balance = approved_amount - total_paid
 
         if amount_paid > remaining_balance:
             messages.error(request, "Payment exceeds remaining balance.")
             return redirect(f"{request.path}?ippis={ippis}")
 
-        # Check for existing payment for the same month
-        if LoanRepayback.objects.filter(loan_request=loan_request,repayment_date__year=month_date.year,
-            repayment_date__month=month_date.month).exists():
-            messages.warning(request, f"Payment already exists for {month_date.strftime('%B %Y')}.")
-            return redirect(f"{request.path}?ippis={ippis}")
+        # After creating payment
+        total_after_payment = total_paid + amount_paid
+        if total_after_payment >= approved_amount:
+            loan_request.status = 'Fullpaid'
+            loan_request.save(update_fields=['status']) 
 
         # Create payment transaction
         with transaction.atomic():

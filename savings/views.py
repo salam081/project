@@ -399,17 +399,15 @@ def upload_savings(request):
                 messages.error(request, "No valid data found in file.")
                 return redirect("upload_savings")
             
-
             file_ippis = df["IPPIS"].tolist()
             members_qs = Member.objects.filter(ippis__in=file_ippis).only("id", "ippis", "member")
             members_dict = {str(m.ippis).strip(): m for m in members_qs}
-
-            # file_ippis = df["IPPIS"].tolist()
 
             existing_savings_ids = set(
                 Savings.objects.filter(month=month, member__ippis__in=file_ippis)
                 .values_list("member_id", flat=True)
             )
+
             try:
                 global_interest = InterestAmount.objects.latest("date_created").amount
             except InterestAmount.DoesNotExist:
@@ -423,8 +421,8 @@ def upload_savings(request):
             investments_to_create = []
             savings_member_ids_added = set()
             interest_member_ids_added = set()
-
             skipped_members_report = []
+
             records = df.to_dict("records")
             for row in records:
                 ippis = str(row["IPPIS"]).strip()
@@ -499,14 +497,29 @@ def upload_savings(request):
             with transaction.atomic():
                 if interests_to_create:
                     Interest.objects.bulk_create(interests_to_create, batch_size=1000)
+
                 if savings_to_create:
                     Savings.objects.bulk_create(savings_to_create, batch_size=1000)
+
+                    # ✅ Efficiently update totals using bulk_update
+                    totals = (
+                        Savings.objects.filter(member__in=savings_member_ids_added)
+                        .values("member")
+                        .annotate(total=Sum("month_saving"))
+                    )
+
+                    members_to_update = [
+                        Member(id=row["member"], total_savings=row["total"])
+                        for row in totals
+                    ]
+                    if members_to_update:
+                        Member.objects.bulk_update(members_to_update, ["total_savings"])
+
                 if loanables_to_create:
                     Loanable.objects.bulk_create(loanables_to_create, batch_size=1000)
                 if investments_to_create:
                     Investment.objects.bulk_create(investments_to_create, batch_size=1000)
 
-        
             created_count = len(savings_to_create)
 
             # ✅ If skipped members exist, generate downloadable Excel
@@ -518,9 +531,7 @@ def upload_savings(request):
                 messages.warning(request, f"⚠️ {len(skipped_members_report)} members skipped. Download report for details.")
                 return response
 
-        
             total_uploaded_amount = sum([s.month_saving for s in savings_to_create])
-
             total_interest_deducted = len(interests_to_create) * global_interest
             total_remaining_balance = total_uploaded_amount - total_interest_deducted
             half_amount = (total_remaining_balance / 2).quantize(Decimal("0.01"))
@@ -540,6 +551,204 @@ def upload_savings(request):
             return redirect("upload_savings")
 
     return render(request, "saving/upload_savings.html")
+
+
+# @transaction.atomic
+# def upload_savings(request):
+#     if request.method == "POST" and request.FILES.get("file"):
+#         try:
+#             # Get selected month
+#             selected_month = request.POST.get("month")
+#             if not selected_month:
+#                 messages.error(request, "Please select a month.")
+#                 return redirect("upload_savings")
+
+#             month = pd.to_datetime(selected_month).date().replace(day=1)
+#             file = request.FILES["file"]
+
+#             # Read Excel or CSV
+#             if file.name.endswith(('.xlsx', '.xls')):
+#                 df = pd.read_excel(file, dtype={'IPPIS': str})
+#             else:
+#                 df = pd.read_csv(file, dtype={'IPPIS': str})
+
+#             # ✅ Validate required columns
+#             required_columns = ["IPPIS", "Amount"]
+#             missing_columns = [col for col in required_columns if col not in df.columns]
+#             if missing_columns:
+#                 messages.error(
+#                     request,
+#                     f"Missing columns: {', '.join(missing_columns)}. "
+#                     f"Found columns: {', '.join(df.columns.tolist())}"
+#                 )
+#                 return redirect("upload_savings")
+
+#             # Clean data
+#             df = df.dropna(subset=['IPPIS', 'Amount'])
+#             df["IPPIS"] = df["IPPIS"].astype(str).str.strip()
+#             df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
+#             df = df[(df["Amount"] > 0) & df["Amount"].notna()]
+
+#             if len(df) == 0:
+#                 messages.error(request, "No valid data found in file.")
+#                 return redirect("upload_savings")
+            
+
+#             file_ippis = df["IPPIS"].tolist()
+#             members_qs = Member.objects.filter(ippis__in=file_ippis).only("id", "ippis", "member")
+#             members_dict = {str(m.ippis).strip(): m for m in members_qs}
+
+#             # file_ippis = df["IPPIS"].tolist()
+
+#             existing_savings_ids = set(
+#                 Savings.objects.filter(month=month, member__ippis__in=file_ippis)
+#                 .values_list("member_id", flat=True)
+#             )
+#             try:
+#                 global_interest = InterestAmount.objects.latest("date_created").amount
+#             except InterestAmount.DoesNotExist:
+#                 messages.error(request, "No Subscription amount has been set. Please add one first.")
+#                 return redirect("upload_savings")
+
+#             # Prepare bulk insert lists
+#             savings_to_create = []
+#             interests_to_create = []
+#             loanables_to_create = []
+#             investments_to_create = []
+#             savings_member_ids_added = set()
+#             interest_member_ids_added = set()
+
+#             skipped_members_report = []
+#             records = df.to_dict("records")
+#             for row in records:
+#                 ippis = str(row["IPPIS"]).strip()
+#                 amount = Decimal(str(row["Amount"]))
+           
+#                 # Member lookup
+#                 member = members_dict.get(ippis)
+#                 if not member:
+#                     skipped_members_report.append({
+#                         "IPPIS": ippis,
+#                         "Member Name": "N/A",
+#                         "Reason": "IPPIS not found"
+#                     })
+#                     continue
+
+#                 # Skip if already saved
+#                 if member.id in existing_savings_ids:
+#                     skipped_members_report.append({
+#                         "IPPIS": ippis,
+#                         "Member Name": member.member,
+#                         "Reason": "Savings already exist"
+#                     })
+#                     continue
+
+#                 # Deduct interest only once per member
+#                 final_amount = max(amount - global_interest, Decimal("0.00"))
+#                 if member.id not in interest_member_ids_added:
+#                     interests_to_create.append(
+#                         Interest(member=member, month=month, amount_deducted=global_interest)
+#                     )
+#                     interest_member_ids_added.add(member.id)
+
+#                 # Prepare savings record
+#                 savings_to_create.append(
+#                     Savings(member=member, month=month, month_saving=final_amount, original_amount=amount)
+#                 )
+#                 savings_member_ids_added.add(member.id)
+
+#                 # Split into loanable & investment
+#                 half_amount = (final_amount / 2).quantize(Decimal("0.01"))
+
+#                 # Get current totals before adding new records
+#                 current_loanable_total = Loanable.objects.filter(member=member).aggregate(
+#                     total=Sum("amount")
+#                 )["total"] or Decimal("0.00")
+
+#                 current_investment_total = Investment.objects.filter(member=member).aggregate(
+#                     total=Sum("amount")
+#                 )["total"] or Decimal("0.00")
+
+#                 # Create updated loanable record
+#                 loanables_to_create.append(
+#                     Loanable(
+#                         member=member,
+#                         month=month,
+#                         amount=half_amount,
+#                         total_amount=current_loanable_total + half_amount
+#                     )
+#                 )
+
+#                 # Create updated investment record
+#                 investments_to_create.append(
+#                     Investment(
+#                         member=member,
+#                         month=month,
+#                         amount=half_amount,
+#                         total_amount=current_investment_total + half_amount
+#                     )
+#                 )
+
+#             # Bulk insert
+#             with transaction.atomic():
+#                 if interests_to_create:
+#                     Interest.objects.bulk_create(interests_to_create, batch_size=1000)
+#                 # if savings_to_create:
+#                 #     Savings.objects.bulk_create(savings_to_create, batch_size=1000)
+#                 if savings_to_create:
+#                     Savings.objects.bulk_create(savings_to_create, batch_size=1000)
+
+#                     # ✅ Efficiently update totals in one query
+#                     totals = (
+#                         Savings.objects.filter(member__in=savings_member_ids_added)
+#                         .values("member")
+#                         .annotate(total=Sum("month_saving"))
+#                     )
+
+#                     # Bulk update each member's total_savings
+#                     for row in totals:
+#                         Member.objects.filter(id=row["member"]).update(total_savings=row["total"])
+
+#                 if loanables_to_create:
+#                     Loanable.objects.bulk_create(loanables_to_create, batch_size=1000)
+#                 if investments_to_create:
+#                     Investment.objects.bulk_create(investments_to_create, batch_size=1000)
+
+        
+#             created_count = len(savings_to_create)
+
+#             # ✅ If skipped members exist, generate downloadable Excel
+#             if skipped_members_report:
+#                 skipped_df = pd.DataFrame(skipped_members_report)
+#                 response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+#                 response['Content-Disposition'] = f'attachment; filename="skipped_members_{month}.xlsx"'
+#                 skipped_df.to_excel(response, index=False)
+#                 messages.warning(request, f"⚠️ {len(skipped_members_report)} members skipped. Download report for details.")
+#                 return response
+
+        
+#             total_uploaded_amount = sum([s.month_saving for s in savings_to_create])
+
+#             total_interest_deducted = len(interests_to_create) * global_interest
+#             total_remaining_balance = total_uploaded_amount - total_interest_deducted
+#             half_amount = (total_remaining_balance / 2).quantize(Decimal("0.01"))
+
+#             messages.success(
+#                 request,
+#                 f"✅ Uploaded {created_count} records!<br>"
+#                 f"💰 Total Uploaded: <b>₦{total_uploaded_amount:,.2f}</b><br>"
+#                 f"📌 Subscription Deducted: <b>₦{total_interest_deducted:,.2f}</b><br>"
+#                 f"🏦 Loanable: <b>₦{half_amount:,.2f}</b> | 📈 Investment: <b>₦{half_amount:,.2f}</b>"
+#             )
+#             return redirect("upload_savings")
+
+#         except Exception as e:
+#             transaction.set_rollback(True)
+#             messages.error(request, f"Error processing file: {str(e)}")
+#             return redirect("upload_savings")
+
+#     return render(request, "saving/upload_savings.html")
+
 
 @transaction.atomic
 def edit_saving(request, saving_id):

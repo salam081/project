@@ -23,6 +23,10 @@
                         <label for="id_max_amount" class="form-label">Max Amount</label>
                         <input type="number" class="form-control" id="id_max_amount" name="max_amount" step="0.01">
                     </div>
+                    <div class="col-md-6">
+                        <label for="id_request_fee" class="form-label">Request Fee</label>
+                        <input type="number" class="form-control" id="id_request_fee" name="request_fee" step="0.01">
+                    </div>
                     <div class="col-6">
                         <label for="id_description" class="form-label">Description</label>
                         <textarea class="form-control" id="id_description" name="description" rows="3"></textarea>
@@ -52,6 +56,7 @@
                             <th scope="col">Name</th>
                             <th scope="col">Description</th>
                             <th class="text-nowrap" style="min-width: 120px;">Max Amount</th>
+                            <th class="text-nowrap" style="min-width: 120px;">Request Fee</th>
                             <th class="text-nowrap" style="min-width: 120px;">Max Term</th>
                             <th scope="col">Status</th>
                             <th scope="col">Actions</th>
@@ -63,6 +68,7 @@
                             <td class="text-nowrap" style="min-width: 120px;">{{ loan_type.name }}</td>
                             <td class="text-nowrap" style="min-width: 120px;">{{ loan_type.description|default:"N/A" }}</td>
                             <td>{{ loan_type.max_amount|default:"N/A" }}</td>
+                            <td>{{ loan_type.request_fee|default:"N/A" }}</td>
                             <td>{{ loan_type.max_loan_term_months|default:"N/A" }} months</td>
                             <td>
                                 {% if loan_type.available %}
@@ -127,6 +133,11 @@
                         <label for="edit-max-amount" class="form-label">Max Amount</label>
                         <input type="number" class="form-control" id="edit-max-amount" name="max_amount" step="0.01">
                     </div>
+                
+                    <div class="mb-3">
+                        <label for="edit-request-fee" class="form-label">Request Fee</label>
+                        <input type="number" class="form-control" id="edit-request-fee" name="request_fee" step="0.01">
+                    </div>
                     <div class="mb-3">
                         <label for="edit-max-term" class="form-label">Max Loan Term (Months)</label>
                         <input type="number" class="form-control" id="edit-max-term" name="max_loan_term_months">
@@ -150,18 +161,21 @@
             const name = button.getAttribute('data-name');
             const description = button.getAttribute('data-description');
             const maxAmount = button.getAttribute('data-max-amount');
+            const requestFee = button.getAttribute('data-request-fee');
             const maxTerm = button.getAttribute('data-max-term');
 
             const modalId = editModal.querySelector('#edit-loan-type-id');
             const modalName = editModal.querySelector('#edit-name');
             const modalDescription = editModal.querySelector('#edit-description');
             const modalMaxAmount = editModal.querySelector('#edit-max-amount');
+            const modalRequestFee = editModal.querySelector('#edit-request-fee');
             const modalMaxTerm = editModal.querySelector('#edit-max-term');
 
             modalId.value = id;
             modalName.value = name;
             modalDescription.value = description;
             modalMaxAmount.value = maxAmount;
+            modalRequestFee.value = requestFee;
             modalMaxTerm.value = maxTerm;
         });
     });

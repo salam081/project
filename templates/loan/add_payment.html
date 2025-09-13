@@ -72,8 +72,8 @@
                                                 <option value="">-- Select Loan --</option>
                                                 {% for req in requests %}
                                                     <option value="{{ req.id }}">
-                                                        Loan #{{ req.id }} — ₦{{ req.amount|floatformat:2 }}
-                                                        <br>(Paid: ₦{{ req.total_paid|default:0|floatformat:2 }}, 
+                                                        Approved Amount: ₦{{ req.approved_amount|floatformat:2 }}
+                                                        <br>(Amount Paid: ₦{{ req.total_paid|default:0|floatformat:2 }}, 
                                                         Remaining: ₦{{ req.remaining_balance|floatformat:2 }})
                                                     </option>
                                                 {% endfor %}

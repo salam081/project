@@ -67,15 +67,15 @@ def consumable_dashboard(request):
 @login_required
 def add_consumable_type(request):
     consumable_types = ConsumableType.objects.all()
+
     if request.method == 'POST':
         name = request.POST.get('name')
         description = request.POST.get('description')
-        max_amount = request.POST.get('max_amount') or None
-        max_loan_term_months = request.POST.get('max_loan_term_months') or None
+        request_fee = request.POST.get('request_fee')
         consumable_type_id = request.POST.get('consumable_type_id')
         action = request.POST.get('action')  
 
-        if consumable_type_id:
+        if consumable_type_id:  # Editing or Toggling
             consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
 
             if action == 'toggle':
@@ -87,19 +87,25 @@ def add_consumable_type(request):
             elif action == 'edit':
                 consumable_type.name = name
                 consumable_type.description = description
-                consumable_type.max_amount = max_amount
-                consumable_type.max_loan_term_months = max_loan_term_months
+                consumable_type.request_fee = request_fee
                 consumable_type.save()
                 messages.success(request, 'Consumable type updated successfully.')
                 return redirect('add_consumable_type')
 
-        else:
-            ConsumableType.objects.create(name=name,description=description,available=True,created_by=request.user)
+        else:  # New consumable type
+            ConsumableType.objects.create(
+                name=name,
+                description=description,
+                request_fee=request_fee,
+                available=True,
+                created_by=request.user
+            )
             messages.success(request, 'Consumable type created successfully.')
             return redirect('add_consumable_type')
 
     context = {'consumable_types': consumable_types}
     return render(request, 'consumable/add_consumable_type.html', context)
+
 
 def process_item_pickup(request_id):
     try:
@@ -123,36 +129,114 @@ def process_item_pickup(request_id):
     except ConsumableRequest.DoesNotExist:
         print("Request not found.")
 
+
+
+
 @login_required
-# @group_required(['admin'])
 def consumable_fee(request):
-    if request.method == 'POST':
-        member_ippis = request.POST.get('member_ippis')
-        form_fee = request.POST.get('form_fee')
-        
-        # Get Member instance using IPPIS number
-        member = get_object_or_404(Member, ippis=member_ippis)
-        ConsumableFormFee.objects.create( member=member, form_fee=form_fee,created_by=request.user)
-        messages.success(request, 'Payment recorded successfully')
-        return redirect('consumable_fee')
+    member_info = None
+    consumable_types = ConsumableType.objects.filter(available=True)
 
-    fee = ConsumableFormFee.objects.aggregate(total=Sum('form_fee'))['total'] or 0
-    consumable_req_form = ConsumableFormFee.objects.count()
-    members = ConsumableFormFee.objects.select_related('member')
+    if request.method == "POST":
+        # Step 1: Search Member
+        if "search_member" in request.POST:
+            ippis = request.POST.get("ippis")
+            try:
+                member = Member.objects.get(ippis=ippis)
+            except Member.DoesNotExist:
+                messages.error(request, f"No member found with IPPIS {ippis}.")
+                return render(request, "consumable/consumable_fee.html", {
+                    "consumable_types": consumable_types
+                })
 
+            member_info = {
+                "id": member.id,
+                "name": f"{member.member.first_name} {member.member.last_name}",
+                "ippis": member.ippis,
+            }
+
+            return render(request, "consumable/consumable_fee.html", {
+                "member_info": member_info,
+                "consumable_types": consumable_types,
+            })
+
+        # Step 2: Make Payment
+        elif "make_payment" in request.POST:
+            member_id = request.POST.get("member_id")
+            consumable_type_id = request.POST.get("consumable_type")
+
+            member = get_object_or_404(Member, id=member_id)
+            consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
+
+            # Prevent duplicate active fee payments for the same consumable type
+            if ConsumableFormFee.objects.filter(member=member, status="paid").exists():
+                messages.warning(request, f"{member} already has an active paid fee.")
+                return redirect("consumable_fee")
+
+            # ✅ Create the record
+            ConsumableFormFee.objects.create(
+                member=member,
+                form_fee=consumable_type.request_fee,
+                status="paid",
+                created_by=request.user
+            )
+            messages.success(
+                request,
+                f"Consumable form fee of ₦{consumable_type.request_fee} recorded for {member}."
+            )
+            return redirect("consumable_fee")
+
+    # Aggregates
+    total_fee = ConsumableFormFee.objects.aggregate(total=Sum('form_fee'))['total'] or Decimal("0.00")
+    fee_count = ConsumableFormFee.objects.count()
+
+    # Fetch all consumable fees with member details
+    fees = ConsumableFormFee.objects.select_related('member').order_by('-created_at')
+
+    # Pagination
     page_number = request.GET.get('page')
-    paginator = Paginator(members, 1)  
+    paginator = Paginator(fees, 50)
+    page_obj = paginator.get_page(page_number)
 
-    try:
-       
-        page_obj = paginator.get_page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-
-    context = {"fee": fee,"consumable_req_form": consumable_req_form,'members':members, 'page_obj': page_obj}
+    context = {
+        "total_fee": total_fee,
+        "fee_count": fee_count,
+        "fees": fees,
+        "page_obj": page_obj,
+        "consumable_types": consumable_types,
+    }
     return render(request, "consumable/consumable_fee.html", context)
+
+# @login_required
+# # @group_required(['admin'])
+# def consumable_fee(request):
+#     if request.method == 'POST':
+#         member_ippis = request.POST.get('member_ippis')
+#         form_fee = request.POST.get('form_fee')
+        
+#         # Get Member instance using IPPIS number
+#         member = get_object_or_404(Member, ippis=member_ippis)
+#         ConsumableFormFee.objects.create( member=member, form_fee=form_fee,created_by=request.user)
+#         messages.success(request, 'Payment recorded successfully')
+#         return redirect('consumable_fee')
+
+#     fee = ConsumableFormFee.objects.aggregate(total=Sum('form_fee'))['total'] or 0
+#     consumable_req_form = ConsumableFormFee.objects.count()
+#     members = ConsumableFormFee.objects.select_related('member')
+
+#     page_number = request.GET.get('page')
+#     paginator = Paginator(members, 1)  
+
+#     try:
+       
+#         page_obj = paginator.get_page(page_number)
+#     except PageNotAnInteger:
+#         page_obj = paginator.page(1)
+#     except EmptyPage:
+#         page_obj = paginator.page(paginator.num_pages)
+
+#     context = {"fee": fee,"consumable_req_form": consumable_req_form,'members':members, 'page_obj': page_obj}
+#     return render(request, "consumable/consumable_fee.html", context)
 
 
 

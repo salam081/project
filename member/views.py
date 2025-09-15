@@ -186,15 +186,33 @@ def member_savings(request):
     }
     return render(request, 'member/member_savings.html', context)
 
+# def ajax_load_bank_code(request):
+#     bank_id = request.GET.get('bank_id')
+#     try:
+#         bank_code = BankCode.objects.filter(bank_name_id=bank_id).first()
+#         return JsonResponse({'code': bank_code.name if bank_code else ''})
+#     except:
+#         return JsonResponse({'code': ''})
+
 def ajax_load_bank_code(request):
     bank_id = request.GET.get('bank_id')
+    print(f"Received bank_id: {bank_id}")  # Debug log
+    
     try:
-        bank_code = BankCode.objects.filter(bank_name_id=bank_id).first()
-        return JsonResponse({'code': bank_code.name if bank_code else ''})
-    except:
-        return JsonResponse({'code': ''})
-
-
+        if bank_id:
+            bank_code = BankCode.objects.filter(bank_name_id=bank_id).first()
+            if bank_code:
+                response_data = {
+                    'code': bank_code.name,
+                    'id': bank_code.id
+                }
+                print(f"Returning: {response_data}")  # Debug log
+                return JsonResponse(response_data)
+        
+        return JsonResponse({'code': '', 'id': ''})
+    except Exception as e:
+        print(f"Error in ajax_load_bank_code: {e}")  # Debug log
+        return JsonResponse({'code': '', 'id': '', 'error': str(e)})
 
 # @login_required
 # def loan_request_view(request):
@@ -412,10 +430,7 @@ def loan_request_view(request):
         selected_type_name = selected_loan_type.name.lower()
 
         # ✅ Active loan restrictions
-        active_loans = LoanRequest.objects.filter(
-            member=member,
-            status__in=['pending', 'approved']
-        ).select_related('loan_type')
+        active_loans = LoanRequest.objects.filter(member=member,status__in=['pending', 'approved']).select_related('loan_type')
 
         has_active_short = any('short term' in loan.loan_type.name.lower() for loan in active_loans)
         has_active_long = any('long term' in loan.loan_type.name.lower() for loan in active_loans)
@@ -462,16 +477,11 @@ def loan_request_view(request):
 
         # ✅ Create the loan request
         LoanRequest.objects.create(
-            member=member,
-            loan_type=selected_loan_type,
-            amount=amount,
-            loan_term_months=loan_term_months,
-            approved_amount=None,
-            file_one=file_one,
-            bank_name_id=bank_name_id,
-            bank_code_id=bank_code_id,
-            account_number=account_number,
-            guarantor=guarantor_member,
+            member=member,loan_type=selected_loan_type,
+            amount=amount,loan_term_months=loan_term_months,
+            approved_amount=None,file_one=file_one,
+            bank_name_id=bank_name_id,bank_code_id=bank_code_id,
+            account_number=account_number,guarantor=guarantor_member,
             created_by=request.user,
         )
 
@@ -512,7 +522,10 @@ def show_guarantor_approval(request, pk):
 
 @login_required
 def confirm_guarantor_approval(request, pk):
-    loan = get_object_or_404(LoanRequest, pk=pk)
+    try:
+        loan = get_object_or_404(LoanRequest, pk=pk)
+    except LoanRequest.DoesNotExist:
+        messages.error(request,'loan do not exist')    
 
     member = getattr(request.user, 'member', None)
     if not member or loan.guarantor != member:
@@ -570,10 +583,7 @@ def request_consumable(request):
     
     # Check if user has paid the consumable request form fee
     has_paid = ConsumableFormFee.objects.filter(
-        member=request.user.member,
-        created_at__year=now.year,
-        created_at__month=now.month,
-    ).exists()
+        member=request.user.member,created_at__year=now.year,created_at__month=now.month,).exists()
 
     if not has_paid:
         messages.error(request, "Please pay your consumables request form fee before applying for consumables.")
@@ -583,7 +593,7 @@ def request_consumable(request):
         consumable_type_id = request.POST.get('consumable_type')
         loan_term_months = request.POST.get("loan_term_months")
         payslip_file = request.FILES.get("file_payslpt")
-        selected_item_ids = request.POST.getlist("selected_items")  # ✅ Matches template
+        selected_item_ids = request.POST.getlist("selected_items") 
 
         # Validation
         if not loan_term_months or not loan_term_months.isdigit() or int(loan_term_months) <= 0:
@@ -623,8 +633,8 @@ def request_consumable(request):
                     status="paid"
                 )
                 except ConsumableFormFee.DoesNotExist:
-                    messages.error(request, f"You must pay the request fee for {consumable_type_obj.name} before requesting this loan.")
-                    return redirect('loan_request')
+                    messages.error(request, f"Please pay The form fee {consumable_type_obj.name} before requesting this consumables loan.")
+                    return redirect('request_consumable')
                 
                 loan_term_months = int(loan_term_months)
 
@@ -685,6 +695,154 @@ def request_consumable(request):
         "selling_plans": selling_plans
     }
     return render(request, "member/request_consumable.html", context)
+
+
+
+
+
+# @login_required
+# def request_consumable(request):
+#     now = timezone.now()
+    
+#     # Check if user has paid the consumable request form fee
+#     has_paid = ConsumableFormFee.objects.filter(
+#         member=request.user.member,
+#         created_at__year=now.year,
+#         created_at__month=now.month,
+#     ).exists()
+
+#     if not has_paid:
+#         messages.error(request, "Please pay your consumables request form fee before applying for consumables.")
+#         return redirect("member_dashboard")
+
+#     if request.method == "POST":
+#         consumable_type_id = request.POST.get('consumable_type')
+#         loan_term_months = request.POST.get("loan_term_months")
+#         payslip_file = request.FILES.get("file_payslpt")
+#         selected_item_ids = request.POST.getlist("selected_items")
+
+#         # New fields
+#         bank_name_id = request.POST.get("bank_name")
+#         bank_code_id = request.POST.get("bank_code")
+#         account_number = request.POST.get("account_number")
+
+#         # Validation
+#         if not loan_term_months or not loan_term_months.isdigit() or int(loan_term_months) <= 0:
+#             messages.error(request, "A valid loan term (in months) must be provided.")
+#             return redirect("request_consumable")
+
+#         if not selected_item_ids:
+#             messages.error(request, "You must select at least one item.")
+#             return redirect("request_consumable")
+
+#         if not bank_name_id or not bank_code_id or not account_number:
+#             messages.error(request, "Bank details are required.")
+#             return redirect("request_consumable")
+        
+#         # Collect quantities
+#         item_details = {}
+#         for item_id in selected_item_ids:
+#             try:
+#                 quantity = int(request.POST.get(f"quantity_{item_id}", 0))
+#                 if quantity <= 0:
+#                     raise ValueError("Quantity must be positive.")
+#                 item_details[item_id] = {"quantity": quantity}
+#             except (ValueError, TypeError):
+#                 messages.error(request, f"Invalid quantity for item ID {item_id}.")
+#                 return redirect("request_consumable")
+
+#         with transaction.atomic():
+#             try:
+#                 # Get consumable type
+#                 consumable_type_obj = ConsumableType.objects.get(id=consumable_type_id)
+
+#                 # Check form fee
+#                 try:
+#                     fee = ConsumableFormFee.objects.get(
+#                         member=request.user.member,
+#                         consumable_type=consumable_type_obj,
+#                         status="paid"
+#                     )
+#                 except ConsumableFormFee.DoesNotExist:
+#                     messages.error(
+#                         request,
+#                         f"Please pay the form fee for {consumable_type_obj.name} before requesting this consumables loan."
+#                     )
+#                     return redirect('request_consumable')
+                
+#                 loan_term_months = int(loan_term_months)
+
+#                 # Get bank objects
+#                 bank_name_obj = get_object_or_404(BankName, id=bank_name_id)
+#                 bank_code_obj = get_object_or_404(BankCode, id=bank_code_id)
+
+#                 # Create main ConsumableRequest
+#                 consumable_request = ConsumableRequest.objects.create(
+#                     user=request.user,
+#                     consumable_type=consumable_type_obj,
+#                     bank_name=bank_name_obj,
+#                     bank_code=bank_code_obj,
+#                     account_number=account_number,
+#                     file_payslpt=payslip_file,
+#                     status='Pending'
+#                 )
+
+#                 # Mark fee as used
+#                 fee.status = "used"
+#                 fee.save()
+
+#                 # Process selected SellingPlan items
+#                 for item_id, details in item_details.items():
+#                     selling_item = SellingPlan.objects.select_related("purchased_item").get(id=item_id)
+#                     quantity = details["quantity"]
+
+#                     # Check stock
+#                     if quantity > selling_item.quantity:
+#                         messages.error(
+#                             request,
+#                             f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}."
+#                         )
+#                         raise ValueError("Insufficient stock.")
+
+#                     # Create detail record
+#                     ConsumableRequestDetail.objects.create(
+#                         request=consumable_request,
+#                         selling_item=selling_item,
+#                         quantity=quantity,
+#                         item_price=selling_item.selling_price_per_unit,
+#                         loan_term_months=loan_term_months
+#                     )
+
+#                     # Reduce stock
+#                     selling_item.quantity -= quantity
+#                     selling_item.save(update_fields=["quantity"])
+
+#                 messages.success(request, "Your consumable request has been submitted successfully!")
+#                 return redirect("my_consumablerequests")
+
+#             except Exception as e:
+#                 messages.error(request, f"An unexpected error occurred: {e}")
+#                 return redirect("request_consumable")
+
+#     # GET: Show available items
+#     selling_plans = SellingPlan.objects.filter(quantity__gt=0)
+#     consumable_types = ConsumableType.objects.filter(available=True)
+#     bank_names = BankName.objects.all()
+#     bank_codes = BankCode.objects.all()
+
+#     context = {
+#         "consumable_types": consumable_types,
+#         "selling_plans": selling_plans,
+#         "bank_names": bank_names,
+#         "bank_codes": bank_codes,
+#     }
+#     return render(request, "member/request_consumable.html", context)
+
+
+
+
+
+
 
 @login_required
 def my_consumable_requests(request):

@@ -15,8 +15,8 @@ urlpatterns = [
     path('consumables/<int:request_id>/reject/', views.admin_request_reject, name='admin_request_reject'),
     path('consumables/<int:request_id>/taking/', views.admin_request_taking, name='admin_request_taking'),
     path('add_payment/<int:request_id>/', views.add_payment, name='add_payment'),
-    path('members_by_consumable_type/<int:id>/', views.members_by_consumable_type, name='members_by_consumable_type'),
     path('consumable_types_with_requests/',views.consumable_types_with_requests,name='consumable_types_with_requests'),
+    path('members_by_consumable_type/<int:id>/', views.members_by_consumable_type, name='members_by_consumable_type'),
     path('add_single_consumable_payment/', views.add_single_consumable_payment, name='add_single_consumable_payment'),
     path('upload_consumable_payment/', views.upload_consumable_payment, name='upload_consumable_payment'),
     

@@ -76,6 +76,7 @@
                                     <th scope="col">ID</th>
                                     <th scope="col">Member</th>
                                     <th class="text-nowrap" style="min-width: 120px;">Consumable Type</th>
+                                    <th scope="col">Items Amount</th>
                                     <th class="text-nowrap" style="min-width: 120px;">Date Created</th>
                                     <th scope="col">Status</th>
                                     <th scope="col">Actions</th>
@@ -87,6 +88,7 @@
                                         <td>#{{ request_obj.id }}</td>
                                         <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.user.get_full_name|default:request_obj.user.username }}</td>
                                         <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.consumable_type.name }}</td>
+                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.calculate_total_price }}</td>
                                         <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.date_created|date:'M j, Y, P' }}</td>
                                         <td>
                                            
@@ -110,8 +112,8 @@
                                                 <a href="" class="btn btn-sm btn-success p-1 me-1" title="Approve">
                                                     <i class="bi bi-check-circle"></i>
                                                 </a>
-                                                <a href="{% url 'admin_edit_consumable_request' request_obj.id %}" class="btn btn-sm btn-pen p-1 me-1" title="Edit">
-                                                    <i class="bi bi-box-pen"></i>
+                                                <a href="{% url 'admin_edit_consumable_request' request_obj.id %}" class="btn btn-sm btn-warning p-1 me-1" title="Edit">
+                                                    <i class="bi bi-pen"></i>
                                                 </a>
                                                 <button type="button" class="btn btn-danger btn-sm p-1" data-bs-toggle="modal" 
                                                         data-bs-target="#declineConfirmModal" 

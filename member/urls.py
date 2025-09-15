@@ -11,10 +11,10 @@ urlpatterns = [
     path('loan_request/',views.loan_request_view,name="loan_request"),
     path('guarantor/<int:pk>/', views.show_guarantor_approval, name='guarantor_approval_page'),
     path('guarantor/confirm/<int:pk>/', views.confirm_guarantor_approval, name='confirm_guarantor_approval'),
-     path('my_loan_requests/', views.my_loan_requests, name='my_loan_requests'),
+    path('my_loan_requests/', views.my_loan_requests, name='my_loan_requests'),
     path('loan_details/<int:request_id>/', views.member_loan_request_detail, name='member_loan_request_detail'),
 
-
+   
     path('request/', views.request_consumable, name='request_consumable'),
     path('my_consumablerequests', views.my_consumable_requests, name='my_consumablerequests'),
     path('request_detail/<int:request_id>/', views.request_detail, name='request_detail'),

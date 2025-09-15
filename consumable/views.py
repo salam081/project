@@ -143,22 +143,13 @@ def consumable_fee(request):
             ippis = request.POST.get("ippis")
             try:
                 member = Member.objects.get(ippis=ippis)
+                member_info = {
+                    "id": member.id,
+                    "name": f"{member.member.first_name} {member.member.last_name}",
+                    "ippis": member.ippis,
+                }
             except Member.DoesNotExist:
                 messages.error(request, f"No member found with IPPIS {ippis}.")
-                return render(request, "consumable/consumable_fee.html", {
-                    "consumable_types": consumable_types
-                })
-
-            member_info = {
-                "id": member.id,
-                "name": f"{member.member.first_name} {member.member.last_name}",
-                "ippis": member.ippis,
-            }
-
-            return render(request, "consumable/consumable_fee.html", {
-                "member_info": member_info,
-                "consumable_types": consumable_types,
-            })
 
         # Step 2: Make Payment
         elif "make_payment" in request.POST:
@@ -168,14 +159,17 @@ def consumable_fee(request):
             member = get_object_or_404(Member, id=member_id)
             consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
 
-            # Prevent duplicate active fee payments for the same consumable type
-            if ConsumableFormFee.objects.filter(member=member, status="paid").exists():
-                messages.warning(request, f"{member} already has an active paid fee.")
+            if ConsumableFormFee.objects.filter(
+                member=member, consumable_type=consumable_type, status="paid"
+            ).exists():
+                messages.warning(
+                    request, f"{member} already has an active paid fee for {consumable_type.name}."
+                )
                 return redirect("consumable_fee")
 
-            # ✅ Create the record
             ConsumableFormFee.objects.create(
                 member=member,
+                consumable_type=consumable_type,
                 form_fee=consumable_type.request_fee,
                 status="paid",
                 created_by=request.user
@@ -186,24 +180,21 @@ def consumable_fee(request):
             )
             return redirect("consumable_fee")
 
-    # Aggregates
+    # ✅ Always load aggregates & fees
     total_fee = ConsumableFormFee.objects.aggregate(total=Sum('form_fee'))['total'] or Decimal("0.00")
     fee_count = ConsumableFormFee.objects.count()
 
-    # Fetch all consumable fees with member details
-    fees = ConsumableFormFee.objects.select_related('member').order_by('-created_at')
-
-    # Pagination
-    page_number = request.GET.get('page')
+    fees = ConsumableFormFee.objects.select_related('member', 'consumable_type').order_by('-created_at')
     paginator = Paginator(fees, 50)
+    page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     context = {
         "total_fee": total_fee,
         "fee_count": fee_count,
-        "fees": fees,
         "page_obj": page_obj,
         "consumable_types": consumable_types,
+        "member_info": member_info,   # ✅ keep this in context so search works
     }
     return render(request, "consumable/consumable_fee.html", context)
 

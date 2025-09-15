@@ -14,35 +14,32 @@
         max-width: 100%;
     }
 
-    .content-card, .card, .stat-card, .stats-grid {
-        max-width: 100%;
-        overflow-x: hidden;
-    }
+ 
 </style>
 
 
-<div class="content-card">
-    <div class="text-center mb-4 mb-md-5">
+<div class="container">
+  
+  <div class="text-center mb-1 mb-md-1">
         <h4 class="h5 h4-md fw-light text-primary mb-2">Loan Request Fee Management</h4>
         <p class="text-muted small">Manage and track loan request fees efficiently</p>
         <hr class="w-50 w-25-md mx-auto">
     </div>
-
     <!-- Statistics Cards -->
-      <div class="stats-grid">
+      <div class="stats-grid mt-0">
 
-         <div class="stat-card">
-            <div class="stat-icon bg-primary">
-                 <i class="fas fa-money-bill-wave fa-lg fa-2x-md text-white"></i>
+         <div class="stat-card shadow">
+            <div class="stat-icon ">
+                 <i class="fas fa-money-bill-wave fa-lg fa-2x-md text-primary"></i>
             </div>
             <div class="stat-content">
                 <p class="card-title fw-normal mb-1 mb-md-2 small">Total Fees Collected</p>
                  <h5 class="h4-md fw-bold mb-0 text-primary">₦{{ fee|floatformat:2|intcomma }}</h5>
             </div>
         </div>
-         <div class="stat-card">
-            <div class="stat-icon bg-primary">
-                  <i class="fas fa-hand-holding-usd fa-lg fa-2x-md text-white"></i>
+         <div class="stat-card shadow">
+            <div class="stat-icon ">
+                  <i class="fas fa-hand-holding-usd fa-lg fa-2x-md text-success"></i>
             </div>
             <div class="stat-content">
                  <p class="card-title fw-normal mb-1 mb-md-2 small">Total Loan Amount</p>
@@ -50,9 +47,9 @@
             </div>
         </div>
 
-        <div class="stat-card">
-            <div class="stat-icon bg-primary">
-                <i class="fas fa-calculator fa-lg fa-2x-md text-white"></i>
+        <div class="stat-card shadow-lg">
+            <div class="stat-icon ">
+                <i class="fas fa-calculator fa-lg fa-2x-md text-info"></i>
             </div>
             <div class="stat-content">
                 <p class="card-title fw-normal mb-1 mb-md-2 small">Number of Payments</p>
@@ -63,7 +60,7 @@
     </div>
 
     <!-- Search and Payment Form -->
-    <div class="row justify-content-center mb-4 mb-md-5">
+    <div class="row justify-content-center mt-2 mb-4 mb-md-5">
         <div class="col-12 col-lg-12">
             <div class="card border-0 shadow">
                 <div class="card-header bg-primary text-white">
@@ -208,7 +205,7 @@
     {% endif %}
 
     <!-- Recent Payments Table -->
-    <div class="stat-cardcard border-0 shadow">
+    <div class="card border-0 shadow">
         <div class="card-header bg-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 h6 h5-md">
@@ -235,7 +232,7 @@
                     <div class="row g-2 text-center">
                         <div class="col-6">
                             <small class="text-muted d-block">Loan Type</small>
-                            <span class="badge bg-info text-dark small">{{ item.loan_type.name }}</span>
+                            <span >{{ item.loan_type.name }}</span>
                         </div>
                         <div class="col-6">
                             <small class="text-muted d-block">Form Fee</small>
@@ -283,35 +280,14 @@
                         </thead>
                         <tbody>
                             {% for item in page_obj %}
-                            <tr class="border-bottom">
-                                <td class="px-4">
-                                    <span class="badge bg-primary rounded-pill">{{ forloop.counter }}</span>
-                                </td>
-                                <td>
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-semibold">{{ item.member.member.get_full_name }}</span>
-                                        <small class="text-muted">
-                                            <i class="fas fa-id-badge me-1"></i>{{ item.member.ippis }}
-                                        </small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-info text-dark">{{ item.loan_type.name }}</span>
-                                </td>
-                                <td>
-                                    <span class="text-success fw-bold">₦{{ item.form_fee|floatformat:2|intcomma }}</span>
-                                </td>
-                                <td>
-                                    <span class="text-primary fw-bold">₦{{ item.loan_amount|floatformat:2|intcomma }}</span>
-                                </td>
-                                <td>
-                                    <small class="text-muted">
-                                        <i class="fas fa-calendar me-1"></i>{{ item.created_at|date:"M d, Y" }}
-                                    </small>
-                                </td>
-                                <td>
-                                    <small class="text-muted">{{ item.created_by.get_full_name }}</small>
-                                </td>
+                            <tr>
+                                <td class="px-4">{{ forloop.counter }}</td>
+                                <td> {{ item.member.member.get_full_name }}</td>
+                                <td>{{ item.loan_type.name }}</td>
+                                <td>₦{{ item.form_fee|floatformat:2|intcomma }} </td>
+                                <td>₦{{ item.loan_amount|floatformat:2|intcomma }}</td>
+                                <td>{{ item.created_at|date:"M d, Y" }}</td>
+                                <td>{{ item.created_by.get_full_name }}</td>
                             </tr>
                             {% empty %}
                             <tr>

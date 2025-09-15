@@ -2,112 +2,119 @@
 {% load humanize %}
 
 {% block content %}
-<div class="content-card mt-4 shadow">
-   
-            
-           
-<h4 class="text-center text-dark">{{ loan_type.name }}</h4>
-            
- <form method="get" class="row g-2 align-items-end mb-4 mt-3">
-    <!-- Status Filter -->
-    <div class="col-3 col-sm-8 col-md-3 shadow">
-        <select name="status" id="status" class="form-select">
-            <option value="">Select Status</option>
-            <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
-            <option value="approved" {% if selected_status == 'approved' %}selected{% endif %}>Approved</option>
-            <option value="paid" {% if selected_status == 'Fullpaid' %}selected{% endif %}>Fullpaid</option>
-        </select>
-    </div>
+<div class="content-card mt-4 shadow p-4">
 
-    <!-- Search Button -->
-    <div class="col-3 col-sm-8 col-md-2 shadow">
-        <button type="submit" class="btn btn-primary w-100">Search</button>
-    </div>
- {% if loanobj %}
-   <!-- Wrap the download buttons in a row -->
-<div class="col-6 col-md-3 ms-auto d-flex justify-content-end gap-2 shadow">
-    <!-- Download Excel -->
-    <div class="flex-grow-1">
-        <a href="{% url 'loans_by_year' year=year loan_type_filter=loan_type.name %}?download=excel{% if selected_status %}&status={{ selected_status }}{% endif %}"
-           class="btn btn-outline-success w-100"
-           target="_blank">
-           Excel
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="text-dark mb-0">{{ loan_type.name }}</h4>
+        <a href="{% url 'loans_by_year' year=year loan_type_filter='all' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Years
         </a>
     </div>
 
-    <!-- Download PDF -->
-    <div class="flex-grow-1">
-        <a href="{% url 'loans_by_year' year=year loan_type_filter=loan_type.name %}?download=pdf{% if selected_status %}&status={{ selected_status }}{% endif %}"
-           class="btn btn-outline-primary w-100"
-           target="_blank">
-           PDF
+    <form method="get" class="row g-3 align-items-end mb-4">
+        <div class="col-12 col-md-4">
+            <label for="status" class="form-label visually-hidden">Status</label>
+            <select name="status" id="status" class="form-select shadow-sm">
+                <option value="">All Statuses</option>
+                <option value="pending" {% if selected_status == 'Pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if selected_status == 'Approved' %}selected{% endif %}>Approved</option>
+                <option value="Fullpaid" {% if selected_status == 'Fullpaid' %}selected{% endif %}>Full Paid</option>
+            </select>
+        </div>
+
+        <div class="col-6 col-md-2">
+            <button type="submit" class="btn btn-primary w-100 shadow-sm">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+
+        {% if loanobj %}
+        <div class="col-6 col-md-6 d-flex justify-content-end gap-2">
+            <a href="{% url 'loans_by_year' year=year loan_type_filter=loan_type.name %}?download=excel{% if selected_status %}&status={{ selected_status }}{% endif %}"
+               class="btn btn-outline-success w-100 shadow-sm">
+                <i class="fas fa-file-excel me-1"></i> 
+            </a>
+            <a href="{% url 'loans_by_year' year=year loan_type_filter=loan_type.name %}?download=pdf{% if selected_status %}&status={{ selected_status }}{% endif %}"
+               class="btn btn-outline-primary w-100 shadow-sm">
+                <i class="fas fa-file-pdf me-1"></i> 
+            </a>
+        </div>
+        {% endif %}
+    </form>
+
+    {% if loanobj %}
+    <div class="table-responsive mt-4">
+        <table class="table table-bordered table-hover table-striped">
+            <thead class="table-info">
+                <tr>
+                    <th class="text-nowrap">M/ID</th>
+                    <th class="text-nowrap">Full Name</th>
+                    <th>Duration</th>
+                    <th class="text-nowrap">Approved Amount</th>
+                    <th class="text-nowrap">Account Number</th>
+                    <th class="text-nowrap">Bank</th>
+                    <th class="text-nowrap">Bank Code</th>
+                    <th class="text-nowrap">Status</th>
+                    <th class="text-nowrap">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for loan in loanobj %}
+                <tr>
+                    <td>{{ loan.member.member.member_number }}</td>
+                    <td class="text-nowrap">{{ loan.member.member.first_name }} {{ loan.member.member.last_name }}</td>
+                    <td>{{ loan.loan_term_months }}</td>
+                    <td>
+                        {% if loan.approved_amount %}
+                        ₦{{ loan.approved_amount|intcomma }}
+                        {% else %}
+                        <span class="text-muted">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ loan.account_number }}</td>
+                    <td>{{ loan.bank_name.name }}</td>
+                    <td>{{ loan.bank_code.name }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if loan.status == 'pending' %}bg-warning text-dark
+                            {% elif loan.status == 'approved' %}bg-success
+                            {% elif loan.status == 'Fullpaid' %}bg-secondary
+                            {% else %}bg-info
+                            {% endif %}">
+                            {{ loan.status|title }}
+                        </span>
+                    </td>
+                    <td>{{ loan.application_date|date:"F j, Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4">
+        <h5 class="mb-3 mb-md-0">Total Loans by Status:</h5>
+        <ul class="list-unstyled d-flex flex-wrap gap-3 mb-0">
+            {% for status, total in totals_by_status.items %}
+            <li>
+                <span class="fw-bold">{{ status|capfirst }}:</span>
+                <span class="text-success fw-bold">₦{{ total|intcomma }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {% else %}
+    <div class="text-center py-5">
+        <div class="mb-3">
+            <i class="fas fa-box-open fa-4x text-muted"></i>
+        </div>
+        <h3 class="text-dark fw-bold">No Results Found</h3>
+        <p class="text-muted">There are no loans matching your search criteria.</p>
+        <a href="{% url 'loans_by_year' year=year loan_type_filter=loan_type.name %}" class="btn btn-outline-primary mt-3">
+            Reset Filters
         </a>
     </div>
-</div>
+    {% endif %}
 
-</form>
-
-
-            <div class="table-responsive mt-3 ">
-                <table class="table table-bordered table-hover table-striped">
-                    <thead class="table-info">
-                        <tr class="border-bottom">
-                            <th class="text-nowrap" style="min-width: 100px;">M/ID</th>
-                            <th class="text-nowrap" style="min-width: 150px;">Full Name</th>
-                            <th>Duration</th> 
-                            <th class="text-nowrap" style="min-width: 150px;">Approved Amount</th>
-                            <th class="text-nowrap" style="min-width: 150px;">Account Number</th>
-                            <th class="text-nowrap" style="min-width: 150px;">Bank</th>
-                            <th class="text-nowrap" style="min-width: 150px;">BankCode</th>
-                            <th class="text-nowrap" style="min-width: 150px;">Status</th>
-                            <!-- <th class="text-nowrap" style="min-width: 150px;">Loan Type</th> -->
-                            <th class="text-nowrap" style="min-width: 150px;"> Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for loan in loanobj %}
-                        <tr class="border-bottom">
-                            <td>{{ loan.member.member.member_number }}</td>
-                            <td class="text-nowrap text-truncate" style="max-width: 250px;">
-                                {{loan.member.member.first_name }}-{{ loan.member.member.last_name }}</td>
-                             <td>{{ loan.loan_term_months }}</td>
-                            <td class="text-nowrap text-truncate" style="max-width: 250px;">
-                                {% if loan.approved_amount %}
-                                ₦{{ loan.approved_amount }}
-                                {% else %}
-                                Pending
-                                {% endif %}
-                            </td>
-                            <td class="text-nowrap text-truncate" style="max-width: 250px;">{{ loan.account_number }}
-                            </td>
-                            <td class="text-nowrap text-truncate" style="max-width: 250px;">{{ loan.bank_name.name }}
-                            </td>
-                            <td>{{ loan.bank_code.name }}</td>
-                            <td class="text-nowrap text-truncate" style="max-width: 250px;">{{ loan.status|title }}</td>
-                            <!-- loan<td class="text-nowrap text-truncate" style="max-width: 250px;">{{ loan.loan_type.name }}</td> -->
-                            <td class="text-nowrap text-truncate" style="max-width: 250px;">{{ loan.application_date }}
-                            </td>
-                        </tr>
-                    
-                        {% endfor %}
-                    </tbody>
-                </table>
-
-
-
-                <ul>
-                    {% for status, total in totals_by_status.items %}
-                    <li>Total : {{ status|capfirst }} - Amount: ₦{{ total }}</li>
-                    {% endfor %}
-                </ul>
-
-
-
-                {% else %}
-                <h3 class="text-center text-danger text-uppercase ">No results found for Your Search.</h3>
-                <!-- <h4 class="text-center"><a href="">Go Back</a></h4> -->
-                {% endif %}
-            </div>
-      
 </div>
 {% endblock content %}

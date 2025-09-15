@@ -136,18 +136,13 @@ def loan_request_fee_payment(request):
                 messages.warning(request, f"{member} has already paid the request fee for {loan_type.name}.")
                 return redirect("loan_request_fee_payment")
 
-            # ✅ Create the record
-            LoanRequestFee.objects.create(
-                member=member,
-                loan_type=loan_type,
-                form_fee=loan_type.request_fee,
-                loan_amount=loan_amount,
-                created_by=request.user
-            )
+            #  Create the record
+            LoanRequestFee.objects.create( member=member,loan_type=loan_type, form_fee=loan_type.request_fee,
+                loan_amount=loan_amount, created_by=request.user)
             messages.success(request, f"Loan request fee of ₦{loan_type.request_fee} recorded for {member}.")
             return redirect("loan_request_fee_payment")
 
-    # ✅ Aggregates always calculated (whether search, payment, or first load)
+    #  Aggregates always calculated (whether search, payment, or first load)
     loan = LoanRequestFee.objects.aggregate(total=Sum('loan_amount'))['total'] or Decimal("0.00")
     fee = LoanRequestFee.objects.aggregate(total=Sum('form_fee'))['total'] or Decimal("0.00")
     loan_req_form = LoanRequestFee.objects.count()
@@ -160,13 +155,8 @@ def loan_request_fee_payment(request):
     paginator = Paginator(members, 100)
     page_obj = paginator.get_page(page_number)
 
-    context = {
-        "fee": fee,
-        "loan": loan,
-        "loan_req_form": loan_req_form,
-        "members": members,
-        "page_obj": page_obj,
-        "loan_types": loan_types,
+    context = {"fee": fee,"loan": loan,"loan_req_form": loan_req_form, "members": members,
+        "page_obj": page_obj,"loan_types": loan_types,
         "member_info": member_info,  # ✅ keep this so search results still show
     }
     return render(request, "loan/loan_request_fee.html", context)
@@ -447,12 +437,99 @@ def loan_years_list(request):
     return render(request, "loan/loan_years_list.html", context)
 
 #========list of loan request in a year details===========
+# def loans_by_year(request, year, loan_type_filter):
+#     try:
+#         loan_type = get_object_or_404(LoanType, name__iexact=loan_type_filter)
+#     except LoanType.DoesNotExist:
+#         messages.error(request,'loantype dons not exist')
+
+#     status_filter = request.GET.get('status')
+
+#     # Filter loans by type and year
+#     loanobj = LoanRequest.objects.filter(loan_type=loan_type, date_created__year=year)
+
+#     # Optional: Filter by status if given
+#     if status_filter:
+#         loanobj = loanobj.filter(status__iexact=status_filter)
+
+#     # Totals by status
+#     totals_by_status = dict(
+#         loanobj.values('status')
+#         .annotate(total=Sum('approved_amount'))
+#         .values_list('status', 'total')
+#     )
+
+#     context = {
+#         'year': year,'loan_type': loan_type, 'loanobj': loanobj,
+#         'totals_by_status': totals_by_status,'selected_status': status_filter, 
+#     }
+
+#     # Handle PDF download
+#     if request.GET.get('download') == 'pdf':
+#         template_path = 'loan/loans_by_year_pdf.html'
+#         response = HttpResponse(content_type='application/pdf')
+#         response['Content-Disposition'] = f'attachment; filename="loans_{loan_type.name}_{year}.pdf"'
+#         template = get_template(template_path)
+#         html = template.render(context)
+#         pisa_status = pisa.CreatePDF(html, dest=response)
+#         if pisa_status.err:
+#             return HttpResponse('We had some errors <pre>' + html + '</pre>')
+#         return response
+
+#     # Handle Excel download
+#     if request.GET.get('download') == 'excel':
+#         wb = openpyxl.Workbook()
+#         ws = wb.active
+#         ws.title = "Loan Data"
+
+#         headers = ['ID', 'First Name', 'Last Name', 'Other Name', 'Amount', 'Account Number', 'Bank Name', 'Bank Code', 'Duration Month', ]#'Status','Amount', 'Date Created'
+#         ws.append(headers)
+
+#         for loan in loanobj:
+#             ws.append([
+#                 loan.id,
+#                 str(loan.member.member.first_name),
+#                 str(loan.member.member.last_name),
+#                 str(loan.member.member.other_name),
+#                 # loan.amount,
+#                 loan.approved_amount,
+#                 loan.account_number,
+#                 str(loan.bank_name),
+#                 str(loan.bank_code.name),
+#                 loan.loan_term_months
+#                 # loan.date_created.strftime('%Y-%m-%d')
+#             ])
+
+#         for col in ws.columns:
+#             max_length = 0
+#             col_letter = get_column_letter(col[0].column)
+#             for cell in col:
+#                 if cell.value:
+#                     max_length = max(max_length, len(str(cell.value)))
+#             ws.column_dimensions[col_letter].width = max_length + 2
+
+#         response = HttpResponse(
+#             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+#         )
+#         response['Content-Disposition'] = f'attachment; filename="loans_{loan_type.name}_{year}.xlsx"'
+#         wb.save(response)
+#         return response
+
+#     return render(request, "loan/loans_by_year.html", context)
+
 def loans_by_year(request, year, loan_type_filter):
-    loan_type = get_object_or_404(LoanType, name__iexact=loan_type_filter)
+    try:
+        loan_type = get_object_or_404(LoanType, name__iexact=loan_type_filter)
+    except LoanType.DoesNotExist:
+        messages.error(request, 'Loan type does not exist.')
+        return render(request, "loan/loans_by_year.html", {'loanobj': []})
+
     status_filter = request.GET.get('status')
 
     # Filter loans by type and year
-    loanobj = LoanRequest.objects.filter(loan_type=loan_type, date_created__year=year)
+    loanobj = LoanRequest.objects.filter(
+        loan_type=loan_type, date_created__year=year
+    )
 
     # Optional: Filter by status if given
     if status_filter:
@@ -466,8 +543,11 @@ def loans_by_year(request, year, loan_type_filter):
     )
 
     context = {
-        'year': year,'loan_type': loan_type, 'loanobj': loanobj,
-        'totals_by_status': totals_by_status,'selected_status': status_filter, 
+        'year': year,
+        'loan_type': loan_type,
+        'loanobj': loanobj,
+        'totals_by_status': totals_by_status,
+        'selected_status': status_filter,
     }
 
     # Handle PDF download
@@ -488,20 +568,20 @@ def loans_by_year(request, year, loan_type_filter):
         ws = wb.active
         ws.title = "Loan Data"
 
-        headers = ['ID', 'Full Name',   'Amount', 'Account Number', 'Bank Name', 'Bank Code','Duration Month', ]#'Status','Amount', 'Date Created'
+        headers = ['ID', 'First Name', 'Last Name', 'Other Name', 'Approved Amount', 'Account Number', 'Bank Name', 'Bank Code', 'Duration Month']
         ws.append(headers)
 
         for loan in loanobj:
             ws.append([
                 loan.id,
-                str(loan.member),
-                # loan.amount,
-                loan.approved_amount,
+                str(loan.member.member.first_name),
+                str(loan.member.member.last_name),
+                str(loan.member.member.other_name),
+                loan.approved_amount if loan.approved_amount is not None else 'N/A',
                 loan.account_number,
                 str(loan.bank_name),
-                str(loan.bank_code),
+                str(loan.bank_code.name),
                 loan.loan_term_months
-                # loan.date_created.strftime('%Y-%m-%d')
             ])
 
         for col in ws.columns:
@@ -510,7 +590,8 @@ def loans_by_year(request, year, loan_type_filter):
             for cell in col:
                 if cell.value:
                     max_length = max(max_length, len(str(cell.value)))
-            ws.column_dimensions[col_letter].width = max_length + 2
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[col_letter].width = adjusted_width
 
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -520,8 +601,6 @@ def loans_by_year(request, year, loan_type_filter):
         return response
 
     return render(request, "loan/loans_by_year.html", context)
-
-
 # =========Loan Payment Section==========
 
 # ====== make payment for one member =========

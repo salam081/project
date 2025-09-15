@@ -7,7 +7,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.paginator import Paginator
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ValidationError
-from django.db.models import QuerySet
+from django.db.models import QuerySet,Q
 from django.db import models
 from django.contrib.auth.models import User
 from .models import *
@@ -370,11 +370,20 @@ def login_view(request):
 
 def logout_view(request):
     logout(request) 
-    messages.success(request, "You have been logged out.")
+    messages.success(request, "logged out successfully")
     return redirect('login')
 
 def all_members(request):
+    search_name = request.GET.get("name", "").strip()
+    
     members_list = User.objects.all()
+     # Filter by member name
+    if search_name:
+        members_list = members_list.filter(
+            Q(first_name__icontains=search_name) |
+            Q(last_name__icontains=search_name)|
+            Q(phone1__icontains=search_name)
+        )
     paginator = Paginator(members_list, 150)  # Show 10 members per page
     page_number = request.GET.get("page")
     members = paginator.get_page(page_number)
@@ -395,8 +404,6 @@ def delete_member(request, id):
     
     member.delete()
     return redirect('all_members')
-
-# Django View (views.py)
 
 
 @login_required
@@ -499,8 +506,10 @@ def reset_password_view(request, id):
     if request.user.group.title.lower() != 'admin':
         messages.error(request, "Only admin can reset passwords.")
         return redirect('all_members')
-
-    user_to_reset = get_object_or_404(User, id=id)
+    try:
+        user_to_reset = get_object_or_404(User, id=id)
+    except User.DoesNotExist:
+        messages.error(request, 'user Dont Exist')     
 
     if user_to_reset == request.user:
         messages.error(request, "You cannot reset your own password this way.")

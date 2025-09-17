@@ -567,6 +567,7 @@ body {
 .status-pending { background-color: #e7c145; color: #ffffff; }
 .status-active { background-color: #069c17; color: #ffffff; }
 .status-completed { background-color: #210591; color: #ffffff; }
+.status-itempicked { background-color: #0c8af1; color: #ffffff; }
 .status-cancelled { background-color: #dd1111; color: #ffffff; }
 
 /* Form sections */

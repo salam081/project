@@ -201,11 +201,11 @@
                                     <td><strong>{{ req.id }}</strong></td>
                                     <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.user.get_full_name|default:req.user.username }}</td>
                                     <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.date_created|date:"Y-m-d H:i" }}</td>
-                                    <td>
+                                    <td class="text-nowrap text-truncate" style="max-width: 270px;">
                                         <span class="status-badge 
                                             {% if req.status == 'Pending' %}status-pending
                                             {% elif req.status == 'Approved' %}status-active
-                                            {% elif req.status == 'Itempicked' %}status-info
+                                            {% elif req.status == 'Itempicked' %}status-itempicked
                                             {% elif req.status == 'FullyPaid' %}status-completed
                                             {% elif req.status == 'Declined' %}status-cancelled
                                             {% else %}status-secondary{% endif %}">

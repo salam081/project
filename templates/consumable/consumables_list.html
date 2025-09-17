@@ -90,7 +90,7 @@
                                         <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.consumable_type.name }}</td>
                                         <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.calculate_total_price }}</td>
                                         <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.date_created|date:'M j, Y, P' }}</td>
-                                        <td>
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">
                                            
                                             <span class="status-badge 
                                                 {% if request_obj.status == 'Pending' %}status-pending

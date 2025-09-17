@@ -72,19 +72,19 @@
                         {% endif %}
                     </td>
                     <td>{{ loan.account_number }}</td>
-                    <td>{{ loan.bank_name.name }}</td>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.bank_name.name }}</td>
                     <td>{{ loan.bank_code.name }}</td>
-                    <td>
-                        <span class="badge 
-                            {% if loan.status == 'pending' %}bg-warning text-dark
-                            {% elif loan.status == 'approved' %}bg-success
-                            {% elif loan.status == 'Fullpaid' %}bg-secondary
-                            {% else %}bg-info
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                        <span class="status-badge 
+                            {% if loan.status == 'pending' %}status-pending
+                            {% elif loan.status == 'approved' %}status-active
+                            {% elif loan.status == 'Fullpaid' %}status-completed
+                            {% else %}bg-primary
                             {% endif %}">
                             {{ loan.status|title }}
                         </span>
                     </td>
-                    <td>{{ loan.application_date|date:"F j, Y" }}</td>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.application_date|date:"F j, Y" }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

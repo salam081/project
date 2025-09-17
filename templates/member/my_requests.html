@@ -2,18 +2,18 @@
 {% load static %}
 {% block content %}
 
-<div class="container my-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="page-title">My Consumable Requests 🧺</h2>
+<div class="container my-1 shadow">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+        <h5 class="page-title">My Consumable Requests 🧺</h5>
         <a href="{% url 'request_consumable' %}" class="btn btn-create-request shadow-sm">
             <i class="fas fa-plus-circle me-2"></i> Make New Request
         </a>
     </div>
 
     {% if consumable_data %}
-    <div class="content-card shadow-lg p-4 p-md-5">
+    
         <div class="table-responsive">
-            <table class="table table-hover align-middle custom-table">
+            <table class="table table-hover align-middle custom-table mt-3">
                 <thead class="table-info">
                     <tr>
                         <th scope="col">#</th>
@@ -51,7 +51,7 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    
     {% else %}
     <div class="alert alert-info text-center shadow-sm py-4">
         <i class="fas fa-box-open me-2"></i> You have no consumable requests yet.

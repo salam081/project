@@ -76,13 +76,13 @@
         <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#loanSubmenu" aria-expanded="false" aria-controls="loanSubmenu">
                 <i class="bi bi-wallet2"></i> 
-                <span class="nav-text">Loan Management</span>
+                <span class="nav-text">Loan</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="loanSubmenu">
                 <a href="{% url 'loan_request_fee_payment' %}" class="nav-link" >
                     <i class="bi bi-person"></i>
-                    <span class="nav-text">Loan fee</span>
+                    <span class="nav-text">Loan Form Fee</span>
                 </a>
                 <a href="{% url 'admin_loan_settings' %}" class="nav-link" >
                     <i class="bi bi-sliders"></i>
@@ -98,7 +98,7 @@
                 </a>
                 <a href="{% url 'loan_years_list'  %}" class="nav-link" >
                     <i class="bi bi-sliders"></i>
-                    <span class="nav-text">Loan Requests </span>
+                    <span class="nav-text">Loans With Requests </span>
                 </a>
                 <a href="{% url 'all_reject_loan'  %}" class="nav-link" >
                     <i class="bi bi-check-circle"></i>
@@ -117,37 +117,42 @@
         <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#consumableSubmenu" aria-expanded="false" aria-controls="consumableSubmenu">
                 <i class="bi bi-box"></i>
-                <span class="nav-text">Manage Consumables</span>
+                <span class="nav-text">Consumables</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="consumableSubmenu">
-                <a href="{% url 'consumable_dashboard' %}" class="nav-link" >
+                  <a href="{% url 'admin_loan_settings' %}" class="nav-link" >
+                    <i class="bi bi-sliders"></i>
+                    <span class="nav-text">Consumable Settings</span>
+                </a>
+                 <a href="{% url 'consumable_fee' %}" class="nav-link" >
+                    <i class="bi bi-wallet2"></i> 
+                    <span class="nav-text">Consumable Form Fee</span>
+                </a>
+                {% comment %} <a href="{% url 'consumable_dashboard' %}" class="nav-link" >
                     <i class="bi bi-speedometer2"></i>
                     <span class="nav-text">dashboard</span>
-                </a>
+                </a> {% endcomment %}
                 <a href="{% url 'add_consumable_type' %}" class="nav-link" >
                     <i class="bi bi-plus-circle"></i> 
                     <span class="nav-text">Add Consumable Type</span>
                 </a>
-                <a href="{% url 'consumable_fee' %}" class="nav-link" >
-                    <i class="bi bi-wallet2"></i> 
-                    <span class="nav-text">Consumable Fee</span>
-                </a>
-                 <a href="{% url 'consumable_items'  %}" class="nav-link" >
+               
+                 {% comment %} <a href="{% url 'consumable_items'  %}" class="nav-link" >
                    <i class="bi bi-check-circle"></i> 
                     <span class="nav-text">Management Items</span>
-                </a>
+                </a> {% endcomment %}
                 {% comment %} <a href="{% url 'loan_fee' %}" class="nav-link" >
                     <i class="bi bi-person"></i>
                     <span class="nav-text">Consumable fee</span>
                 </a> {% endcomment %}
                 <a href="{% url 'admin_consumables_list' %}" class="nav-link" >
                     <i class="bi bi-graph-up"></i> 
-                    <span class="nav-text">Consumable Requests</span>
+                    <span class="nav-text">Approve  Requests</span>
                 </a>
                 <a href="{% url 'consumable_types_with_requests' %}" class="nav-link" >
-                    <i class="bi bi-eye"></i> >
-                    <span class="nav-text">Requests Type</span>
+                    <i class="bi bi-eye"></i> 
+                    <span class="nav-text">Consumables  with Requests </span>
                 </a>
                 {% comment %} <a href="{% url 'add_loan_type'  %}" class="nav-link" >
                     <i class="bi bi-person-plus"></i>
@@ -185,6 +190,11 @@
                    <i class="bi bi-speedometer2"></i>
                     <span class="nav-text">Purchase Dashboard</span>
                 </a>
+                <a href="{% url 'adjustment_list' %}" class="nav-link" >
+                   <i class="bi bi-speedometer2"></i>
+                    <span class="nav-text">Adjustment List</span>
+                </a>
+              
                 {% endif %}
                  {% if user.is_authenticated and user.group.title == 'staff' %}
                 <a href="{% url 'purchase_request_list' %}" class="nav-link" >

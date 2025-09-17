@@ -73,17 +73,30 @@ class ConsumableRequest(models.Model):
 
 class ConsumableRequestDetail(models.Model):
     request = models.ForeignKey(ConsumableRequest, on_delete=models.CASCADE, related_name="details")
-    selling_item = models.ForeignKey(SellingPlan, on_delete=models.CASCADE) # 🔹 Change to SellingPlan
+    selling_item = models.ForeignKey(SellingPlan, on_delete=models.CASCADE,related_name="details") 
     quantity = models.PositiveIntegerField(default=1)
     item_price = models.DecimalField(max_digits=10, decimal_places=2)
     loan_term_months = models.PositiveIntegerField()
     approved_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     approval_date = models.DateField(null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
+    
+
+    def save(self, *args, **kwargs):
+        # Only set item_price on first creation
+        if not self.pk:
+            self.item_price = self.selling_item.selling_price_per_unit
+        super().save(*args, **kwargs)
 
     @property
     def total_price(self):
         return self.quantity * self.item_price
+    
+    @property
+    def profit(self):
+        purchased_item = self.selling_item.purchased_item
+        cost_per_unit = purchased_item.unit_price + (purchased_item.expenditure_amount / purchased_item.quantity)
+        return (self.item_price - cost_per_unit) * self.quantity
     
     def __str__(self):
         return f"{self.request} {self.quantity} x {self.selling_item.purchased_item.item_name} (Req #{self.request.id})"

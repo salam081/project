@@ -43,7 +43,7 @@
             <div class="card shadow">
                 <div class="card-header">
                     <h4 class="mb-0">
-                        <i class="fas fa-list me-2"></i>Members who requested: **{{ consumable_type.name }}**
+                        <i class="fas fa-list me-2 "></i>Members who requested: **{{ consumable_type.name }}**
                     </h4>
                 </div>
                 <div class="card-body">
@@ -52,33 +52,34 @@
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Request ID</th>
-                                        <th>Member Name</th>
-                                        <th>Total Price</th>
+                                        {% comment %} <th>Request ID</th> {% endcomment %}
+                                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Member Name</th>
+                                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Price</th>
                                         <th>Balance</th>
                                         <th>Status</th>
-                                        <th>Date Requested</th>
+                                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Date Requested</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for request_obj in page_obj  %}
                                     <tr>
-                                        <td>#{{ request_obj.id }}</td>
-                                        <td>{{ request_obj.user.first_name }} {{ request_obj.user.last_name }} {{ request_obj.user.member.ippis }}</td>
+                                        {% comment %} <td>#{{ request_obj.id }}</td> {% endcomment %}
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ request_obj.user.first_name }} {{ request_obj.user.last_name }} {{ request_obj.user.member.ippis }}</td>
                                         <td>₦{{ request_obj.calculate_total_price|floatformat:2 }}</td>
                                         <td>₦{{ request_obj.balance|floatformat:2 }}</td>
-                                      <td>
+                                      <td class="text-nowrap text-truncate" style="max-width: 270px;">
                                         {% comment %} {{ request_obj.status }} {% endcomment %}
                                         <span class="status-badge 
                                             {% if request_obj.status == 'Pending' %}status-pending
                                             {% elif request_obj.status == 'Approved' %}status-active
+                                            {% elif request_obj.status == 'Itempicked' %}status-itempicked
                                             {% elif request_obj.status == 'FullyPaid' %}status-completed
                                             {% elif request_obj.status == 'Declined' %}status-cancelled
                                             {% else %}bg-secondary{% endif %}">
                                             {{ request_obj.status }}
                                         </span>
                                     </td>
-                                        <td>{{ request_obj.date_created|date:"M d, Y" }}</td>
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ request_obj.date_created|date:"M d, Y" }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>

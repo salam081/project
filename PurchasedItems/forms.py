@@ -193,4 +193,11 @@ class ProfitCalculatorForm(forms.Form):
             'class': 'form-control',
             'placeholder': 'Enter quantity to sell'
         })
-    )        
+    )    
+
+
+class SellingPlanAdjustmentForm(forms.ModelForm):
+    class Meta:
+        model = SellingPlanAdjustment
+        fields = ["selling_plan", "old_price", "new_price", "reason"]
+  

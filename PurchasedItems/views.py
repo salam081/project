@@ -13,7 +13,7 @@ from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from .models import ConsumablePurchasedRequest, PurchasedItem
 # from accounts.decorator import group_required
 from .forms import *
-from  .forms import ProfitCalculatorForm
+from  .forms import ProfitCalculatorForm,SellingPlanAdjustmentForm
 from .models import *
 from accounts.models import *
 from consumable.models import *
@@ -273,14 +273,14 @@ def consumable_purchase_request_approve(request, pk):
     context =  {'consumable_request': consumable_request}
     return render(request, 'consumable/purchase_request_approve.html',context)
 
+
 @login_required
 def purchased_item_create(request, request_pk):
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=request_pk)
 
-    # Access checks...
+    #  Access checks
     if (not (request.user.group and request.user.group.title == 'admin')
-          and consumable_request.requested_by != request.user):
-   
+            and consumable_request.requested_by != request.user):
         messages.error(request, "You don't have permission to add items to this request.")
         return redirect('consumable_purchase_request_detail', pk=request_pk)
 
@@ -288,7 +288,7 @@ def purchased_item_create(request, request_pk):
         messages.error(request, "Only approved requests can have purchased items.")
         return redirect('consumable_purchase_request_detail', pk=request_pk)
 
-    # ✅ Total spent = quantity * unit_price + expenditure_amount
+    #  Total spent so far = Σ(quantity * unit_price + expenditure_amount)
     total_spent = consumable_request.items.aggregate(
         total=Sum(
             ExpressionWrapper(
@@ -312,44 +312,105 @@ def purchased_item_create(request, request_pk):
             item.consumable_purchased_request = consumable_request
             item.requested_by = request.user
             item.date_added = timezone.now()
-            # ✅ Calculate full total of this new item
+
             new_item_total = (item.quantity * item.unit_price) + item.expenditure_amount
 
             if new_item_total > balance_remaining:
                 messages.error(
                     request,
-                    f"This item (₦{new_item_total:.2f}) exceeds the remaining balance or Approved Amount  (₦{balance_remaining:.2f})."
+                    f"This item (₦{new_item_total:.2f}) exceeds the remaining balance "
+                    f"(₦{balance_remaining:.2f})."
                 )
                 return redirect('consumable_purchase_request_detail', pk=request_pk)
+
             item.save()
             messages.success(request, 'Purchased item added successfully!')
             return redirect('consumable_purchase_request_detail', pk=request_pk)
     else:
         form = PurchasedItemForm()
-    context = {'form': form,'consumable_request': consumable_request,
-        'title': 'Add Purchased Item','balance_remaining': balance_remaining, }
-    return render(request, 'consumable/item_form.html', context )
+
+    context = {
+        'form': form,
+        'consumable_request': consumable_request,
+        'title': 'Add Purchased Item',
+        'balance_remaining': balance_remaining,
+    }
+    return render(request, 'consumable/item_form.html', context)
+# @login_required
+# def purchased_item_create(request, request_pk):
+#     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=request_pk)
+
+#     # Access checks...
+#     if (not (request.user.group and request.user.group.title == 'admin')
+#           and consumable_request.requested_by != request.user):
+   
+#         messages.error(request, "You don't have permission to add items to this request.")
+#         return redirect('consumable_purchase_request_detail', pk=request_pk)
+
+#     if consumable_request.status != 'approved':
+#         messages.error(request, "Only approved requests can have purchased items.")
+#         return redirect('consumable_purchase_request_detail', pk=request_pk)
+
+#     # ✅ Total spent = quantity * unit_price + expenditure_amount
+#     total_spent = consumable_request.items.aggregate(
+#         total=Sum(
+#             ExpressionWrapper(
+#                 F('quantity') * F('unit_price') + F('expenditure_amount'),
+#                 output_field=DecimalField()
+#             )
+#         )
+#     )['total'] or 0
+
+#     approved_amount = consumable_request.approved_amount or 0
+#     balance_remaining = approved_amount - total_spent
+
+#     if balance_remaining <= 0:
+#         messages.warning(request, f"₦{approved_amount:.2f} already spent. No balance remaining.")
+#         return redirect('consumable_purchase_request_detail', pk=request_pk)
+
+#     if request.method == 'POST':
+#         form = PurchasedItemForm(request.POST, request.FILES)
+#         if form.is_valid():
+#             item = form.save(commit=False)
+#             item.consumable_purchased_request = consumable_request
+#             item.requested_by = request.user
+#             item.date_added = timezone.now()
+#             # ✅ Calculate full total of this new item
+#             if not item.pk:
+#                 item.unit_price = item.unit_price
+
+#             new_item_total = (item.quantity * item.unit_price) + item.expenditure_amount
+
+#             if new_item_total > balance_remaining:
+#                 messages.error(request,f"This item (₦{new_item_total:.2f}) exceeds the remaining balance or Approved Amount  (₦{balance_remaining:.2f}).")
+#                 return redirect('consumable_purchase_request_detail', pk=request_pk)
+#             item.save()
+#             messages.success(request, 'Purchased item added successfully!')
+#             return redirect('consumable_purchase_request_detail', pk=request_pk)
+#     else:
+#         form = PurchasedItemForm()
+#     context = {'form': form,'consumable_request': consumable_request,
+#         'title': 'Add Purchased Item','balance_remaining': balance_remaining, }
+#     return render(request, 'consumable/item_form.html', context )
 
 @login_required
 def purchased_item_update(request, request_pk, item_pk):
     """Update a specific purchased item associated with a request."""
-    # Retrieve the request and the specific item to be updated.
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=request_pk)
     item = get_object_or_404(PurchasedItem, pk=item_pk, consumable_purchased_request=consumable_request)
 
-    # Permission check: Only the admin or the original requester can update.
+    # Permission check
     if (not (request.user.group and request.user.group.title == 'admin')
             and consumable_request.requested_by != request.user):
         messages.error(request, "You don't have permission to modify this item.")
         return redirect('consumable_purchase_request_detail', pk=request_pk)
 
-    # Status check: The request must be approved to update its items.
+    # Status check
     if consumable_request.status != 'approved':
         messages.error(request, "Only approved requests can have purchased items updated.")
         return redirect('consumable_purchase_request_detail', pk=request_pk)
 
-    # Calculate total spent, excluding the current item being updated.
-    # This is necessary to correctly check the balance with the new item's value.
+    # Calculate total spent excluding current item
     other_items_total = consumable_request.items.exclude(pk=item_pk).aggregate(
         total=Sum(
             ExpressionWrapper(
@@ -362,9 +423,12 @@ def purchased_item_update(request, request_pk, item_pk):
     approved_amount = consumable_request.approved_amount or 0
     balance_remaining = approved_amount - other_items_total
 
-    # Handle form submission for POST requests
     if request.method == 'POST':
-        form = PurchasedItemForm(request.POST, request.FILES, instance=item)
+        #  Ensure unit_price stays locked (exclude from form if needed)
+        post_data = request.POST.copy()
+        post_data['unit_price'] = item.unit_price  # force old price
+        form = PurchasedItemForm(post_data, request.FILES, instance=item)
+
         if form.is_valid():
             updated_item = form.save(commit=False)
             new_item_total = (updated_item.quantity * updated_item.unit_price) + updated_item.expenditure_amount
@@ -372,7 +436,8 @@ def purchased_item_update(request, request_pk, item_pk):
             if new_item_total > balance_remaining:
                 messages.error(
                     request,
-                    f"This item (₦{new_item_total:.2f}) exceeds the remaining balance (₦{balance_remaining:.2f})."
+                    f"This item (₦{new_item_total:.2f}) exceeds the remaining balance "
+                    f"(₦{balance_remaining:.2f})."
                 )
                 return redirect('consumable_purchase_request_detail', pk=request_pk)
 
@@ -380,8 +445,9 @@ def purchased_item_update(request, request_pk, item_pk):
             messages.success(request, 'Purchased item updated successfully!')
             return redirect('consumable_purchase_request_detail', pk=request_pk)
     else:
-        # For GET requests, pre-populate the form with the existing item data.
+        # Pre-populate but keep unit_price disabled
         form = PurchasedItemForm(instance=item)
+        form.fields['unit_price'].disabled = True  # prevent editing in UI
 
     context = {
         'form': form,
@@ -391,7 +457,6 @@ def purchased_item_update(request, request_pk, item_pk):
         'balance_remaining': balance_remaining,
     }
     return render(request, 'consumable/item_form.html', context)
-
 
 @login_required
 def consumable_request_mark_accounted(request, pk):
@@ -635,3 +700,81 @@ def refund_and_account_request(request, pk):
     messages.success(request, f"Request successfully accounted for. Approved amount changed to ₦{new_approved_amount:.2f}.")
 
     return redirect('consumable_purchase_request_detail', pk=pk)
+
+
+@login_required
+def adjust_purchased_item_price(request, item_pk):
+    item = get_object_or_404(PurchasedItem, pk=item_pk)
+
+    if request.method == "POST":
+        new_price = Decimal(request.POST.get("new_price"))
+        reason = request.POST.get("reason")
+
+        PurchasedItemAdjustment.objects.create(
+            purchased_item=item,
+            old_price=item.unit_price,
+            new_price=new_price,
+            reason=reason,
+            adjusted_by=request.user,
+        )
+
+        # Update the live price
+        item.unit_price = new_price
+        item.save(update_fields=["unit_price"])
+
+        messages.success(request, "Price adjusted successfully!")
+        return redirect("consumable_purchase_request_detail", pk=item.consumable_purchased_request.pk)
+
+    return render(request, "consumable/adjust_price.html", {"item": item})
+
+
+
+
+# List all adjustments
+def adjustment_list(request):
+    adjustments = SellingPlanAdjustment.objects.select_related("selling_plan").order_by("-date_adjusted")
+    return render(request, "consumable/adjustment_list.html", {"adjustments": adjustments})
+
+
+# Create new adjustment
+@login_required
+def adjustment_create(request, selling_plan_id):
+    selling_plan = get_object_or_404(SellingPlan, id=selling_plan_id)
+
+    if request.method == "POST":
+        new_price = request.POST.get("new_price")
+        reason = request.POST.get("reason")
+
+        try:
+            new_price = float(new_price)
+        except (TypeError, ValueError):
+            messages.error(request, "Invalid price entered.")
+            return redirect("adjustment_create", selling_plan_id=selling_plan.id)
+
+        with transaction.atomic():
+            # Save adjustment
+            adjustment = SellingPlanAdjustment.objects.create(
+                selling_plan=selling_plan,
+                old_price=selling_plan.selling_price_per_unit,
+                new_price=new_price,
+                reason=reason,
+                adjusted_by=request.user,
+            )
+
+            # Update the selling plan
+            selling_plan.selling_price_per_unit = new_price
+            selling_plan.save()
+
+        messages.success(request, f"Price updated for {selling_plan.purchased_item.item_name}!")
+        return redirect("adjustment_detail", pk=adjustment.pk)
+
+    return render(request, "consumable/adjustment_form.html", {
+        "selling_plan": selling_plan,
+        "title": f"Adjust Price for {selling_plan.purchased_item.item_name}"
+    })
+
+# Adjustment details
+def adjustment_detail(request, pk):
+    adjustment = get_object_or_404(SellingPlanAdjustment, pk=pk)
+    return render(request, "consumable/adjustment_detail.html", {"adjustment": adjustment})
+

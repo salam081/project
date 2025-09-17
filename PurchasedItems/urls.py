@@ -22,4 +22,9 @@ urlpatterns = [
     path('selling_plan_delete/<int:pk>/', views.selling_plan_delete, name='selling_plan_delete'),
     path('requests/account/<int:pk>/', views.refund_and_account_request, name='refund_and_account_request'),
 
+
+    path("adjustments/", views.adjustment_list, name="adjustment_list"),
+    path("adjustment/create/<int:selling_plan_id>/", views.adjustment_create, name="adjustment_create"),
+
+    path("adjustments/<int:pk>/", views.adjustment_detail, name="adjustment_detail"),
 ]

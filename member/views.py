@@ -908,8 +908,9 @@ def member_withdrawal_request(request):
             messages.warning(request, "You already have a pending withdrawal request.")
 
         #  Check if member has enough savings
-        elif member.total_savings <= 0:
+        elif member.total_savings is None or member.total_savings <= 0:
             messages.warning(request, "You are not eligible for withdrawal.")
+
 
         #  Block if member has pending loan / consumable / project finance
         elif LoanRequest.objects.filter(member=member, status="Approved").exists():

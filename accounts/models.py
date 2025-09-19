@@ -61,7 +61,7 @@ class User(AbstractUser):
 class Member(models.Model):
     member = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True,related_name='member')
     ippis = models.IntegerField(unique=True)  # Required and unique
-    total_savings = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    total_savings = models.DecimalField(max_digits=12, decimal_places=2, default=0, blank=True, null=True)
 
     def __str__(self):
         return f"{self.member} ({self.ippis})"

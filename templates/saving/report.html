@@ -126,17 +126,37 @@
                         </li>
                         {% endif %}
 
-                        {% for i in savings_details.paginator.page_range %}
-                            {% if savings_details.number == i %}
-                            <li class="page-item active" aria-current="page">
-                                <span class="page-link">{{ i }}</span>
-                            </li>
-                            {% else %}
+                        {% if savings_details.number > 3 %}
                             <li class="page-item">
-                                <a class="page-link" href="?savings_page={{ i }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=savings#savings-tab-pane">{{ i }}</a>
+                                <a class="page-link" href="?savings_page=1{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=savings#savings-tab-pane">1</a>
                             </li>
+                            {% if savings_details.number > 4 %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endif %}
+
+                        {% for i in savings_details.paginator.page_range %}
+                            {% if i >= savings_details.number|add:'-2' and i <= savings_details.number|add:'2' %}
+                                {% if savings_details.number == i %}
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link">{{ i }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?savings_page={{ i }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=savings#savings-tab-pane">{{ i }}</a>
+                                </li>
+                                {% endif %}
                             {% endif %}
                         {% endfor %}
+
+                        {% if savings_details.number < savings_details.paginator.num_pages|add:'-2' %}
+                            {% if savings_details.number < savings_details.paginator.num_pages|add:'-3' %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                            <li class="page-item">
+                                <a class="page-link" href="?savings_page={{ savings_details.paginator.num_pages }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=savings#savings-tab-pane">{{ savings_details.paginator.num_pages }}</a>
+                            </li>
+                        {% endif %}
 
                         {% if savings_details.has_next %}
                         <li class="page-item">
@@ -189,17 +209,37 @@
                         </li>
                         {% endif %}
 
-                        {% for i in interest_details.paginator.page_range %}
-                            {% if interest_details.number == i %}
-                            <li class="page-item active" aria-current="page">
-                                <span class="page-link">{{ i }}</span>
-                            </li>
-                            {% else %}
+                        {% if interest_details.number > 3 %}
                             <li class="page-item">
-                                <a class="page-link" href="?interest_page={{ i }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=interest#interest-tab-pane">{{ i }}</a>
+                                <a class="page-link" href="?interest_page=1{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=interest#interest-tab-pane">1</a>
                             </li>
+                            {% if interest_details.number > 4 %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endif %}
+
+                        {% for i in interest_details.paginator.page_range %}
+                            {% if i >= interest_details.number|add:'-2' and i <= interest_details.number|add:'2' %}
+                                {% if interest_details.number == i %}
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link">{{ i }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?interest_page={{ i }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=interest#interest-tab-pane">{{ i }}</a>
+                                </li>
+                                {% endif %}
                             {% endif %}
                         {% endfor %}
+
+                        {% if interest_details.number < interest_details.paginator.num_pages|add:'-2' %}
+                            {% if interest_details.number < interest_details.paginator.num_pages|add:'-3' %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                            <li class="page-item">
+                                <a class="page-link" href="?interest_page={{ interest_details.paginator.num_pages }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=interest#interest-tab-pane">{{ interest_details.paginator.num_pages }}</a>
+                            </li>
+                        {% endif %}
 
                         {% if interest_details.has_next %}
                         <li class="page-item">
@@ -252,17 +292,37 @@
                         </li>
                         {% endif %}
 
-                        {% for i in loanable_details.paginator.page_range %}
-                            {% if loanable_details.number == i %}
-                            <li class="page-item active" aria-current="page">
-                                <span class="page-link">{{ i }}</span>
-                            </li>
-                            {% else %}
+                        {% if loanable_details.number > 3 %}
                             <li class="page-item">
-                                <a class="page-link" href="?loanable_page={{ i }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=loanable#loanable-tab-pane">{{ i }}</a>
+                                <a class="page-link" href="?loanable_page=1{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=loanable#loanable-tab-pane">1</a>
                             </li>
+                            {% if loanable_details.number > 4 %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endif %}
+
+                        {% for i in loanable_details.paginator.page_range %}
+                            {% if i >= loanable_details.number|add:'-2' and i <= loanable_details.number|add:'2' %}
+                                {% if loanable_details.number == i %}
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link">{{ i }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?loanable_page={{ i }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=loanable#loanable-tab-pane">{{ i }}</a>
+                                </li>
+                                {% endif %}
                             {% endif %}
                         {% endfor %}
+
+                        {% if loanable_details.number < loanable_details.paginator.num_pages|add:'-2' %}
+                            {% if loanable_details.number < loanable_details.paginator.num_pages|add:'-3' %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                            <li class="page-item">
+                                <a class="page-link" href="?loanable_page={{ loanable_details.paginator.num_pages }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=loanable#loanable-tab-pane">{{ loanable_details.paginator.num_pages }}</a>
+                            </li>
+                        {% endif %}
 
                         {% if loanable_details.has_next %}
                         <li class="page-item">
@@ -315,17 +375,37 @@
                         </li>
                         {% endif %}
 
-                        {% for i in investment_details.paginator.page_range %}
-                            {% if investment_details.number == i %}
-                            <li class="page-item active" aria-current="page">
-                                <span class="page-link">{{ i }}</span>
-                            </li>
-                            {% else %}
+                        {% if investment_details.number > 3 %}
                             <li class="page-item">
-                                <a class="page-link" href="?investment_page={{ i }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=investment#investment-tab-pane">{{ i }}</a>
+                                <a class="page-link" href="?investment_page=1{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=investment#investment-tab-pane">1</a>
                             </li>
+                            {% if investment_details.number > 4 %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endif %}
+
+                        {% for i in investment_details.paginator.page_range %}
+                            {% if i >= investment_details.number|add:'-2' and i <= investment_details.number|add:'2' %}
+                                {% if investment_details.number == i %}
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link">{{ i }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?investment_page={{ i }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=investment#investment-tab-pane">{{ i }}</a>
+                                </li>
+                                {% endif %}
                             {% endif %}
                         {% endfor %}
+
+                        {% if investment_details.number < investment_details.paginator.num_pages|add:'-2' %}
+                            {% if investment_details.number < investment_details.paginator.num_pages|add:'-3' %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                            <li class="page-item">
+                                <a class="page-link" href="?investment_page={{ investment_details.paginator.num_pages }}{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}&active_tab=investment#investment-tab-pane">{{ investment_details.paginator.num_pages }}</a>
+                            </li>
+                        {% endif %}
 
                         {% if investment_details.has_next %}
                         <li class="page-item">

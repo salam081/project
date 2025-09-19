@@ -5,6 +5,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator,PageNotAnInteger,EmptyPage
+from django.db.models import Sum, Count, F, DecimalField, ExpressionWrapper
 from django.forms import DecimalField
 from django.http import JsonResponse, HttpResponse
 from django.db.models import F, Q, Sum, DecimalField, Value
@@ -30,29 +31,95 @@ from main.models import *
 
 
 
-@login_required  
+
+
 def consumable_dashboard(request):
-    # Get basic statistics
+    # === Request Statistics ===
     total_requests = ConsumableRequest.objects.count()
     pending_count = ConsumableRequest.objects.filter(status='Pending').count()
     approved_count = ConsumableRequest.objects.filter(status='Approved').count()
     completed_count = ConsumableRequest.objects.filter(status='FullyPaid').count()
-    
-    # Recent requests
-    recent_requests = ConsumableRequest.objects.select_related(
-        'user', 'consumable_type'
-    ).order_by('-date_created')[:10]
-    
-    # Pending approvals
-    pending_approvals = ConsumableRequest.objects.filter(
-        status='Pending'
-    ).select_related('user', 'consumable_type')[:5]
-    
+    declined_count = ConsumableRequest.objects.filter(status='Declined').count()
+
+    # === Financials (Global) ===
+    total_amount_requested = ConsumableRequestDetail.objects.aggregate(
+        total=Sum(
+            ExpressionWrapper(
+                F('quantity') * F('item_price'),
+                output_field=DecimalField()
+            )
+        )
+    )['total'] or 0
+
+    total_amount_paid = PaybackConsumable.objects.aggregate(
+        total=Sum('amount_paid')
+    )['total'] or 0
+
+    outstanding_balance = total_amount_requested - total_amount_paid
+
+    # === Form Fees ===
+    total_form_fees = ConsumableFormFee.objects.aggregate(total=Sum('form_fee'))['total'] or 0
+    form_fees_paid = ConsumableFormFee.objects.filter(status="paid").aggregate(total=Sum('form_fee'))['total'] or 0
+    form_fees_used = ConsumableFormFee.objects.filter(status="used").aggregate(total=Sum('form_fee'))['total'] or 0
+
+    # === Stock (SellingPlan) ===
+    stock_plans = SellingPlan.objects.select_related('purchased_item')
+
+    # === Recent Activity ===
+    recent_requests = ConsumableRequest.objects.select_related('user', 'consumable_type').order_by('-date_created')[:10]
+    pending_approvals = ConsumableRequest.objects.filter(status='Pending').select_related('user', 'consumable_type')[:5]
+    recent_repayments = PaybackConsumable.objects.select_related('consumable_request').order_by('-created_at')[:5]
+
+    # === Breakdown by Consumable Type ===
+    type_breakdown = (
+        ConsumableType.objects.annotate(
+            total_requests=Count('consumables_type'),
+            total_requested=Sum(
+                ExpressionWrapper(
+                    F('consumables_type__details__quantity') *
+                    F('consumables_type__details__item_price'),
+                    output_field=DecimalField()
+                )
+            ),
+            total_paid=Sum('consumables_type__repayments__amount_paid'),
+        )
+        .annotate(balance=F('total_requested') - F('total_paid'))
+        .order_by('name')
+    )
+    stock_level = SellingPlan.objects.aggregate(Sum('quantity'))['quantity__sum'] or 0
+
+
     context = {
-        'total_requests': total_requests, 'pending_approvals': pending_approvals,
-        'pending_count': pending_count,'approved_count': approved_count,
-        'completed_count': completed_count, 'recent_requests': recent_requests,}
-    
+        # Request stats
+        'total_requests': total_requests,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'completed_count': completed_count,
+        'declined_count': declined_count,
+         'stock_level': stock_level,
+
+        # Financials
+        'total_amount_requested': total_amount_requested,
+        'total_amount_paid': total_amount_paid,
+        'outstanding_balance': outstanding_balance,
+
+        # Form fees
+        'total_form_fees': total_form_fees,
+        'form_fees_paid': form_fees_paid,
+        'form_fees_used': form_fees_used,
+
+        # Stock (from SellingPlan)
+        'stock_plans': stock_plans,
+
+        # Recent activity
+        'recent_requests': recent_requests,
+        'pending_approvals': pending_approvals,
+        'recent_repayments': recent_repayments,
+
+        # Breakdown by type
+        'type_breakdown': type_breakdown,
+    }
+
     return render(request, 'consumable/consumable_dashboard.html', context)
 
 # def add_consumable_type(request):
@@ -359,34 +426,71 @@ def admin_request_reject(request, request_id):
 
 
 @login_required
+# def admin_request_taking(request, request_id):
+#     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
+
+#     with transaction.atomic():
+#         if consumable_request.status == 'Approved':
+#             # Get all the details for the request
+#             request_details = ConsumableRequestDetail.objects.filter(request=consumable_request)
+
+#             for detail in request_details:
+#                 selling_plan = detail.selling_item
+#                 requested_quantity = detail.quantity
+
+#                 # Check if enough stock is available before deducting
+#                 if selling_plan.quantity < requested_quantity:
+#                     messages.error(
+#                         request,
+#                         f"Insufficient stock for {selling_plan.purchased_item.item_name}. Cannot process request."
+#                     )
+#                     # Rollback the transaction
+#                     raise Exception("Insufficient stock")
+
+#                 # Deduct stock
+#                 selling_plan.quantity -= requested_quantity
+#                 selling_plan.save(update_fields=['quantity'])
+
+#                 # Record approval date
+#                 detail.approval_date = timezone.now().date()
+#                 detail.save(update_fields=['approval_date'])
+
+#             # Update main request status
+#             consumable_request.status = 'Itempicked'
+#             consumable_request.approved_by = request.user
+#             consumable_request.save(update_fields=['status', 'approved_by'])
+
+#             messages.success(
+#                 request,
+#                 f"Request #{request_id} has been marked as 'Itempicked' and stock has been reduced."
+#             )
+#         elif consumable_request.status == 'Itempicked':
+#             messages.info(request, f"Request #{request_id} has already been marked as 'Itempicked'.")
+#         else:
+#             messages.error(
+#                 request,
+#                 f"Cannot mark request #{request_id} as 'Itempicked' because its status is '{consumable_request.status}'."
+#             )
+
+#     return redirect('admin_consumable_detail', request_id=request_id)
+
 def admin_request_taking(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
 
     with transaction.atomic():
         if consumable_request.status == 'Approved':
-            # Get all the details for the request
             request_details = ConsumableRequestDetail.objects.filter(request=consumable_request)
 
             for detail in request_details:
-                selling_plan = detail.selling_item
-                requested_quantity = detail.quantity
-
-                # Check if enough stock is available before deducting
-                if selling_plan.quantity < requested_quantity:
-                    messages.error(
-                        request,
-                        f"Insufficient stock for {selling_plan.purchased_item.item_name}. Cannot process request."
-                    )
-                    # Rollback the transaction
-                    raise Exception("Insufficient stock")
-
-                # Deduct stock
-                selling_plan.quantity -= requested_quantity
-                selling_plan.save(update_fields=['quantity'])
-
-                # Record approval date
+                # Set approval date
                 detail.approval_date = timezone.now().date()
                 detail.save(update_fields=['approval_date'])
+
+                # Create a picked log
+                PickedLog.objects.create(
+                    request_detail=detail,
+                    picked_by=request.user,
+                )
 
             # Update main request status
             consumable_request.status = 'Itempicked'
@@ -395,10 +499,14 @@ def admin_request_taking(request, request_id):
 
             messages.success(
                 request,
-                f"Request #{request_id} has been marked as 'Itempicked' and stock has been reduced."
+                f"Request #{request_id} has been marked as 'Itempicked'. Items logged."
             )
+
         elif consumable_request.status == 'Itempicked':
-            messages.info(request, f"Request #{request_id} has already been marked as 'Itempicked'.")
+            messages.info(
+                request,
+                f"Request #{request_id} has already been marked as 'Itempicked'."
+            )
         else:
             messages.error(
                 request,
@@ -406,8 +514,6 @@ def admin_request_taking(request, request_id):
             )
 
     return redirect('admin_consumable_detail', request_id=request_id)
-
-
 
 @login_required
 def consumable_types_with_requests(request):
@@ -526,6 +632,7 @@ def add_payment(request, request_id):
             messages.info(request, 'Request marked as Fully Paid')
 
     return redirect('admin_consumable_detail', request_id=request_id)
+
 @login_required
 def admin_edit_consumable_request(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
@@ -773,4 +880,68 @@ def upload_consumable_payment(request):
     context = {"grouped_list": grouped_list}
     return render(request, "consumable/upload_consumable_payment.html", context)
 
+@login_required
+# def item_list_with_requests(request):
+#     items = (
+#         SellingPlan.objects.all()
+#         .select_related("purchased_item")
+#         .annotate(total_requested=Sum("details__quantity"),))
 
+#     # Add calculated remaining stock
+#     for item in items:
+#         total_requested = item.total_requested or 0
+#         item.remaining_stock = item.quantity - total_requested
+
+#     context = {"items": items}
+#     return render(request, "consumable/item_list.html", context)
+
+@login_required
+def item_list_with_requests(request):
+    items = (
+        SellingPlan.objects.all()
+        .select_related("purchased_item")
+        .prefetch_related("details__request")  # preload related details for efficiency
+    )
+
+    grand_total_amount = 0
+    grand_total_profit = 0
+
+    for item in items:
+        # Total quantity requested for this selling item
+        total_requested = item.details.aggregate(total=Sum("quantity"))["total"] or 0
+        item.total_requested = total_requested
+
+        # Total amount requested = selling price * requested quantity
+        item.total_amount_requested = item.selling_price_per_unit * total_requested
+
+        # Total profit requested = sum of each detail's profit (already correct in model)
+        item.total_profit_requested = sum(detail.profit for detail in item.details.all())
+
+        # Remaining stock
+        item.remaining_stock = item.quantity - total_requested
+
+        # Add to grand totals
+        grand_total_amount += item.total_amount_requested
+        grand_total_profit += item.total_profit_requested
+
+    context = {
+        "items": items,
+        "grand_total_amount": grand_total_amount,
+        "grand_total_profit": grand_total_profit,
+    }
+    return render(request, "consumable/item_list.html", context)
+
+@login_required
+def item_request_list(request, item_id):
+    # Get the item (SellingPlan)
+    selling_plan = get_object_or_404(SellingPlan, id=item_id)
+
+    # Get all requests related to this item
+    requests_for_item = ConsumableRequestDetail.objects.filter( selling_item_id=selling_plan ).select_related("request__user")
+
+    context = {
+        "selling_plan": selling_plan,
+        "requests_for_item": requests_for_item,
+        'title': f"Requests for {selling_plan.purchased_item.item_name}"
+    }
+    return render(request, "consumable/item_request_list.html", context)

@@ -47,6 +47,19 @@
                             <i class="fas fa-calculator"></i> Calculate Profit
                         </button>
                     </form>
+                    <div class="card border-success shadow-sm mt-3" id="profit-card" style="display:none;">
+    <div class="card-body">
+        <h5 class="card-title text-success"><i class="fas fa-chart-line"></i> Profit Analysis</h5>
+        <div class="row">
+            <div class="col-md-4"><p><strong>Total Sale:</strong> <span class="text-success" id="total-sale">₦0.00</span></p></div>
+            <div class="col-md-4"><p><strong>Total Cost:</strong> <span class="text-danger" id="total-cost">₦0.00</span></p></div>
+            <div class="col-md-4"><p><strong>Estimated Profit:</strong> <span class="fw-bold" id="profit">₦0.00</span></p></div>
+        </div>
+        <div class="alert mt-3" id="profit-alert" style="display:none;">
+            <i class="fas" id="profit-icon"></i> <span id="profit-message"></span>
+        </div>
+    </div>
+</div>
 
                     {% if profit is not None %}
                         <div class="card bg-light">
@@ -124,4 +137,68 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const sellingPriceInput = document.getElementById('selling_price_per_unit');
+    const quantityInput = document.getElementById('quantity_to_sell');
+
+    const totalSaleEl = document.getElementById('total-sale');
+    const totalCostEl = document.getElementById('total-cost');
+    const profitEl = document.getElementById('profit');
+    const profitCard = document.getElementById('profit-card');
+    const profitAlert = document.getElementById('profit-alert');
+    const profitIcon = document.getElementById('profit-icon');
+    const profitMessage = document.getElementById('profit-message');
+
+    // Purchased item info from template context
+    const unitPrice = parseFloat("{{ purchased_item.unit_price }}");
+    const quantityAvailable = parseInt("{{ purchased_item.quantity }}");
+    const expenditureAmount = parseFloat("{{ purchased_item.expenditure_amount }}");
+
+    function calculateProfit() {
+        const sellPrice = parseFloat(sellingPriceInput.value) || 0;
+        const quantity = parseInt(quantityInput.value) || 0;
+
+        if(quantity > quantityAvailable) {
+            alert("Quantity cannot exceed available stock!");
+            quantityInput.value = quantityAvailable;
+            return;
+        }
+
+        const totalCost = (unitPrice * quantity) + (expenditureAmount * (quantity / quantityAvailable));
+        const totalSale = sellPrice * quantity;
+        const profit = totalSale - totalCost;
+
+        // Update UI
+        totalSaleEl.textContent = `₦${totalSale.toFixed(2)}`;
+        totalCostEl.textContent = `₦${totalCost.toFixed(2)}`;
+        profitEl.textContent = `₦${profit.toFixed(2)}`;
+
+        profitCard.style.display = 'block';
+        profitAlert.style.display = 'block';
+
+        if(profit > 0) {
+            profitAlert.className = 'alert alert-success mt-3';
+            profitIcon.className = 'fas fa-thumbs-up';
+            profitMessage.textContent = `Great! Profit of ₦${profit.toFixed(2)}`;
+            profitEl.className = 'fw-bold text-success';
+        } else if(profit === 0) {
+            profitAlert.className = 'alert alert-warning mt-3';
+            profitIcon.className = 'fas fa-balance-scale';
+            profitMessage.textContent = 'Break-even: No profit or loss';
+            profitEl.className = 'fw-bold text-warning';
+        } else {
+            profitAlert.className = 'alert alert-danger mt-3';
+            profitIcon.className = 'fas fa-exclamation-triangle';
+            profitMessage.textContent = `Warning: Loss of ₦${profit.toFixed(2)}`;
+            profitEl.className = 'fw-bold text-danger';
+        }
+    }
+
+    sellingPriceInput.addEventListener('input', calculateProfit);
+    quantityInput.addEventListener('input', calculateProfit);
+});
+</script>
+
 {% endblock content %}

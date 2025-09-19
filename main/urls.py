@@ -13,6 +13,9 @@ urlpatterns = [
     path('approve/<int:pk>/', views.approve_withdrawal_request, name='approve_withdrawal_request'),
     path('decline/<int:pk>/', views.decline_withdrawal_request, name='decline_withdrawal_request'),
     path('eligible-members/', views.eligible_members_view, name='eligible_members_view'),
-   
+    
+    path("guest/request/", views.guest_request_consumable, name="guest_request_consumable"),
+    path("active-requests/", views.member_active_requests, name="member_active_requests"),
+
     
 ]

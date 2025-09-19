@@ -87,14 +87,16 @@
                         <div class="card shadow">
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-6">
-                                        <strong>Total Price:</strong>
-                                        <span id="total-price">₦{{consumable_request.total_price|floatformat:2}}</span>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <strong>Remaining Balance:</strong>
-                                        <span id="remaining-balance">₦{{ consumable_request.balance_remaining|floatformat:2 }}</span>
-                                    </div>
+                                   <div class="col-md-6">
+                                    <strong>Item Total:</strong>
+                                    <span id="total-price">₦0.00</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Remaining Balance:</strong>
+                                    <span id="remaining-balance">₦{{ balance_remaining|floatformat:2 }}</span>
+                                </div>
+
+
                                 </div>
                                 <div class="row mt-2" id="balance-warning" style="display: none;">
                                     <div class="col-12">
@@ -206,10 +208,8 @@
     </div>
 </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
-<script>
+{% comment %} <script>
 document.addEventListener('DOMContentLoaded', function() {
     const quantityInput = document.getElementById('{{ form.quantity.id_for_label }}');
     const unitPriceInput = document.getElementById('{{ form.unit_price.id_for_label }}');
@@ -273,5 +273,74 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial calculation
     updateTotalPrice();
 });
+</script> {% endcomment %}
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.getElementById('{{ form.quantity.id_for_label }}');
+    const unitPriceInput = document.getElementById('{{ form.unit_price.id_for_label }}');
+    const expenditureInput = document.getElementById('{{ form.expenditure_amount.id_for_label }}');
+    const totalPriceSpan = document.getElementById('total-price');
+    const remainingBalanceSpan = document.getElementById('remaining-balance');
+    const balanceWarning = document.getElementById('balance-warning');
+    const saveBtn = document.getElementById('save-btn');
+    const form = document.getElementById('item-form');
+    
+    // ✅ Use approved_amount (not amount_requested)
+    const approvedAmount = {{ consumable_request.approved_amount|default:0 }};
+    const currentSpent = {{ consumable_request.total_spent|default:0 }};
+    
+    function updateTotalPrice() {
+        const quantity = parseFloat(quantityInput.value) || 0;
+        const unitPrice = parseFloat(unitPriceInput.value) || 0;
+        const expenditure = parseFloat(expenditureInput.value) || 0;
+
+        // ✅ Match model logic: (quantity * unit_price) + expenditure_amount
+        const totalPrice = (quantity * unitPrice) + expenditure;
+        const newBalance = approvedAmount - currentSpent - totalPrice;
+        
+        totalPriceSpan.textContent = '₦' + totalPrice.toFixed(2);
+        remainingBalanceSpan.textContent = '₦' + newBalance.toFixed(2);
+        
+        if (newBalance >= 0) {
+            remainingBalanceSpan.className = 'text-success';
+            balanceWarning.style.display = 'none';
+        } else {
+            remainingBalanceSpan.className = 'text-danger';
+            balanceWarning.style.display = 'block';
+        }
+    }
+    
+    function validateForm() {
+        const quantity = parseFloat(quantityInput.value) || 0;
+        const unitPrice = parseFloat(unitPriceInput.value) || 0;
+        const expenditure = parseFloat(expenditureInput.value) || 0;
+        const totalPrice = (quantity * unitPrice) + expenditure;
+        const newBalance = approvedAmount - currentSpent - totalPrice;
+        
+        // Optional client-side block if needed
+        // if (newBalance < 0) {
+        //     alert('The total price exceeds the remaining balance.');
+        //     return false;
+        // }
+        return true;
+    }
+    
+    // Event listeners
+    if (quantityInput) quantityInput.addEventListener('input', updateTotalPrice);
+    if (unitPriceInput) unitPriceInput.addEventListener('input', updateTotalPrice);
+    if (expenditureInput) expenditureInput.addEventListener('input', updateTotalPrice);
+    
+    form.addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+        }
+    });
+    
+    // Initial calculation
+    updateTotalPrice();
+});
 </script>
 {% endblock %}
+

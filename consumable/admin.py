@@ -6,6 +6,7 @@ admin.site.register(ConsumableRequestDetail)
 admin.site.register(PaybackConsumable)
 admin.site.register(ConsumableType)
 admin.site.register(ConsumableFormFee)
+admin.site.register(PickedLog)
 
 class ItemAdmin(admin.ModelAdmin):
     list_display = ('title', 'price', 'quantity_in_stock', 'total_stock_value')

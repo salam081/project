@@ -577,139 +577,13 @@ def member_loan_request_detail(request, request_id):
     return render(request, 'member/loan_request_detail.html', context)
 
 # ============ consumable =================
-@login_required
-def request_consumable(request):
-    now = timezone.now()
-    
-    # Check if user has paid the consumable request form fee
-    has_paid = ConsumableFormFee.objects.filter(
-        member=request.user.member,created_at__year=now.year,created_at__month=now.month,).exists()
-
-    if not has_paid:
-        messages.error(request, "Please pay your consumables request form fee before applying for consumables.")
-        return redirect("member_dashboard")
-
-    if request.method == "POST":
-        consumable_type_id = request.POST.get('consumable_type')
-        loan_term_months = request.POST.get("loan_term_months")
-        payslip_file = request.FILES.get("file_payslpt")
-        selected_item_ids = request.POST.getlist("selected_items") 
-
-        # Validation
-        if not loan_term_months or not loan_term_months.isdigit() or int(loan_term_months) <= 0:
-            messages.error(request, "A valid loan term (in months) must be provided.")
-            return redirect("request_consumable")
-
-        if not selected_item_ids:
-            messages.error(request, "You must select at least one item.")
-            return redirect("request_consumable")
-        
-        
-        # Collect quantities
-        item_details = {}
-        for item_id in selected_item_ids:
-            try:
-                quantity = int(request.POST.get(f"quantity_{item_id}", 0))
-                if quantity <= 0:
-                    raise ValueError("Quantity must be positive.")
-                item_details[item_id] = {"quantity": quantity}
-            except (ValueError, TypeError):
-                messages.error(request, f"Invalid quantity for item ID {item_id}.")
-                return redirect("request_consumable")
-
-        with transaction.atomic():
-            try:
-                # Get the selected consumable type object
-                try:
-                    consumable_type_obj = ConsumableType.objects.get(id=consumable_type_id)
-                except ConsumableType.DoesNotExist:
-                    messages.error(request, "The selected consumable type does not exist.")
-                    return redirect('request_consumable')
-                
-                try:
-                   fee = ConsumableFormFee.objects.get(
-                    member=request.user.member,
-                    consumable_type=consumable_type_obj,
-                    status="paid"
-                )
-                except ConsumableFormFee.DoesNotExist:
-                    messages.error(request, f"Please pay The form fee {consumable_type_obj.name} before requesting this consumables loan.")
-                    return redirect('request_consumable')
-                
-                loan_term_months = int(loan_term_months)
-
-                # Create main ConsumableRequest
-                consumable_request = ConsumableRequest.objects.create(
-                    user=request.user,
-                    consumable_type=consumable_type_obj,
-                    file_payslpt=payslip_file,
-                    status='Pending'
-                )
-                fee.status = "used"
-                fee.save()
-
-                # Process selected SellingPlan items
-                for item_id, details in item_details.items():
-                    try:
-                        selling_item = SellingPlan.objects.select_related("purchased_item").get(id=item_id)
-                        quantity = details["quantity"]
-
-                        # Check stock
-                        if quantity > selling_item.quantity:
-                            messages.error(
-                                request,
-                                f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}."
-                            )
-                            raise ValueError("Insufficient stock.")
-
-                        # Create ConsumableRequestDetail
-                        ConsumableRequestDetail.objects.create(
-                            request=consumable_request,
-                            selling_item=selling_item,  # Updated to match model
-                            quantity=quantity,
-                            item_price=selling_item.selling_price_per_unit,
-                            loan_term_months=loan_term_months
-                        )
-
-                        # Reduce stock
-                        selling_item.quantity -= quantity
-                        selling_item.save(update_fields=["quantity"])
-
-                    except SellingPlan.DoesNotExist:
-                        messages.error(request, f"Selling plan item with ID {item_id} not found.")
-                        raise
-
-                messages.success(request, "Your consumable request has been submitted successfully!")
-                return redirect("my_consumablerequests")
-
-            except Exception as e:
-                messages.error(request, f"An unexpected error occurred: {e}")
-                return redirect("request_consumable")
-
-    # GET: Show available items
-    selling_plans = SellingPlan.objects.filter(quantity__gt=0)
-    consumable_types = ConsumableType.objects.filter(available=True)
-
-    context = {
-        'consumable_types': consumable_types,
-        "selling_plans": selling_plans
-    }
-    return render(request, "member/request_consumable.html", context)
-
-
-
-
-
 # @login_required
 # def request_consumable(request):
 #     now = timezone.now()
     
 #     # Check if user has paid the consumable request form fee
 #     has_paid = ConsumableFormFee.objects.filter(
-#         member=request.user.member,
-#         created_at__year=now.year,
-#         created_at__month=now.month,
-#     ).exists()
+#         member=request.user.member,created_at__year=now.year,created_at__month=now.month,).exists()
 
 #     if not has_paid:
 #         messages.error(request, "Please pay your consumables request form fee before applying for consumables.")
@@ -719,12 +593,7 @@ def request_consumable(request):
 #         consumable_type_id = request.POST.get('consumable_type')
 #         loan_term_months = request.POST.get("loan_term_months")
 #         payslip_file = request.FILES.get("file_payslpt")
-#         selected_item_ids = request.POST.getlist("selected_items")
-
-#         # New fields
-#         bank_name_id = request.POST.get("bank_name")
-#         bank_code_id = request.POST.get("bank_code")
-#         account_number = request.POST.get("account_number")
+#         selected_item_ids = request.POST.getlist("selected_items") 
 
 #         # Validation
 #         if not loan_term_months or not loan_term_months.isdigit() or int(loan_term_months) <= 0:
@@ -734,10 +603,7 @@ def request_consumable(request):
 #         if not selected_item_ids:
 #             messages.error(request, "You must select at least one item.")
 #             return redirect("request_consumable")
-
-#         if not bank_name_id or not bank_code_id or not account_number:
-#             messages.error(request, "Bank details are required.")
-#             return redirect("request_consumable")
+        
         
 #         # Collect quantities
 #         item_details = {}
@@ -753,69 +619,65 @@ def request_consumable(request):
 
 #         with transaction.atomic():
 #             try:
-#                 # Get consumable type
-#                 consumable_type_obj = ConsumableType.objects.get(id=consumable_type_id)
-
-#                 # Check form fee
+#                 # Get the selected consumable type object
 #                 try:
-#                     fee = ConsumableFormFee.objects.get(
-#                         member=request.user.member,
-#                         consumable_type=consumable_type_obj,
-#                         status="paid"
-#                     )
+#                     consumable_type_obj = ConsumableType.objects.get(id=consumable_type_id)
+#                 except ConsumableType.DoesNotExist:
+#                     messages.error(request, "The selected consumable type does not exist.")
+#                     return redirect('request_consumable')
+                
+#                 try:
+#                    fee = ConsumableFormFee.objects.get(
+#                     member=request.user.member,
+#                     consumable_type=consumable_type_obj,
+#                     status="paid"
+#                 )
 #                 except ConsumableFormFee.DoesNotExist:
-#                     messages.error(
-#                         request,
-#                         f"Please pay the form fee for {consumable_type_obj.name} before requesting this consumables loan."
-#                     )
+#                     messages.error(request, f"Please pay The form fee {consumable_type_obj.name} before requesting this consumables loan.")
 #                     return redirect('request_consumable')
                 
 #                 loan_term_months = int(loan_term_months)
-
-#                 # Get bank objects
-#                 bank_name_obj = get_object_or_404(BankName, id=bank_name_id)
-#                 bank_code_obj = get_object_or_404(BankCode, id=bank_code_id)
 
 #                 # Create main ConsumableRequest
 #                 consumable_request = ConsumableRequest.objects.create(
 #                     user=request.user,
 #                     consumable_type=consumable_type_obj,
-#                     bank_name=bank_name_obj,
-#                     bank_code=bank_code_obj,
-#                     account_number=account_number,
 #                     file_payslpt=payslip_file,
 #                     status='Pending'
 #                 )
-
-#                 # Mark fee as used
 #                 fee.status = "used"
 #                 fee.save()
 
 #                 # Process selected SellingPlan items
 #                 for item_id, details in item_details.items():
-#                     selling_item = SellingPlan.objects.select_related("purchased_item").get(id=item_id)
-#                     quantity = details["quantity"]
+#                     try:
+#                         selling_item = SellingPlan.objects.select_related("purchased_item").get(id=item_id)
+#                         quantity = details["quantity"]
 
-#                     # Check stock
-#                     if quantity > selling_item.quantity:
-#                         messages.error(
-#                             request,
-#                             f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}."
+#                         # Check stock
+#                         if quantity > selling_item.quantity:
+#                             messages.error(
+#                                 request,
+#                                 f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}."
+#                             )
+#                             raise ValueError("Insufficient stock.")
+
+#                         # Create ConsumableRequestDetail
+#                         ConsumableRequestDetail.objects.create(
+#                             request=consumable_request,
+#                             selling_item=selling_item,  # Updated to match model
+#                             quantity=quantity,
+#                             item_price=selling_item.selling_price_per_unit,
+#                             loan_term_months=loan_term_months
 #                         )
-#                         raise ValueError("Insufficient stock.")
 
-#                     # Create detail record
-#                     ConsumableRequestDetail.objects.create(
-#                         request=consumable_request,
-#                         selling_item=selling_item,
-#                         quantity=quantity,
-#                         item_price=selling_item.selling_price_per_unit,
-#                         loan_term_months=loan_term_months
-#                     )
+#                         # Reduce stock
+#                         selling_item.quantity -= quantity
+#                         selling_item.save(update_fields=["quantity"])
 
-#                     # Reduce stock
-#                     selling_item.quantity -= quantity
-#                     selling_item.save(update_fields=["quantity"])
+#                     except SellingPlan.DoesNotExist:
+#                         messages.error(request, f"Selling plan item with ID {item_id} not found.")
+#                         raise
 
 #                 messages.success(request, "Your consumable request has been submitted successfully!")
 #                 return redirect("my_consumablerequests")
@@ -827,19 +689,126 @@ def request_consumable(request):
 #     # GET: Show available items
 #     selling_plans = SellingPlan.objects.filter(quantity__gt=0)
 #     consumable_types = ConsumableType.objects.filter(available=True)
-#     bank_names = BankName.objects.all()
-#     bank_codes = BankCode.objects.all()
 
 #     context = {
-#         "consumable_types": consumable_types,
-#         "selling_plans": selling_plans,
-#         "bank_names": bank_names,
-#         "bank_codes": bank_codes,
+#         'consumable_types': consumable_types,
+#         "selling_plans": selling_plans
 #     }
 #     return render(request, "member/request_consumable.html", context)
 
 
+def request_consumable(request):
+    now = timezone.now()
 
+    if request.method == "POST":
+        consumable_type_id = request.POST.get("consumable_type")
+        loan_term_months = request.POST.get("loan_term_months")
+        payslip_file = request.FILES.get("file_payslpt")
+        selected_item_ids = request.POST.getlist("selected_items")
+
+        # Validation
+        if not loan_term_months or not loan_term_months.isdigit() or int(loan_term_months) <= 0:
+            messages.error(request, "A valid loan term (in months) must be provided.")
+            return redirect("request_consumable")
+
+        if not selected_item_ids:
+            messages.error(request, "You must select at least one item.")
+            return redirect("request_consumable")
+
+        # Collect quantities
+        item_details = {}
+        for item_id in selected_item_ids:
+            try:
+                quantity = int(request.POST.get(f"quantity_{item_id}", 0))
+                if quantity <= 0:
+                    raise ValueError("Quantity must be positive.")
+                item_details[item_id] = {"quantity": quantity}
+            except (ValueError, TypeError):
+                messages.error(request, f"Invalid quantity for item ID {item_id}.")
+                return redirect("request_consumable")
+
+        with transaction.atomic():
+            try:
+                # Get consumable type
+                consumable_type_obj = get_object_or_404(ConsumableType, id=consumable_type_id)
+                loan_term_months = int(loan_term_months)
+
+                # Create request
+                consumable_request = ConsumableRequest(
+                    consumable_type=consumable_type_obj,
+                    file_payslpt=payslip_file,
+                    status="Pending",
+                )
+
+                if request.user.is_authenticated:
+                    # Member flow: enforce form fee check
+                    has_paid = ConsumableFormFee.objects.filter(
+                        member=request.user.member,
+                        consumable_type=consumable_type_obj,
+                        created_at__year=now.year,
+                        created_at__month=now.month,
+                        status="paid",
+                    ).first()
+
+                    if not has_paid:
+                        messages.error(request, f"Please pay the form fee for {consumable_type_obj.name} before applying.")
+                        return redirect("member_dashboard")
+
+                    consumable_request.user = request.user
+
+                    # mark fee used
+                    has_paid.status = "used"
+                    has_paid.save()
+
+                else:
+                    # Guest flow: collect guest fields
+                    guest_name = request.POST.get("guest_name")
+                    guest_phone = request.POST.get("guest_phone")
+                    guest_ippis = request.POST.get("guest_ippis")
+
+                    if not guest_name or not guest_phone or not guest_ippis:
+                        messages.error(request, "Guest details (name, phone, IPPIS) are required.")
+                        return redirect("request_consumable")
+
+                    consumable_request.guest_name = guest_name
+                    consumable_request.guest_phone = guest_phone
+                    consumable_request.guest_ippis = guest_ippis
+
+                consumable_request.save()
+
+                # Process items
+                for item_id, details in item_details.items():
+                    selling_item = get_object_or_404(SellingPlan.objects.select_related("purchased_item"), id=item_id)
+                    quantity = details["quantity"]
+
+                    if quantity > selling_item.quantity:
+                        messages.error(request, f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}.")
+                        raise ValueError("Insufficient stock.")
+
+                    ConsumableRequestDetail.objects.create(
+                        request=consumable_request,
+                        selling_item=selling_item,
+                        quantity=quantity,
+                        item_price=selling_item.selling_price_per_unit,
+                        loan_term_months=loan_term_months,
+                    )
+
+                    # reduce stock
+                    selling_item.quantity -= quantity
+                    selling_item.save(update_fields=["quantity"])
+
+                messages.success(request, "Your consumable request has been submitted successfully!")
+                return redirect("my_consumablerequests" if request.user.is_authenticated else "request_consumable")
+
+            except Exception as e:
+                messages.error(request, f"An unexpected error occurred: {e}")
+                return redirect("request_consumable")
+
+    # GET
+    selling_plans = SellingPlan.objects.filter(quantity__gt=0)
+    consumable_types = ConsumableType.objects.filter(available=True)
+
+    return render(request, "member/request_consumable.html", { "consumable_types": consumable_types, "selling_plans": selling_plans,})
 
 
 
@@ -930,19 +899,35 @@ def cancel_consumable_request(request, id):
 def member_withdrawal_request(request):
     member = get_object_or_404(Member, member=request.user)
     sav = member.total_savings
-    print(sav)
+
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
+
+        #  Check if member already has a pending withdrawal
         if Withdrawal.objects.filter(member=member, status='Pending').exists():
-            messages.warning(request, "You already have a pending request.")
+            messages.warning(request, "You already have a pending withdrawal request.")
+
+        #  Check if member has enough savings
         elif member.total_savings <= 0:
             messages.warning(request, "You are not eligible for withdrawal.")
+
+        #  Block if member has pending loan / consumable / project finance
+        elif LoanRequest.objects.filter(member=member, status="Approved").exists():
+            messages.warning(request, "You have a pending loan request. Resolve it before withdrawal.")
+
+        elif ConsumableRequest.objects.filter(user=request.user, status="Itempicked").exists():
+             messages.warning(request, "You have a pending consumable request. Resolve it before withdrawal.")
+
+        elif ProjectFinanceRequest.objects.filter(application__member=member, status="Approved").exists():
+             messages.warning(request, "You have a pending project finance request. Resolve it before withdrawal.")
+
         else:
             Withdrawal.objects.create(member=member, reason=reason)
             messages.success(request, "Withdrawal request submitted successfully.")
+
         return redirect('member_withdrawal_request')
 
-    return render(request, 'member/withdrawal_request_form.html', {'member': member,})
+    return render(request, 'member/withdrawal_request_form.html', {'member': member})
 
 #==============project_finance_application===================
 

@@ -3,17 +3,9 @@
 
 {% block content %}
 <div class="content-card">
-    <p class="text-center">Your approved project finance requests.</p>
+    <p class="text-center">Your  Project Finance Requests.</p>
     <a href="{% url 'project_finance_application' %}" class="btn btn-primary">Write New Applications</a>
 
-    <div class="card mt-4">
-        <div class="card-body">
-            <h5 class="card-title">Financial Summary</h5>
-            <p>Total Expenditure: <strong class="text-dark">₦{{ member_expenditure|floatformat:2|intcomma }}</strong></p>
-            <p>Total Markup: <strong class="text-dark">₦{{ markup_expenditure|floatformat:2|intcomma }}</strong></p>
-        </div>
-    </div>
-    
     {% if applications %}
     <div class="list-group mt-4">
         {% for app in applications %}
@@ -84,7 +76,7 @@
         {% endfor %}
     </div>
     {% else %}
-    <div class="alert alert-info text-center rounded-3" role="alert">
+    <div class="alert alert-info text-center rounded-3 mt-4" role="alert">
         You have not submitted any project finance applications yet.
     </div>
     {% endif %}

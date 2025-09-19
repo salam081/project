@@ -186,6 +186,11 @@
 </head>
 <body>
     
+    <p class="text-center mt-0 d-lg-flex justify-content-center">
+        <a href="{% url 'guest_request_consumable' %}" class="btn btn-outline-primary">
+            Click To Request Consumables As None Member
+        </a>
+    </p>
     <div class="login-container">
         <div class="login-card shadow">
             <div class="logo-section">
@@ -205,7 +210,7 @@
                 <h1 class="welcome-text">Enter Your Login Details</h1>
 
             </div>
-
+             
             <form method="POST">
                 {% csrf_token %}
                 <div class="col-md-12 mb-3">

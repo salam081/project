@@ -1,4 +1,5 @@
 <!-- Sidebar -->
+
 <nav class="sidebar shadow" id="sidebar" aria-label="Sidebar Navigation">
     {% comment %} <div class="sidebar-header">
         <h4 class="sidebar-title">
@@ -121,6 +122,10 @@
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="consumableSubmenu">
+                 <a href="{% url 'consumable_dashboard' %}" class="nav-link" >
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="nav-text">dashboard</span>
+                </a> 
                   <a href="{% url 'admin_loan_settings' %}" class="nav-link" >
                     <i class="bi bi-sliders"></i>
                     <span class="nav-text">Consumable Settings</span>
@@ -129,19 +134,16 @@
                     <i class="bi bi-wallet2"></i> 
                     <span class="nav-text">Consumable Form Fee</span>
                 </a>
-                {% comment %} <a href="{% url 'consumable_dashboard' %}" class="nav-link" >
-                    <i class="bi bi-speedometer2"></i>
-                    <span class="nav-text">dashboard</span>
-                </a> {% endcomment %}
+               
                 <a href="{% url 'add_consumable_type' %}" class="nav-link" >
                     <i class="bi bi-plus-circle"></i> 
                     <span class="nav-text">Add Consumable Type</span>
                 </a>
                
-                 {% comment %} <a href="{% url 'consumable_items'  %}" class="nav-link" >
+                <a href="{% url 'item_list'  %}" class="nav-link" >
                    <i class="bi bi-check-circle"></i> 
                     <span class="nav-text">Management Items</span>
-                </a> {% endcomment %}
+                </a> 
                 {% comment %} <a href="{% url 'loan_fee' %}" class="nav-link" >
                     <i class="bi bi-person"></i>
                     <span class="nav-text">Consumable fee</span>
@@ -289,6 +291,10 @@
             <a href="{% url 'list_withdrawal_requests' %}" class="nav-link" >
                 <i class="bi bi-people"></i>
                 <span class="nav-text">Withdrawal Requests List</span>
+            </a>
+            <a href="{% url 'member_active_requests' %}" class="nav-link" >
+                <i class="bi bi-people"></i>
+                <span class="nav-text">Active Requests</span>
             </a>
         </div> 
         <!-- Users -->

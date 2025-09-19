@@ -19,6 +19,9 @@ urlpatterns = [
     path('members_by_consumable_type/<int:id>/', views.members_by_consumable_type, name='members_by_consumable_type'),
     path('add_single_consumable_payment/', views.add_single_consumable_payment, name='add_single_consumable_payment'),
     path('upload_consumable_payment/', views.upload_consumable_payment, name='upload_consumable_payment'),
+
+    path("items/", views.item_list_with_requests, name="item_list"),
+    path("item/<int:item_id>/requests/", views.item_request_list, name="item_request_list"),
     
 
 ]

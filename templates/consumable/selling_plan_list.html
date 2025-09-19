@@ -30,9 +30,9 @@
                        <td>
                            <div class="d-flex gap-2">
                            <a href="{% url 'selling_plan_detail' plan.pk %}" class="btn btn-sm btn-info p-1 me-1">view</a>
-                            <a href="{% url 'adjustment_create' plan.id %}" class="btn btn-sm btn-warning p-1 me-1">
+                            {% comment %} <a href="{% url 'adjustment_create' plan.id %}" class="btn btn-sm btn-warning p-1 me-1">
                             AdjustPrice
-                            </a>
+                            </a> {% endcomment %}
                        </td>
                    </tr>
                {% empty %}

@@ -86,7 +86,7 @@
                                 {% for request_obj in consumables_list %}
                                     <tr>
                                         <td>#{{ request_obj.id }}</td>
-                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.user.get_full_name|default:request_obj.user.username }}</td>
+                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.user.first_name }} {{ request_obj.user.last_name }}</td>
                                         <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.consumable_type.name }}</td>
                                         <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.calculate_total_price }}</td>
                                         <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.date_created|date:'M j, Y, P' }}</td>

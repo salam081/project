@@ -144,10 +144,10 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Approved Amount</th>
-                        <th>Monthly Payment</th>
-                        <th>Amount Paid</th>
-                        <th>Remaining Balance</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Approved Amount</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Monthly Payment</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Amount Paid</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Remaining Balance</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,16 +173,16 @@
                     <tr>
                     <th>Date</th>
                     <!-- <th>Items</th> -->
-                    <th>Approved Amount</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Approved Amount</th>
                     <th>Paid</th>
                     <th>Balance</th>
-                    <th>Monthly Payment</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Monthly Payment</th>
                 </tr>
                 </thead>
                 <tbody>
                     {% for item in approved_consumable %}
                 <tr>
-                    <td>{{ item.consumable.date_created|date:"M d, Y" }}</td>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ item.consumable.date_created|date:"M d, Y" }}</td>
                     <td>₦{{ item.approved_amount|floatformat:0|intcomma }}</td>
                     <td>₦{{ item.total_paid|floatformat:0|intcomma }}</td>
                     <td>₦{{ item.balance|floatformat:0|intcomma }}</td>

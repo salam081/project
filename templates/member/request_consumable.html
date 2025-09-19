@@ -68,101 +68,85 @@
     }
 
     .section-title {
-        font-size: 1.4rem;
+        font-size: 1.3rem;
         font-weight: 600;
-        color: var(--text-color);
-        margin: 40px 0 24px 0;
-        padding-bottom: 12px;
-        border-bottom: 2px solid var(--primary-color);
+        color: #333;
+        margin: 30px 0 16px 0;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 8px;
     }
 
+    /* === Updated Compact item cards === */
     #item-selection-container {
-        background: var(--background-light);
-        border-radius: 12px;
-        padding: 20px;
-        border: 1px solid var(--border-color);
-    }
-
-    .item-row {
-        display: flex;
-        align-items: center;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 12px;
-        padding: 15px;
-        background: white;
-        border-radius: 8px;
-        margin-bottom: 12px;
+        margin-bottom: 20px;
+    }
+
+    .item-card {
         border: 1px solid var(--border-color);
-        transition: all 0.3s ease;
-    }
-
-    .item-row:hover {
-        border-color: var(--primary-color);
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
-    }
-
-    .item-row input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
-        accent-color: var(--primary-color);
-    }
-
-    .item-info {
-        flex: 1;
+        border-radius: 10px;
+        padding: 10px;
+        background: #fff;
+        transition: all 0.2s ease;
         display: flex;
         flex-direction: column;
     }
-    
-    .item-info label {
-        font-weight: 500;
-        color: var(--text-color);
-        margin: 0;
+
+    .item-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    }
+
+    .item-header {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .item-header label {
+        font-weight: 600;
+        margin-left: 8px;
         cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .item-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
     }
 
     .price {
         font-weight: 600;
         color: #28a745;
+        font-size: 0.9rem;
+        white-space: nowrap;
     }
 
     .stock-info {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: var(--label-color);
-        margin-top: 4px;
+        white-space: nowrap;
     }
 
-    .quantity-control {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .item-row input[type="number"] {
-        width: 100px;
-        padding: 8px 12px;
+    .quantity-control input[type="number"] {
+        width: 60px;
+        padding: 4px 8px;
         border: 2px solid var(--border-color);
         border-radius: 6px;
-        font-size: 0.9rem;
-        transition: all 0.3s ease;
+        font-size: 0.85rem;
     }
 
-    .item-row input[type="number"]:disabled {
-        background: var(--background-light);
-        color: var(--label-color);
-        cursor: not-allowed;
-    }
-
-    .item-row input[type="number"]:focus {
-        outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-    }
-
-    .no-items {
-        text-align: center;
-        color: var(--label-color);
-        font-style: italic;
-        padding: 40px;
+    .total-summary {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #333;
+        margin-top: 15px;
+        text-align: right;
     }
 
     .submit-btn {
@@ -176,65 +160,13 @@
         cursor: pointer;
         transition: all 0.3s ease;
         display: block;
-        margin: 40px auto 0;
+        margin: 30px auto 0;
         min-width: 200px;
     }
 
     .submit-btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-    }
-
-    .submit-btn:active {
-        transform: translateY(0);
-    }
-
-    /* === Mobile Styles === */
-    @media (max-width: 768px) {
-        .content-card {
-            padding: 20px;
-        }
-
-        .form-header h2 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .section-title {
-            font-size: 1.2rem;
-            margin: 30px 0 16px 0;
-        }
-
-        /* Adjustments for a clean 2-column item layout */
-        .item-row {
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-            padding: 10px;
-        }
-
-        .item-row .form-check {
-            margin: 0;
-        }
-
-        .item-info {
-            flex: 1;
-            display: block; /* Change flex-direction to row/default */
-        }
-
-        .item-info label {
-            display: inline-block;
-        }
-        
-        .quantity-control {
-            flex-grow: 0;
-            justify-content: flex-end;
-        }
-
-        .item-row input[type="number"] {
-            width: 80px;
-        }
     }
 </style>
 
@@ -271,27 +203,39 @@
             <h3 class="section-title">Select Items</h3>
             <div id="item-selection-container">
                 {% for item in selling_plans %}
-                    <div class="item-row">
-                        <div class="form-check">
-                            <input type="checkbox" id="item_{{ item.id }}" name="selected_items" value="{{ item.id }}" class="form-check-input">
-                        </div>
-                        
-                        <div class="item-info">
+                    <div class="item-card">
+                        <div class="item-header">
+                            <input type="checkbox" id="item_{{ item.id }}"
+                                   name="selected_items"
+                                   value="{{ item.id }}"
+                                   class="item-checkbox"
+                                   data-price="{{ item.selling_price_per_unit }}"
+                                   data-stock="{{ item.quantity }}">
                             <label for="item_{{ item.id }}">
-                                {{ item.purchased_item.item_name }} - <span class="price">₦{{ item.selling_price_per_unit|floatformat:0 }}</span>
+                                {{ item.purchased_item.item_name }}
                             </label>
-                            <span class="stock-info">
-                                Stock: {{ item.quantity }}
-                            </span>
                         </div>
-                        
-                        <div class="quantity-control">
-                            <input type="number" name="quantity_{{ item.id }}" placeholder="Qty" min="1" disabled>
+                        <div class="item-details">
+                            <div class="price">₦{{ item.selling_price_per_unit|floatformat:0 }}</div>
+                            <div class="stock-info">Stock: {{ item.quantity }}</div>
+                            <div class="quantity-control">
+                                <input type="number"
+                                       name="quantity_{{ item.id }}"
+                                       class="quantity-input"
+                                       placeholder="Qty"
+                                       min="1"
+                                       max="{{ item.quantity }}"
+                                       disabled>
+                            </div>
                         </div>
                     </div>
                 {% empty %}
                     <p class="no-items">No items are currently available.</p>
                 {% endfor %}
+            </div>
+
+            <div class="total-summary">
+                Total: ₦<span id="totalAmount">0</span>
             </div>
 
             <button type="submit" class="submit-btn">Submit Request</button>
@@ -301,37 +245,45 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const itemContainer = document.getElementById('item-selection-container');
-        
-        itemContainer.addEventListener('change', function(event) {
-            if (event.target.type === 'checkbox') {
-                const checkbox = event.target;
-                const itemRow = checkbox.closest('.item-row');
-                const quantityInput = itemRow.querySelector('input[type="number"]');
-                
-                if (quantityInput) {
-                    quantityInput.disabled = !checkbox.checked;
-                    
-                    if (checkbox.checked) {
-                        quantityInput.focus();
-                        quantityInput.required = true;
-                        quantityInput.value = 1;
-                    } else {
-                        quantityInput.required = false;
-                        quantityInput.value = '';
-                    }
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const totalAmountEl = document.getElementById('totalAmount');
+
+        function updateTotal() {
+            let total = 0;
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const itemCard = cb.closest('.item-card');
+                    const qtyInput = itemCard.querySelector('.quantity-input');
+                    const price = parseFloat(cb.dataset.price) || 0;
+                    const qty = parseInt(qtyInput.value) || 0;
+                    total += price * qty;
                 }
-            }
+            });
+            totalAmountEl.textContent = total.toLocaleString();
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const itemCard = cb.closest('.item-card');
+                const qtyInput = itemCard.querySelector('.quantity-input');
+                qtyInput.disabled = !cb.checked;
+                if (cb.checked) {
+                    qtyInput.value = 1;
+                } else {
+                    qtyInput.value = '';
+                }
+                updateTotal();
+            });
         });
 
-        // Add smooth scrolling for form submission
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function(e) {
-            const submitBtn = document.querySelector('.submit-btn');
-            submitBtn.style.transform = 'scale(0.98)';
-            setTimeout(() => {
-                submitBtn.style.transform = 'scale(1)';
-            }, 150);
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const maxStock = parseInt(input.getAttribute('max')) || 0;
+                if (parseInt(input.value) > maxStock) {
+                    input.value = maxStock;
+                }
+                updateTotal();
+            });
         });
     });
 </script>

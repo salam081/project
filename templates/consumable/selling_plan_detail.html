@@ -84,33 +84,33 @@
         </div>
 
         <div class="col-md-4">
-            {% if potential_profit is not None %}
-            <div class="card">
-                <div class="card-header {% if potential_profit >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
-                    <h5 class="mb-0 text-white">Profit Analysis</h5>
+           {% if potential_profit is not None %}
+                <div class="card">
+                    <div class="card-header {% if potential_profit >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
+                        <h5 class="mb-0 text-white">Profit Analysis</h5>
+                    </div>
+                    <div class="card-body text-start">
+                        <small class="fs-8 mt-2 text-dark">
+                            <p>Unit Cost Of Purchase: <strong>₦{{ selling_plan.purchased_item.cost_per_unit|floatformat:2 }}</strong></p>
+                            <p>Expenditure: <strong>₦{{ selling_plan.purchased_item.expenditure_amount|floatformat:2 }}</strong></p>
+                            <p>Purchase Cost (for sold qty): ₦<strong>{{ total_purchase_cost|floatformat:2 }}</strong></p>
+                            <p>Selling Price per Unit: <strong>₦{{ selling_plan.selling_price_per_unit|floatformat:2 }}</strong></p>
+                            <p>Total Expected Revenue: <strong>₦{{ selling_plan.total_sale_value|floatformat:2 }}</strong></p>
+                        </small>
+                        <p class="mb-0 text-center">
+                            {% if potential_profit >= 0 %}
+                                Expected Profit
+                            {% else %}
+                                Potential Loss
+                            {% endif %}
+                        </p>
+                        <h3 class="text-center {% if potential_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            ₦{{ potential_profit|floatformat:2 }}
+                        </h3>
+                    </div>
                 </div>
-                <div class="card-body text-strat">
-                    <small class="fs-8 mt-2 text-dark">
-                       <p>Unit Cost Of Purchase: <strong>₦{{ selling_plan.purchased_item.unit_price|floatformat:2 }} </strong></p>  
-                       <p>Expenditure: <strong>₦{{ selling_plan.purchased_item.expenditure_amount|floatformat:2 }}</strong> </p> 
-                       <p>Purchase Cost: ₦ <strong> {{ total_purchase_cost|floatformat:2 }}</strong> </p> 
-                       <p>Selling Price: <strong>₦{{ selling_plan.selling_price_per_unit|floatformat:2 }}</strong> </p> 
-                       <p>Total Expected Revenue: <strong> ₦{{ selling_plan.total_sale_value|floatformat:2 }}</strong></p> 
-                    </small>
-                     <p class="mb-0 text-center">
-                        {% if potential_profit >= 0 %}
-                            Expected Profit
-                        {% else %}
-                            Potential Loss
-                        {% endif %}
-                    </p>
-                     <h3 style="text-align: center;" class="{% if potential_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
-                       ₦{{ potential_profit|floatformat:2 }}
-                    </h3>
-                    
-                </div>
-            </div>
             {% endif %}
+
 
             <div class="card mt-4">
                 <div class="card-header">
@@ -118,9 +118,10 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{% url 'selling_plan_update' selling_plan.pk %}" class="btn btn-primary">
-                            Edit Plan
+                        <a href="{% url 'adjustment_create' selling_plan.pk %}" class="btn btn-warning btn-sm">
+                            Adjust Selling Price
                         </a>
+
                         <!-- {# Uncomment this if you add a status field to SellingPlan #}
                         {#  -->
                         <!-- {% if selling_plan.status == 'planned' %}

@@ -33,6 +33,7 @@ class ConsumablePurchasedRequest(models.Model):
         return f"{self.requested_by} | ₦{self.amount_requested} | {self.status}"
 
 
+
 class PurchasedItem(models.Model):
     consumable_purchased_request = models.ForeignKey(ConsumablePurchasedRequest, on_delete=models.CASCADE, related_name='items'  )
     item_name = models.CharField(max_length=255)
@@ -50,18 +51,30 @@ class PurchasedItem(models.Model):
         super().save(*args, **kwargs)
 
     @property
+    def cost_per_unit(self):
+        """
+        Returns the cost per unit, including proportional expenditure allocation.
+        """
+        if self.quantity > 0:
+            return (self.unit_price + (self.expenditure_amount / self.quantity))
+        return self.unit_price
+
+    @property
     def total_price(self):
-        return self.quantity * self.unit_price + self.expenditure_amount
+        """
+        Returns the total price including expenditure for all purchased quantity.
+        """
+        return (self.unit_price * self.quantity) + self.expenditure_amount
+
     
     def __str__(self):
         return f"{self.item_name}  | ₦{self.unit_price} | ₦{self.consumable_purchased_request} | {self.quantity}"
 
 
 class SellingPlan(models.Model):
-    purchased_item = models.OneToOneField(PurchasedItem, on_delete=models.CASCADE, related_name='selling_plan')
+    purchased_item = models.OneToOneField( PurchasedItem,  on_delete=models.CASCADE,  related_name='selling_plan')
     selling_price_per_unit = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.IntegerField()
-    description = models.ForeignKey(PurchasedItem, on_delete=models.CASCADE, null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     date_created = models.DateField(auto_now_add=True)
     notes = models.TextField(blank=True, null=True)
@@ -74,8 +87,19 @@ class SellingPlan(models.Model):
     
     @property
     def total_profit(self):
-        return sum(detail.profit for detail in self.details.all())
+        # ✅ Just return stored profit (safe fallback)
+        return self.profit or 0
+    
+    def update_profit(self, save=True):
+        """Recalculate and update profit based on selling price & purchase cost"""
+        purchase_cost = (self.purchased_item.unit_price * self.quantity) + (self.purchased_item.expenditure_amount or 0)
+        new_profit = self.total_sale_value - purchase_cost
+        self.profit = new_profit
 
+        if save:
+            self.save(update_fields=["profit"])
+        return new_profit
+    
     def __str__(self):
         return f"{self.purchased_item} | ₦{self.selling_price_per_unit} | {self.quantity}"
 

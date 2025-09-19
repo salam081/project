@@ -43,7 +43,10 @@ class ConsumableRequest(models.Model):
     STATUS_CHOICES = [
         ('Pending', 'Pending'),('Approved', 'Approved'), ('Itempicked', 'Itempicked '),
         ('Declined', 'Declined'),('FullyPaid', 'FullyPaid'),]
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE,blank=True, null=True)
+    guest_name = models.CharField(max_length=255, blank=True, null=True)
+    guest_phone = models.CharField(max_length=20, blank=True, null=True)
+    guest_ippis = models.IntegerField(blank=True, null=True)
     consumable_type = models.ForeignKey(ConsumableType, on_delete=models.CASCADE, null=True, blank=True, related_name='consumables_type')
    
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
@@ -53,7 +56,9 @@ class ConsumableRequest(models.Model):
     
     
     def __str__(self):
-        return f"Request #{self.id} by {self.user.username}"
+        if self.user:
+            return f"Request #{self.id} by {self.user.username}"
+        return f"Request #{self.id} by Guest ({self.guest_name})"
     
     def calculate_total_price(self):
         return sum(detail.total_price for detail in self.details.all())
@@ -149,3 +154,11 @@ class ConsumableFormFee(models.Model):
         return f"{self.member.member.first_name} {self.member.member.last_name} - ₦{self.form_fee}"
 
 
+
+class PickedLog(models.Model):
+    request_detail = models.ForeignKey( ConsumableRequestDetail, on_delete=models.CASCADE, related_name="picked_logs")
+    picked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    picked_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.request_detail.selling_item.purchased_item.item_name} picked for Req#{self.request_detail.request.id}"

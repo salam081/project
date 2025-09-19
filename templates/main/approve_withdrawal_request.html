@@ -1,0 +1,40 @@
+{% extends "base/base.html" %}
+{% block content %}
+<h3>Approve Withdrawal Request</h3>
+
+<p><strong>Member:</strong> {{ withdrawal_request.member }}</p>
+<p><strong>Amount:</strong> {{ withdrawal_request.amount }}</p>
+
+<h4>Active Loans</h4>
+<ul>
+  {% for loan in active_loans %}
+    <li>{{ loan.product }} - {{ loan.requested_amount }} ({{ loan.status }})</li>
+  {% empty %}
+    <li>No active loans</li>
+  {% endfor %}
+</ul>
+
+<h4>Active Consumables</h4>
+<ul>
+  {% for con in active_consumables %}
+    <li>{{ con.consumable_type }} - {{ con.total_requested }} ({{ con.status }})</li>
+  {% empty %}
+    <li>No active consumables</li>
+  {% endfor %}
+</ul>
+
+<h4>Active Project Finance</h4>
+<ul>
+  {% for proj in active_project_finance %}
+    <li>{{ proj.application.product }} - {{ proj.requested_amount }} ({{ proj.status }})</li>
+  {% empty %}
+    <li>No active project finance requests</li>
+  {% endfor %}
+</ul>
+
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-success">Approve Withdrawal</button>
+  <a href="{% url 'list_withdrawal_requests' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

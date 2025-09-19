@@ -102,11 +102,12 @@ def member_dashboard(request):
         monthly_payment = active_loan.monthly_payment
         print(monthly_payment,monthly_payment)
     loan_types = LoanType.objects.all()
+    
     consumable_requests = ConsumableRequest.objects.filter(user=request.user) \
         .prefetch_related('details__item') \
         .order_by('-date_created')[:5]
 
-    approved_consumable = ConsumableRequest.objects.filter(user=request.user, status='Approved') \
+    approved_consumable = ConsumableRequest.objects.filter(user=request.user, status='itempicked') \
         .order_by('-date_created')
 
     total_remaining = 0

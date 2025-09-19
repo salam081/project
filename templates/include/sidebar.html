@@ -99,7 +99,7 @@
                 </a>
                 <a href="{% url 'loan_years_list'  %}" class="nav-link" >
                     <i class="bi bi-sliders"></i>
-                    <span class="nav-text">Loans With Requests </span>
+                    <span class="nav-text">Loans Type With Requests </span>
                 </a>
                 <a href="{% url 'all_reject_loan'  %}" class="nav-link" >
                     <i class="bi bi-check-circle"></i>
@@ -139,19 +139,19 @@
                     <i class="bi bi-plus-circle"></i> 
                     <span class="nav-text">Add Consumable Type</span>
                 </a>
-               
+                <a href="{% url 'admin_consumables_list' %}" class="nav-link" >
+                    <i class="bi bi-graph-up"></i> 
+                    <span class="nav-text">Approve  Requests</span>
+                </a>
                 <a href="{% url 'item_list'  %}" class="nav-link" >
                    <i class="bi bi-check-circle"></i> 
-                    <span class="nav-text">Management Items</span>
+                    <span class="nav-text">Items With Requests</span>
                 </a> 
                 {% comment %} <a href="{% url 'loan_fee' %}" class="nav-link" >
                     <i class="bi bi-person"></i>
                     <span class="nav-text">Consumable fee</span>
                 </a> {% endcomment %}
-                <a href="{% url 'admin_consumables_list' %}" class="nav-link" >
-                    <i class="bi bi-graph-up"></i> 
-                    <span class="nav-text">Approve  Requests</span>
-                </a>
+               
                 <a href="{% url 'consumable_types_with_requests' %}" class="nav-link" >
                     <i class="bi bi-eye"></i> 
                     <span class="nav-text">Consumables  with Requests </span>

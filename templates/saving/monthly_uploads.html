@@ -10,6 +10,7 @@
                 <tr>
                     <th>Month</th>
                     <th  class="text-nowrap text-truncate" style="max-width: 270px;">Total Members</th>
+                    <th  class="text-nowrap text-truncate" style="max-width: 270px;">Total Main Deductions</th>
                     <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Savings</th>
                     <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Subscription</th>
                     <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Loanable</th>
@@ -21,6 +22,7 @@
                 <tr>
                     <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ upload.month_only|date:"F Y" }}</td>
                     <td>{{ upload.total_members }}</td>
+                    <td>₦{{ upload.total_original_amount|floatformat:2|default:0|intcomma  }}</td>
                     <td>₦{{ upload.total_uploaded|floatformat:2|default:0|intcomma }}</td>
                     <td>₦{{ upload.total_interest|floatformat:2|default:0|intcomma }}</td>
                     <td>₦{{ upload.total_loanable|floatformat:2|default:0|intcomma }}</td>

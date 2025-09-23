@@ -1,0 +1,35 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Monthly Loan Finance Report</h2>
+
+    {% if monthly_loans %}
+    <table class="table table-bordered table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th>Month</th>
+                <th>Total Requested</th>
+                <th>Total Approved</th>
+                <th>Total Repaid</th>
+                <th>Net Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for loan in monthly_loans %}
+            <tr>
+                <td>{{ loan.month }}</td>
+                <td>₦{{ loan.total_requested|floatformat:2|intcomma }}</td>
+                <td>₦{{ loan.total_approved|floatformat:2|intcomma }}</td>
+                <td>₦{{ loan.total_repaid|floatformat:2|intcomma }}</td>
+                <td>₦{{ loan.net_balance|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>No loan data available for any month.</p>
+    {% endif %}
+</div>
+{% endblock %}

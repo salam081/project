@@ -23,5 +23,5 @@ urlpatterns = [
     # path('loan_fee',views.loan_fee,name="loan_fee"),
     path('loan/repayments/', views.admin_repayment_tracking, name='admin_repayment_tracking'),
    
-
+   path('loan-analytics/', views.loan_analytics_view, name='loan_analytics'),
 ]

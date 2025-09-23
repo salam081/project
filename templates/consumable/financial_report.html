@@ -1,0 +1,59 @@
+{% extends "base/base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Financial Report</h2>
+
+    <!-- Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3">
+                <h6>Total Revenue</h6>
+                <h4>₦{{ total_revenue|floatformat:2 }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3">
+                <h6>Total Purchase Cost</h6>
+                <h4>₦{{ total_purchase_cost|floatformat:2 }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3">
+                <h6>Total Profit</h6>
+                <h4>₦{{ total_profit|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card shadow-sm p-3">
+        <h5>Selling Plans</h5>
+        <table class="table table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Selling Price/Unit</th>
+                    <th>Total Revenue</th>
+                    <th>Purchase Cost</th>
+                    <th>Profit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plan in selling_plans %}
+                <tr>
+                    <td>{{ plan.purchased_item.item_name }}</td>
+                    <td>{{ plan.quantity }}</td>
+                    <td>₦{{ plan.selling_price_per_unit|floatformat:2 }}</td>
+                    <td>₦{{ plan.total_sale_value|floatformat:2 }}</td>
+                    <td>₦{{ plan.purchase_cost|floatformat:2 }}</td>
+                    <td>₦{{ plan.total_profit|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6">No selling plans recorded.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -25,699 +25,588 @@ from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from .models import ConsumablePurchasedRequest, PurchasedItem
 
 
+from decimal import Decimal, InvalidOperation
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q, Sum, F, ExpressionWrapper, DecimalField, FloatField
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.utils import timezone
+
+from .models import (
+    ConsumablePurchasedRequest,
+    PurchasedItem,
+    SellingPlan,
+    PurchasedItemAdjustment,
+    SellingPlanAdjustment,
+)
+from .forms import PurchasedItemForm  # adjust import if form name differs
+
+
+# --------------------------
+# PURCHASE DASHBOARD & CRUD
+# --------------------------
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q, Sum, F
+from django.db.models import Sum, F, DecimalField
+from django.db.models.functions import Coalesce
+from decimal import Decimal
+from django.http import JsonResponse, HttpResponseRedirect
+from django.urls import reverse
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+from decimal import Decimal
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+from .models import (
+    ConsumablePurchasedRequest, PurchasedItem, 
+    SellingPlan, PurchasedItemAdjustment,  SellingPlanAdjustment
+    )
 
 @login_required
 def purchase_consumable_dashboard(request):
-    if request.user.is_staff:
-        # For staff, we consider all requests
-        requests = ConsumablePurchasedRequest.objects.all()
-    else:
-        # For regular users, we filter by the user
-        requests = ConsumablePurchasedRequest.objects.filter(requested_by=request.user)
+    """Dashboard with overview statistics"""
+    # Summary statistics
+    total_requests = ConsumablePurchasedRequest.objects.count()
+    pending_requests = ConsumablePurchasedRequest.objects.filter(
+        status=ConsumablePurchasedRequest.STATUS_PENDING
+    ).count()
+    approved_requests = ConsumablePurchasedRequest.objects.filter(
+        status=ConsumablePurchasedRequest.STATUS_APPROVED
+    ).count()
+    
+    total_spent = PurchasedItem.objects.aggregate(
+        total=Sum(F('quantity') * F('unit_price') + F('expenditure_amount'))
+    )['total'] or Decimal('0')
+    
+    total_planned_revenue = SellingPlan.objects.filter(available=True).aggregate(
+        total=Sum(F('selling_price_per_unit') * F('quantity'))
+    )['total'] or Decimal('0')
+    print("total_planned_revenue",total_planned_revenue)
 
-    # Use a separate queryset for approved requests to ensure accurate financial calculations
-    approved_requests = requests.filter(status='approved')
+    total_planned_profit = SellingPlan.objects.filter(available=True).aggregate(
+        total=Sum('profit')
+    )['total'] or Decimal('0')
+    # print("total_planned_profit",total_planned_profit)
 
-    # --- Financial Calculations (optimized) ---
-    # Annotate the approved requests with the total spent for each request
-    approved_requests_annotated = approved_requests.annotate(
-        total_spent_per_request=Sum(
-            ExpressionWrapper(
-                F('items__quantity') * F('items__unit_price') + F('items__expenditure_amount'),
-                output_field=DecimalField()
-            )
-        )
-    )
-
-    # Aggregate the total approved amount and total spent from the annotated queryset
-    financial_summary = approved_requests_annotated.aggregate(
-        total_requested=Sum('approved_amount'),
-        total_spent=Sum('total_spent_per_request')
-    )
-
-    # Handle cases where there are no approved requests
-    total_requested = financial_summary['total_requested'] or 0
-    total_spent = financial_summary['total_spent'] or 0
-    balance_remaining = total_requested - total_spent
-
-    # --- Statistics (unchanged) ---
-    total_requests = requests.count()
-    pending_requests = requests.filter(status='pending').count()
-    approved_requests_count = approved_requests.count()
-    accounted_requests = requests.filter(status='accounted').count()
-
-    # --- Recent Requests (unchanged) ---
-    recent_requests = requests.order_by('-date_requested')[:10]
-
+    # Recent activity
+    recent_requests = ConsumablePurchasedRequest.objects.select_related('requested_by')[:5]
+    recent_items = PurchasedItem.objects.select_related('consumable_purchased_request')[:5]
+    recent_plans = SellingPlan.objects.select_related('purchased_item', 'created_by')[:5]
+    
     context = {
         'total_requests': total_requests,
         'pending_requests': pending_requests,
-        'approved_requests': approved_requests_count,
-        'accounted_requests': accounted_requests,
-        'total_requested': total_requested,
+        'approved_requests': approved_requests,
         'total_spent': total_spent,
-        'balance_remaining': balance_remaining,
+        'total_planned_revenue': total_planned_revenue,
+        'total_planned_profit': total_planned_profit,
         'recent_requests': recent_requests,
+        'recent_items': recent_items,
+        'recent_plans': recent_plans,
     }
-
-    return render(request, 'consumable/purchase_consumable_dashboard.html', context)
-
-# API Views for AJAX calls
-@login_required
-@require_http_methods(["GET"])
-def purchase_request_balance_api(request, pk):
-    """API endpoint to get request balance information"""
-    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
-    # Check permissions
-    if (
-    not (request.user.group and request.user.group.title == 'admin')
-    and consumable_request.requested_by != request.use):
-        messages.error(request, "You don’t have permission to perform this action.")
-    # if not request.user.is_staff and consumable_request.requested_by != request.user:
-        return JsonResponse({'error': 'Permission denied'}, status=403)
-    data = {
-        'amount_requested': float(consumable_request.amount_requested),
-        'total_spent': float(consumable_request.total_spent()),
-        'balance_remaining': float(consumable_request.balance_remaining()),
-        'is_fully_accounted': consumable_request.is_fully_accounted(),}
-    return JsonResponse(data)
+    return render(request, 'purchaseitem/purchase_dashboard.html', context)
+# ============== CONSUMABLE PURCHASE REQUEST VIEWS ==============
 
 @login_required
-def consumable_purchase_request_create(request):
-    if request.method == 'POST':
-        item = request.POST.get('item')
-        purpose = request.POST.get('purpose')
-        amount_requested = request.POST.get('amount_requested')
-        remarks = request.POST.get('remarks')
-
-        new_request = ConsumablePurchasedRequest.objects.create(
-            item=item,purpose=purpose,
-            requested_by = request.user,
-            amount_requested=amount_requested,
-            approved_amount=0,
-            remarks=remarks) 
-        new_request.save()   
-
-        messages.success(request, 'Item request created successfully!')
-        return redirect('consumable_purchase_request_detail', pk=new_request.pk)
-    return render(request, 'consumable/purchase_request_form.html',)
-
-
-@login_required
-def purchase_request_list(request):
-    """List all consumable requests with filtering and pagination"""
-    requests = ConsumablePurchasedRequest.objects.all().order_by('-date_requested')
+def consumable_purchase_request_list(request):
+    """List all consumable purchase requests with filtering"""
+    requests = ConsumablePurchasedRequest.objects.all()
     
-    # Filter by status
+    # Filtering
     status_filter = request.GET.get('status')
     if status_filter:
         requests = requests.filter(status=status_filter)
     
-    # Filter by user (for non-staff users, show only their requests)
-    if not request.user.is_staff :
-        requests = requests.filter(requested_by=request.user)
-    
-    # Search functionality
     search_query = request.GET.get('search')
     if search_query:
         requests = requests.filter(
+            Q(item__icontains=search_query) |
             Q(purpose__icontains=search_query) |
-            Q(requested_by__username__icontains=search_query) |
-            Q(remarks__icontains=search_query)
+            Q(requested_by__username__icontains=search_query)
         )
+    
     # Pagination
-    paginator = Paginator(requests, 10)
+    paginator = Paginator(requests, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    context = {'page_obj': page_obj,
+    context = {
+        'page_obj': page_obj,
         'status_choices': ConsumablePurchasedRequest.STATUS_CHOICES,
-        'current_status': status_filter,'search_query': search_query,}
-    return render(request, 'consumable/purchase_request_list.html', context)
+        'current_status': status_filter,
+        'search_query': search_query,
+    }
+    return render(request, 'purchaseitem/purchase_request_list.html', context)
 
 @login_required
 def consumable_purchase_request_detail(request, pk):
-    """View details of a specific consumable request"""
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
     
-    # Check permissions
-    if (not (request.user.group and request.user.group.title == 'admin')
-         and consumable_request.requested_by != request.user):
-   
-    # if not request.user.is_staff and consumable_request.requested_by != request.user:
-        messages.error(request, "You don't have permission to view this request.")
-        return redirect('consumable_request_list')
-    
-    purchased_items = consumable_request.items.all()
-    
-    context = {
-        'consumable_request': consumable_request,
-        'purchased_items': purchased_items,
-        'total_spent': consumable_request.total_spent(),
-        'balance_remaining': consumable_request.balance_remaining(),}
-    return render(request, 'consumable/purchase_request_detail.html', context)
-
-
-@login_required
-def purchase_consumable_request_update(request, pk):
-    """Update a consumable request"""
-    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
-
-    if (
-        not (request.user.group and request.user.group.title == 'admin')
-        and consumable_request.requested_by != request.user
-    ):
-        messages.error(request, "You don't have permission to edit this request.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-
-    if consumable_request.status != 'pending':
-        messages.error(request, "Cannot edit request that has been approved or accounted.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-
-    if request.method == 'POST':
-        item = request.POST.get('item')
-        purpose = request.POST.get('purpose')
-        amount_requested = request.POST.get('amount_requested')
-        remarks = request.POST.get('remarks')
-
-        consumable_request.item = item
-        consumable_request.purpose = purpose
-        consumable_request.amount_requested = amount_requested or 0
-        consumable_request.remarks = remarks
-        consumable_request.approved_amount = 0  # reset approval
-        consumable_request.requested_by = request.user  # keep the requesting user
-        consumable_request.save()
-
-        messages.success(request, "Consumable request updated successfully.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-
-    context = {
-        'title': 'Update Consumable Request',
-        'consumable_request': consumable_request,
-    }
-    return render(request, 'consumable/purchase_update_form.html', context)
-
-@login_required
-def consumable_purchase_request_delete(request, pk):
-    """Delete a consumable request"""
-    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
-    
-    # Check permissions
-    if (not (request.user.group and request.user.group.title == 'admin')
-    and consumable_request.requested_by != request.user):
-   
-        messages.error(request, "You don't have permission to delete this request.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-    
-    # Only allow deletion if request is pending
-    if consumable_request.status != 'pending':
-        messages.error(request, "Cannot delete request that has been approved or accounted.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-    
-    if request.method == 'POST':
-        consumable_request.delete()
-        messages.success(request, 'Consumable request deleted successfully!')
-        return redirect('purchase_request_list')
-    
-    return render(request, 'consumables/purchase_request_confirm_delete.html', {
-        'consumable_request': consumable_request
-    })
-
-@login_required
-def consumable_purchase_request_approve(request, pk):
-    if not request.user.is_staff:
-        messages.error(request, "You don't have permission to approve requests.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-
-    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
-
-    if consumable_request.status != 'pending':
-        messages.error(request, "Request has already been processed.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-    
-    if request.method == 'POST':
-        approved_amount = request.POST.get('approved_amount')
-
-        try:
-            approved_amount = float(approved_amount)
-        except (TypeError, ValueError):
-            messages.error(request, 'Invalid approved amount.')
-            return redirect('consumable_purchase_request_approve', pk=pk)
-        consumable_request.status = 'approved'
-        consumable_request.approved_amount = approved_amount
-        consumable_request.approved_by = request.user
-        consumable_request.date_approved = timezone.now().date()
-        consumable_request.save()
-
-        messages.success(request, 'Request approved successfully!')
-        return redirect('consumable_purchase_request_detail', pk=pk)
-    context =  {'consumable_request': consumable_request}
-    return render(request, 'consumable/purchase_request_approve.html',context)
-
-
-@login_required
-def purchased_item_create(request, request_pk):
-    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=request_pk)
-
-    # Access checks: admin or the user who requested the purchase
-    if not (hasattr(request.user, "group") and request.user.group and request.user.group.title == "admin") \
-       and consumable_request.requested_by != request.user:
-        messages.error(request, "You don't have permission to add items to this request.")
-        return redirect("consumable_purchase_request_detail", pk=request_pk)
-
-    # Only allow adding items to approved requests
-    if consumable_request.status != "approved":
-        messages.error(request, "Only approved requests can have purchased items.")
-        return redirect("consumable_purchase_request_detail", pk=request_pk)
-
-    # Use the model property to compute what's already spent (single source of truth)
-    total_spent = sum(i.total_price for i in consumable_request.items.all()) or Decimal("0.00")
-    approved_amount = consumable_request.approved_amount or Decimal("0.00")
-    balance_remaining = approved_amount - Decimal(total_spent)
-
-    if balance_remaining <= 0:
-        messages.warning(request, f"₦{approved_amount:.2f} already spent. No balance remaining.")
-        return redirect("consumable_purchase_request_detail", pk=request_pk)
-
-    if request.method == "POST":
-        form = PurchasedItemForm(request.POST, request.FILES)
-        if form.is_valid():
-            item = form.save(commit=False)
-
-            # attach to the correct ConsumablePurchasedRequest
-            item.consumable_purchased_request = consumable_request
-
-            # set optional fields only if they exist on the model (defensive)
-            if hasattr(item, "requested_by"):
-                item.requested_by = request.user
-            if hasattr(item, "date_added"):
-                item.date_added = timezone.now()
-
-            # Prefer the model property for the new item total if available
-            try:
-                new_item_total = item.total_price
-            except Exception:
-                # fallback if total_price property isn't accessible before save
-                new_item_total = (item.quantity * item.unit_price) + item.expenditure_amount
-
-            if new_item_total > balance_remaining:
-                messages.error(
-                    request,
-                    f"This item (₦{new_item_total:.2f}) exceeds the remaining balance (₦{balance_remaining:.2f})."
-                )
-                return redirect("consumable_purchase_request_detail", pk=request_pk)
-
-            item.save()
-            messages.success(request, "Purchased item added successfully!")
-            return redirect("consumable_purchase_request_detail", pk=request_pk)
-    else:
-        form = PurchasedItemForm()
-
-    context = {
-        "form": form,
-        "consumable_request": consumable_request,
-        "title": "Add Purchased Item",
-        "balance_remaining": balance_remaining,
-        "total_spent": total_spent,
-    }
-    return render(request, "consumable/item_form.html", context)
-
-
-@login_required
-def purchased_item_update(request, request_pk, item_pk):
-    """Update a specific purchased item associated with a request."""
-    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=request_pk)
-    item = get_object_or_404(PurchasedItem, pk=item_pk, consumable_purchased_request=consumable_request)
-
-    # Permission check
-    if (not (request.user.group and request.user.group.title == 'admin')
-            and consumable_request.requested_by != request.user):
-        messages.error(request, "You don't have permission to modify this item.")
-        return redirect('consumable_purchase_request_detail', pk=request_pk)
-
-    # Status check
-    if consumable_request.status != 'approved':
-        messages.error(request, "Only approved requests can have purchased items updated.")
-        return redirect('consumable_purchase_request_detail', pk=request_pk)
-
-    # Calculate total spent excluding current item
-    other_items_total = consumable_request.items.exclude(pk=item_pk).aggregate(
-        total=Sum(
-            ExpressionWrapper(
-                F('quantity') * F('unit_price') + F('expenditure_amount'),
+    # Calculate correct total including expenditure
+    total_spent_correct = consumable_request.items.aggregate(
+        total=Coalesce(
+            Sum(
+                F('quantity') * F('unit_price') + F('expenditure_amount'), 
                 output_field=DecimalField()
-            )
+            ),
+            Decimal('0')
         )
-    )['total'] or 0
-
-    approved_amount = consumable_request.approved_amount or 0
-    balance_remaining = approved_amount - other_items_total
-
-    if request.method == 'POST':
-        #  Ensure unit_price stays locked (exclude from form if needed)
-        post_data = request.POST.copy()
-        post_data['unit_price'] = item.unit_price  # force old price
-        form = PurchasedItemForm(post_data, request.FILES, instance=item)
-
-        if form.is_valid():
-            updated_item = form.save(commit=False)
-            new_item_total = (updated_item.quantity * updated_item.unit_price) + updated_item.expenditure_amount
-
-            if new_item_total > balance_remaining:
-                messages.error(
-                    request,
-                    f"This item (₦{new_item_total:.2f}) exceeds the remaining balance "
-                    f"(₦{balance_remaining:.2f})."
-                )
-                return redirect('consumable_purchase_request_detail', pk=request_pk)
-
-            updated_item.save()
-            messages.success(request, 'Purchased item updated successfully!')
-            return redirect('consumable_purchase_request_detail', pk=request_pk)
-    else:
-        # Pre-populate but keep unit_price disabled
-        form = PurchasedItemForm(instance=item)
-        form.fields['unit_price'].disabled = True  # prevent editing in UI
-
+    )['total']
+    
     context = {
-        'form': form,
         'consumable_request': consumable_request,
-        'item': item,
-        'title': 'Update Purchased Item',
-        'balance_remaining': balance_remaining,
+        'total_spent_correct': total_spent_correct,
     }
-    return render(request, 'consumable/item_form.html', context)
+    return render(request, 'purchaseitem/purchase_request_detail.html', context)
+
+
+@login_required
+def consumable_purchase_request_create(request):
+    if request.method == 'POST':
+        try:
+            consumable_request = ConsumablePurchasedRequest(
+                requested_by=request.user,
+                item=request.POST.get('item', '').strip(),
+                purpose=request.POST.get('purpose', '').strip(),
+                amount_requested=Decimal(request.POST.get('amount_requested', '0')),
+                remarks=request.POST.get('remarks', '').strip()
+            )
+            consumable_request.full_clean()
+            consumable_request.save()
+            
+            messages.success(request, 'Consumable purchase request created successfully!')
+            return redirect('consumable_purchase_request_detail', pk=consumable_request.pk)
+            
+        except (ValueError, ValidationError) as e:
+            messages.error(request, f'Error creating request: {str(e)}')
+
+    return render(request, 'purchaseitem/purchase_item_form.html', { 'title': 'Create New Consumable Request'})
+
+
+@login_required
+def consumable_request_edit(request, pk):
+    """Edit existing consumable purchase request"""
+    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
+    
+    if not consumable_request.can_be_modified():
+        messages.error(request, 'This request cannot be modified.')
+        return redirect('consumable_request_detail', pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            consumable_request.item = request.POST.get('item', '').strip()
+            consumable_request.purpose = request.POST.get('purpose', '').strip()
+            consumable_request.amount_requested = Decimal(request.POST.get('amount_requested', '0'))
+            consumable_request.remarks = request.POST.get('remarks', '').strip()
+            
+            consumable_request.full_clean()
+            consumable_request.save()
+            
+            messages.success(request, 'Request updated successfully!')
+            return redirect('consumable_request_detail', pk=pk)
+            
+        except (ValueError, ValidationError) as e:
+            messages.error(request, f'Error updating request: {str(e)}')
+    
+    context = {
+        'consumable_request': consumable_request,
+        'title': 'Edit Consumable Request'
+    }
+    return render(request, 'purchaseitem/request_form.html', context)
+
+
+@login_required
+def consumable_purchase_approve(request, pk):
+    """Approve consumable purchase request"""
+    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            approved_amount = Decimal(request.POST.get('approved_amount', '0'))
+            consumable_request.approve(approved_amount, request.user)
+            
+            messages.success(request, 'Request approved successfully!')
+            return redirect('consumable_purchase_request_detail', pk=pk)
+            
+        except (ValueError, ValidationError) as e:
+            messages.error(request, f'Error approving request: {str(e)}')
+    
+    context = {
+        'consumable_request': consumable_request,
+    }
+    return render(request, 'purchaseitem/purchase_request_approve.html', context)
+
 
 @login_required
 def consumable_request_mark_accounted(request, pk):
-    """Mark a consumable request as fully accounted"""
+    """Mark consumable request as fully accounted"""
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
-    # Check permissions
-    if (not (request.user.group and request.user.group.title == 'admin')
-        and consumable_request.requested_by != request.user):
-        messages.error(request, "You don't have permission to modify this request.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-    
-    if consumable_request.status != 'approved':
-        messages.error(request, "Request must be approved before marking as accounted.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
     
     if request.method == 'POST':
-        consumable_request.status = 'accounted'
-        consumable_request.requested_by = request.user
-        consumable_request.date_requested = timezone.now()
-        consumable_request.save()
-        messages.success(request, 'Consumable request marked as fully accounted!')
-        return redirect('consumable_purchase_request_detail', pk=pk)
+        try:
+            consumable_request.mark_as_accounted()
+            messages.success(request, 'Request marked as fully accounted!')
+            return redirect('consumable_request_detail', pk=pk)
+            
+        except ValidationError as e:
+            messages.error(request, f'Error: {str(e)}')
     
-    return render(request, 'consumable/purchase_request_mark_accounted.html', {'consumable_request': consumable_request})
+    return redirect('consumable_request_detail', pk=pk)
 
+
+# ============== PURCHASED ITEM VIEWS ==============
+@login_required
+def purchased_item_create(request, request_pk):
+    """Add new purchased item to a request"""
+    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=request_pk)
+    
+    if request.method == 'POST':
+        try:
+            quantity = int(request.POST.get('quantity', 0))
+            unit_price = Decimal(request.POST.get('unit_price', '0'))
+            expenditure_amount = Decimal(request.POST.get('expenditure_amount', '0'))
+            
+            # Calculate total cost for validation
+            item_total = (quantity * unit_price) + expenditure_amount
+            
+            # Check if item can be added
+            can_add, message = consumable_request.can_add_item(item_total)
+            if not can_add:
+                messages.error(request, message)
+                return render(request, 'purchaseitem/create_purchased_item_form.html', {
+                    'consumable_request': consumable_request,
+                    'title': 'Add Purchased Item'
+                })
+            
+            item = PurchasedItem(
+                consumable_purchased_request=consumable_request,
+                item_name=request.POST.get('item_name', '').strip(),
+                description=request.POST.get('description', '').strip(),
+                quantity=quantity,
+                unit_price=unit_price,
+                expenditure_amount=expenditure_amount,
+                receipt=request.FILES.get('receipt')
+            )
+            item.full_clean()
+            item.save()
+            
+            messages.success(request, 'Purchased item added successfully!')
+            return redirect('consumable_purchase_request_detail', pk=request_pk)
+            
+        except (ValueError, ValidationError) as e:
+            messages.error(request, f'Error adding item: {str(e)}')
+    
+    context = {
+        'consumable_request': consumable_request,
+        'title': 'Add Purchased Item'
+    }
+    return render(request, 'purchaseitem/create_purchased_item_form.html', context)
 
 
 @login_required
-def selling_plan_list(request):
-    """Display list of all selling plans with search and filtering"""
-    selling_plans = SellingPlan.objects.select_related('purchased_item', 'created_by').all()
+def purchased_item_list(request):
+    """List all purchased items"""
+    items = PurchasedItem.objects.select_related('consumable_purchased_request')
     
-    # Search
-    search_query = request.GET.get('search', '')
+    # Filtering
+    search_query = request.GET.get('search')
     if search_query:
-        selling_plans = selling_plans.filter(
-            Q(purchased_item__name__icontains=search_query) |
-            Q(notes__icontains=search_query)
+        items = items.filter(
+            Q(item_name__icontains=search_query) |
+            Q(description__icontains=search_query)
         )
     
-    # Date range filtering
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-    if date_from:
-        selling_plans = selling_plans.filter(date_created__gte=date_from)
-    if date_to:
-        selling_plans = selling_plans.filter(date_created__lte=date_to)
+    request_id = request.GET.get('request_id')
+    if request_id:
+        items = items.filter(consumable_purchased_request_id=request_id)
     
-    # Annotate with line total
-    selling_plans = selling_plans.annotate(
-        line_total=ExpressionWrapper(
-            F('selling_price_per_unit') * F('quantity'),
-            output_field=FloatField()
-        )
-    )
-    
-    # Calculate total sale value
-    total_value = selling_plans.aggregate(total=Sum('line_total'))['total'] or 0
     # Pagination
-    paginator = Paginator(selling_plans, 20)
+    paginator = Paginator(items, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
-        'date_from': date_from,'date_to': date_to,
-        'total_value': total_value,}
-    return render(request, 'consumable/selling_plan_list.html', context)
+        'request_id': request_id,
+    }
+    return render(request, 'purchaseitem/purchased_item_list.html', context)
 
 
 @login_required
-def selling_plan_create(request, pk):
-    purchased_item = get_object_or_404(PurchasedItem, pk=pk)
-    if (
-        not ( request.user.group  and request.user.group.title in ['admin', 'staff'])
-        and purchased_item.consumable_purchased_request.requested_by != request.user
-    ):
-        messages.error(request, "You don't have permission to create this selling plan.")
-        return redirect('consumable_purchase_request_detail', pk=purchased_item.consumable_purchased_request.pk)
+def purchased_item_detail(request, pk):
+    """Detail view for purchased item"""
+    item = get_object_or_404(PurchasedItem, pk=pk)
+    adjustments = item.adjustments.all()
+    context = {'item': item,'adjustments': adjustments,}
+    return render(request, 'purchaseitem/purchased_item_detail.html', context)
 
-    # ✅ Prevent duplicate selling plan
-    if hasattr(purchased_item, "selling_plan"):
-        messages.warning(request, "A selling plan already exists for this item.")
-        return redirect('selling_plan_detail', pk=purchased_item.selling_plan.pk)
-
-    profit = None
-    total_sale_amount = None
-    total_purchase_cost = None
-
+@login_required
+def purchased_item_edit(request, pk):
+    """Edit purchased item"""
+    item = get_object_or_404(PurchasedItem, pk=pk)
+    
     if request.method == 'POST':
-        form = SellingPlanForm(request.POST)
-        if form.is_valid():
-            unit_price = form.cleaned_data['selling_price_per_unit']
-            quantity = form.cleaned_data['quantity']
+        try:
+            # Store old price for adjustment tracking
+            old_price = item.unit_price
+            
+            item.item_name = request.POST.get('item_name', '').strip()
+            item.description = request.POST.get('description', '').strip()
+            item.quantity = int(request.POST.get('quantity', 0))
+            item.unit_price = Decimal(request.POST.get('unit_price', '0'))
+            item.expenditure_amount = Decimal(request.POST.get('expenditure_amount', '0'))
+            
+            if request.FILES.get('receipt'):
+                item.receipt = request.FILES.get('receipt')
+            
+            item.full_clean()
+            item.save()
+            
+            # Create adjustment record if price changed
+            new_price = item.unit_price
+            if old_price != new_price:
+                PurchasedItemAdjustment.objects.create(
+                    purchased_item=item,
+                    old_price=old_price,
+                    new_price=new_price,
+                    reason=request.POST.get('adjustment_reason', ''),
+                    adjusted_by=request.user
+                )
+            
+            messages.success(request, 'Purchased item updated successfully!')
+            return redirect('purchased_item_detail', pk=pk)
+            
+        except (ValueError, ValidationError) as e:
+            messages.error(request, f'Error updating item: {str(e)}')
+    
+    context = {'item': item,'title': 'Edit Purchased Item'}
+    return render(request, 'purchaseitem/purchased_edit_item_form.html', context)
 
-            # ✅ Calculate totals
-            total_sale_amount = unit_price * quantity
-            total_purchase_cost = (purchased_item.unit_price * quantity) + purchased_item.expenditure_amount
-            profit = total_sale_amount - total_purchase_cost
 
-            # ✅ Always save profit
-            selling_plan = form.save(commit=False)
-            selling_plan.purchased_item = purchased_item
-            selling_plan.selling_price_per_unit = unit_price
-            selling_plan.quantity = quantity
-            selling_plan.profit = profit  # <-- always stored
-            selling_plan.created_by = request.user
-            selling_plan.save()
-
-            messages.success(request, f'Selling plan created. Profit: ₦{profit:.2f}')
-            return redirect('selling_plan_detail', pk=selling_plan.pk)
-    else:
-        form = SellingPlanForm()
-
-    context = {'form': form, 'profit': profit, 'purchased_item': purchased_item,
-        'total_sale_amount': total_sale_amount,'total_purchase_cost': total_purchase_cost, }
-    return render(request, 'consumable/selling_plan_create.html', context)
+@login_required
+def purchased_item_delete(request, pk):
+    """Delete purchased item"""
+    item = get_object_or_404(PurchasedItem, pk=pk)
+    request_pk = item.consumable_purchased_request.pk
+    
+    if request.method == 'POST':
+        item.delete()
+        messages.success(request, 'Purchased item deleted successfully!')
+        return redirect('consumable_request_detail', pk=request_pk)
+    
+    context = {'item': item,}
+    return render(request, 'purchaseitem/purchased_item_confirm_delete.html', context)
 
 
-# @login_required
-# def selling_plan_detail(request, pk):
-#     selling_plan = get_object_or_404(SellingPlan, pk=pk)
-#     purchased_item = selling_plan.purchased_item
-#     # Calculate total purchase cost: (unit_price * selling_quantity) + expenditure_amount
-#     total_purchase_cost = (purchased_item.unit_price * selling_plan.quantity ) + purchased_item.expenditure_amount
-#     print(total_purchase_cost)
-#     # Calculate potential profit
-#     potential_profit = selling_plan.total_sale_value - total_purchase_cost
-#     print(potential_profit)
-#     context = {'selling_plan': selling_plan,'potential_profit': potential_profit,'total_purchase_cost': total_purchase_cost,}
-#     return render(request, 'consumable/selling_plan_detail.html', context)
+# ============== SELLING PLAN VIEWS ==============
+
+@login_required
+def selling_plan_create(request, item_pk):
+    """Create selling plan for purchased item"""
+    purchased_item = get_object_or_404(PurchasedItem, pk=item_pk)
+    
+    # Check if selling plan already exists
+    if hasattr(purchased_item, 'selling_plan'):
+        messages.error(request, 'Selling plan already exists for this item.')
+        return redirect('selling_plan_detail', pk=purchased_item.selling_plan.pk)
+    
+    if request.method == 'POST':
+        try:
+            plan = SellingPlan(
+                purchased_item=purchased_item,
+                selling_price_per_unit=Decimal(request.POST.get('selling_price_per_unit', '0')),
+                quantity=int(request.POST.get('quantity', 0)),
+                created_by=request.user,
+                notes=request.POST.get('notes', '').strip(),
+                include_expenditure=request.POST.get('include_expenditure') == 'on'
+            )
+            plan.full_clean()
+            plan.save()
+            plan.update_profit()
+            
+            messages.success(request, 'Selling plan created successfully!')
+            return redirect('selling_plan_detail', pk=plan.pk)
+            
+        except (ValueError, ValidationError) as e:
+            messages.error(request, f'Error creating selling plan: {str(e)}')
+    
+    context = {
+        'purchased_item': purchased_item,
+        'title': 'Create Selling Plan'
+    }
+    return render(request, 'purchaseitem/selling_plan_form.html', context)
+
+@login_required
+def selling_plan_list(request):
+    """List all selling plans"""
+    plans = SellingPlan.objects.select_related('purchased_item', 'created_by')
+    
+    # Filtering
+    search_query = request.GET.get('search')
+    if search_query:
+        plans = plans.filter(
+            Q(purchased_item__item_name__icontains=search_query) |
+            Q(notes__icontains=search_query)
+        )
+    
+    available_only = request.GET.get('available_only')
+    if available_only:
+        plans = plans.filter(available=True)
+    
+    # Pagination
+    paginator = Paginator(plans, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {'page_obj': page_obj,'search_query': search_query,'available_only': available_only,}
+    return render(request, 'purchaseitem/selling_plan_list.html', context)
 
 @login_required
 def selling_plan_detail(request, pk):
     selling_plan = get_object_or_404(SellingPlan, pk=pk)
-    purchased_item = selling_plan.purchased_item
-
-    # Calculate per-unit cost including proportional expenditure
-    if purchased_item.quantity > 0:
-        cost_per_unit = purchased_item.unit_price + (purchased_item.expenditure_amount / purchased_item.quantity)
-    else:
-        cost_per_unit = purchased_item.unit_price  # fallback to unit price
-
-    # Total cost for the sold quantity
-    total_purchase_cost = cost_per_unit * selling_plan.quantity
-
-    # Total sale value
-    total_sale_value = selling_plan.total_sale_value
-
-    # Potential profit
-    potential_profit = total_sale_value - total_purchase_cost
-
     context = {
-        'selling_plan': selling_plan,
-        'purchased_item': purchased_item,
-        'total_purchase_cost': total_purchase_cost,
-        'total_sale_value': total_sale_value,
-        'potential_profit': potential_profit,
+        'plan': selling_plan,  # Template uses 'plan' variable
+        'selling_plan': selling_plan,  # Keep this for the edit/delete buttons
     }
+    return render(request, 'purchaseitem/selling_plan_detail.html', context)
+
+
+@login_required
+def selling_plan_edit(request, pk):
+    """Edit selling plan"""
+    plan = get_object_or_404(SellingPlan, pk=pk)
     
-    return render(request, 'consumable/selling_plan_detail.html', context)
+    if request.method == 'POST':
+        try:
+            # Store old price for adjustment tracking
+            old_price = plan.selling_price_per_unit
+            
+            plan.selling_price_per_unit = Decimal(request.POST.get('selling_price_per_unit', '0'))
+            plan.quantity = int(request.POST.get('quantity', 0))
+            plan.notes = request.POST.get('notes', '').strip()
+            plan.available = request.POST.get('available') == 'on'
+            plan.include_expenditure = request.POST.get('include_expenditure') == 'on'
+            
+            plan.full_clean()
+            plan.save()
+            plan.update_profit()
+            
+            # Create adjustment record if price changed
+            new_price = plan.selling_price_per_unit
+            if old_price != new_price:
+                SellingPlanAdjustment.objects.create(
+                    selling_plan=plan,old_price=old_price,new_price=new_price,
+                    reason=request.POST.get('adjustment_reason', ''),
+                    adjusted_by=request.user)
+            
+            messages.success(request, 'Selling plan updated successfully!')
+            return redirect('selling_plan_detail', pk=pk)
+            
+        except (ValueError, ValidationError) as e:
+            messages.error(request, f'Error updating selling plan: {str(e)}')
+    
+    context = {'plan': plan,'title': 'Edit Selling Plan'}
+    return render(request, 'purchaseitem/selling_plan_edit_form.html', context)
 
 
 @login_required
 def selling_plan_delete(request, pk):
-    """Delete a selling plan"""
-    selling_plan = get_object_or_404(SellingPlan, pk=pk)
-    purchased_item = selling_plan.purchased_item
-    consumable_request = purchased_item.consumable_purchased_request
-
-    # Permission check: only admin or request owner can delete
-    if (not (request.user.group and request.user.group.title == 'admin' or request.user.group.title == 'staff') and consumable_request.requested_by != request.user):
-        messages.error(request, "You don't have permission to delete this selling plan.")
-        return redirect('selling_plan_detail', pk=selling_plan.pk)
-
-    selling_plan.delete()
-    messages.success(request, "Selling plan deleted successfully.")
-    return redirect('consumable_purchase_request_detail', pk=consumable_request.pk)
-
-
-
-@login_required
-@transaction.atomic
-def refund_and_account_request(request, pk):
-    request_obj = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
-
-    # Security check: Ensure only the original requester or a staff member can perform this action.
-    if (not (request.user.group and request.user.group.title == 'admin' or request.user.group.title == 'staff') and request_obj.requested_by != request.user):
-        messages.error(request, "You are not authorized to perform this action.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
+    """Delete selling plan"""
+    plan = get_object_or_404(SellingPlan, pk=pk)
     
-    # Only allow this action if the request is in the 'approved' state.
-    if request_obj.status != 'approved':
-        messages.warning(request, "This request is not in the 'Approved' state and cannot be accounted for.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-
-    # Use the same efficient database calculation from the dashboard view
-    # to get the total spent for this specific request.
-    total_spent_summary = request_obj.items.aggregate(
-        total_spent=Sum(
-            ExpressionWrapper(
-                F('quantity') * F('unit_price') + F('expenditure_amount'),
-                output_field=DecimalField()
-            )
-        )
-    )
+    if request.method == 'POST':
+        plan.delete()
+        messages.success(request, 'Selling plan deleted successfully!')
+        return redirect('selling_plan_list')
     
-    total_spent = total_spent_summary['total_spent'] or 0
-
-    # The new approved amount is the total amount spent.
-    new_approved_amount = total_spent
-
-    # Check for a balance remaining.
-    if new_approved_amount >= request_obj.approved_amount:
-        messages.warning(request, "No balance to refund. The spent amount is greater than or equal to the approved amount.")
-        return redirect('consumable_purchase_request_detail', pk=pk)
-
-    # Update the request object.
-    request_obj.approved_amount = new_approved_amount
-    request_obj.status = 'accounted'
-    request_obj.remarks = f"{request_obj.remarks or ''}\n\n- Member refunded the balance. Approved amount updated to ₦{new_approved_amount:.2f} to reflect actual expenditure."
-    request_obj.save()
-
-    messages.success(request, f"Request successfully accounted for. Approved amount changed to ₦{new_approved_amount:.2f}.")
-
-    return redirect('consumable_purchase_request_detail', pk=pk)
+    context = {
+        'plan': plan,
+    }
+    return render(request, 'purchaseitem/selling_plan_confirm_delete.html', context)
 
 
+# ============== AJAX VIEWS ==============
+
+@login_required
+@require_http_methods(["GET"])
+def get_request_balance(request, pk):
+    """AJAX view to get remaining balance for a request"""
+    try:
+        consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
+        balance = consumable_request.balance_remaining()
+        
+        return JsonResponse({
+            'success': True,
+            'balance': str(balance) if balance else None,
+            'total_spent': str(consumable_request.total_spent()),
+            'approved_amount': str(consumable_request.approved_amount) if consumable_request.approved_amount else None
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
 
 
 @login_required
-def adjust_purchased_item_price(request, item_pk):
-    item = get_object_or_404(PurchasedItem, pk=item_pk)
-
-    if request.method == "POST":
-        try:
-            new_price = Decimal(request.POST.get("new_price"))
-        except (TypeError, ValueError, InvalidOperation):
-            messages.error(request, "Invalid price entered.")
-            return redirect("consumable_purchase_request_detail", pk=item.consumable_purchased_request.pk)
-
-        reason = request.POST.get("reason")
-
-        # Save adjustment record
-        PurchasedItemAdjustment.objects.create(
-            purchased_item=item,
-            old_price=item.unit_price,
-            new_price=new_price,
-            reason=reason,
-            adjusted_by=request.user,
-        )
-
-        # Update the live purchase price
-        item.unit_price = new_price
-        item.save(update_fields=["unit_price"])
-
-        # 🔹 Update linked selling plan profit (if exists)
-        if hasattr(item, "selling_plan"):
-            item.selling_plan.update_profit()
-
-        messages.success(request, "Purchase price adjusted successfully!")
-        return redirect("consumable_purchase_request_detail", pk=item.consumable_purchased_request.pk)
-
-    return render(request, "consumable/adjust_price.html", {"item": item})
-
-
-def adjustment_list(request):
-    """List all selling plan adjustments"""
-    adjustments = SellingPlanAdjustment.objects.select_related("selling_plan").order_by("-date_adjusted")
-    return render(request, "consumable/adjustment_list.html", {"adjustments": adjustments})
+@require_http_methods(["POST"])
+def calculate_item_total(request):
+    """AJAX view to calculate item total cost"""
+    try:
+        data = json.loads(request.body)
+        quantity = int(data.get('quantity', 0))
+        unit_price = Decimal(data.get('unit_price', '0'))
+        expenditure = Decimal(data.get('expenditure_amount', '0'))
+        
+        total = (quantity * unit_price) + expenditure
+        
+        return JsonResponse({
+            'success': True,
+            'total': str(total)
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
 
 
 @login_required
-def adjustment_create(request, selling_plan_id):
-    """Adjust selling price of a SellingPlan and update profit"""
-    selling_plan = get_object_or_404(SellingPlan, id=selling_plan_id)
+@require_http_methods(["POST"])
+def calculate_selling_profit(request):
+    """AJAX view to calculate selling profit"""
+    try:
+        data = json.loads(request.body)
+        selling_price = Decimal(data.get('selling_price', '0'))
+        quantity = int(data.get('quantity', 0))
+        cost_per_unit = Decimal(data.get('cost_per_unit', '0'))
+        
+        total_revenue = selling_price * quantity
+        total_cost = cost_per_unit * quantity
+        profit = total_revenue - total_cost
+        
+        return JsonResponse({
+            'success': True,
+            'total_revenue': str(total_revenue),
+            'total_cost': str(total_cost),
+            'profit': str(profit)
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
 
-    if request.method == "POST":
-        new_price = request.POST.get("new_price")
-        reason = request.POST.get("reason")
 
-        try:
-            new_price = Decimal(new_price)
-        except (TypeError, ValueError, InvalidOperation):
-            messages.error(request, "Invalid price entered.")
-            return redirect("adjustment_create", selling_plan_id=selling_plan.id)
-
-        with transaction.atomic():
-            # Save adjustment record
-            adjustment = SellingPlanAdjustment.objects.create(
-                selling_plan=selling_plan,
-                old_price=selling_plan.selling_price_per_unit,
-                new_price=new_price,
-                reason=reason,
-                adjusted_by=request.user,
-            )
-
-            # Update the selling plan price
-            selling_plan.selling_price_per_unit = new_price
-            selling_plan.save(update_fields=["selling_price_per_unit"])
-
-            # 🔹 Update profit after price change
-            selling_plan.update_profit()
-
-        messages.success(request, f"Selling price updated for {selling_plan.purchased_item.item_name}!")
-        return redirect("adjustment_detail", pk=adjustment.pk)
-
-    return render(request, "consumable/adjustment_form.html", {
-        "selling_plan": selling_plan,
-        "title": f"Adjust Price for {selling_plan.purchased_item.item_name}"
-    })
-
+# ============== DASHBOARD VIEWS ==============
 

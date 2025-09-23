@@ -1,31 +1,35 @@
 from django.urls import path
-from .import views
+from . import views
+
+
+
 urlpatterns = [
-    path('purchase_consumable_dashboard', views.purchase_consumable_dashboard,name='purchase_consumable_dashboard'),
-    path('consumable_purchase_request_create', views.consumable_purchase_request_create,name='consumable_purchase_request_create'),
-    path('consumable_purchase_request_create', views.consumable_purchase_request_create,name='consumable_purchase_request_create'),
-    path('purchase_request_list', views.purchase_request_list,name='purchase_request_list'),
-    path('consumable_purchase_request_detail/<pk>/', views.consumable_purchase_request_detail,name='consumable_purchase_request_detail'),
-    path('purchase_consumable_request_update/<pk>/', views.purchase_consumable_request_update,name='purchase_consumable_request_update'),
-    path('consumable_purchase_request_delete/<pk>/', views.consumable_purchase_request_delete,name='consumable_purchase_request_delete'),
-    path('consumable_purchase_request_approve/<pk>/', views.consumable_purchase_request_approve,name='consumable_purchase_request_approve'),
-    path('purchased_item_create/<request_pk>/', views.purchased_item_create,name='purchased_item_create'),
-    # path('purchased_item_update/<request_pk>/', views.purchased_item_update,name='purchased_item_update'),
-    path('requests/<int:request_pk>/items/<int:item_pk>/update/', views.purchased_item_update,name='purchased_item_update'),
-    path('consumable_request_mark_accounted/<pk>/', views.consumable_request_mark_accounted,name='consumable_request_mark_accounted'),
+    # Dashboard
+    path('purchasedashboard/', views.purchase_consumable_dashboard, name='purchase_consumable_dashboard'),
+    path('consumable_request_list/', views.consumable_purchase_request_list, name='consumable_purchase_request_list'),
+
+    path('requests/create/', views.consumable_purchase_request_create, name='consumable_purchase_request_create'),
+    path('requests/<int:pk>/', views.consumable_purchase_request_detail, name='consumable_purchase_request_detail'),
+    path('requests/<int:pk>/approve/', views.consumable_purchase_approve, name='consumable_purchase_approve'),
+
     
-    
+    path('requests/<int:request_pk>/items/add/', views.purchased_item_create, name='purchased_item_create'),
+    path('purchased_item_list/', views.purchased_item_list, name='purchased_item_list'),
+    path('purchased_item/<int:pk>/', views.purchased_item_detail, name='purchased_item_detail'),
+    path('purchased_item/<int:pk>/edit/', views.purchased_item_edit, name='edit_purchased_item'),
+    path('purchased_item/<int:pk>/delete/', views.purchased_item_delete, name='delete_purchased_item'),
+
+
+
+    path('items/<int:item_pk>/selling-plan/create/', views.selling_plan_create, name='selling_plan_create'),
     path('selling-plans/', views.selling_plan_list, name='selling_plan_list'),
-    path("selling_plan_create/<int:pk>/", views.selling_plan_create, name="selling_plan_create"),
-    path('selling_plan_detail/<int:pk>/', views.selling_plan_detail, name='selling_plan_detail'),
-    # path('selling_plan_update/<int:pk>/', views.selling_plan_update, name='selling_plan_update'),
-    path('selling_plan_delete/<int:pk>/', views.selling_plan_delete, name='selling_plan_delete'),
-    path('requests/account/<int:pk>/', views.refund_and_account_request, name='refund_and_account_request'),
+    path('selling-plans/<int:pk>/', views.selling_plan_detail, name='selling_plan_detail'),
+    path('selling-plans/<int:pk>/edit/', views.selling_plan_edit, name='selling_plan_edit'),
+    path('selling-plans/<int:pk>/delete/', views.selling_plan_delete, name='selling_plan_delete'),
 
-    path("purchased-item/<int:item_pk>/adjust/", views.adjust_purchased_item_price, name="adjust_purchased_item_price"),
+    path('requests/<int:pk>/mark-accounted/', views.consumable_request_mark_accounted, name='consumable_request_mark_accounted'),
 
-    # Selling Plan adjustments
-    path( "adjustments/", views.adjustment_list,name="adjustment_list" ),
-    path( "selling-plan/<int:selling_plan_id>/adjust/", views.adjustment_create,name="adjustment_create"),
+    path('items/<int:pk>/selling-plan/create/', views.selling_plan_create, name='selling_plan_create'),
+    path('selling-plans/<int:pk>/delete/', views.selling_plan_delete, name='selling_plan_delete'),
     
 ]

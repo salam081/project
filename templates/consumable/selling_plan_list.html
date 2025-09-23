@@ -1,58 +1,39 @@
 {% extends 'base/base.html' %}
 
-{% block title %}Selling Plans{% endblock %}
-
 {% block content %}
-<h2>Selling Plan List</h2>
-<div class="container shadow-lg p-4  my-2 mt-4">
+<div class="container mt-4">
+    <h2 class="mb-3">Selling Plans</h2>
 
-    <p><strong>Total Value:</strong> ₦{{ total_value|floatformat:2 }}</p>
-   <div class="table-responsive">
-       <table class="table table-bordered">
-           <thead class="table-info">
-               <tr>
-                   <th>Item</th>
-                   <th class="text-nowrap text-truncate" style="max-width: 270px;">Price/Unit</th>
-                   <th>Quantity</th>
-                   <th>Total</th>
-                   <th class="text-nowrap" style="min-width: 120px;">Date Created</th>
-                   <th>Action</th>
-               </tr>
-           </thead>
-           <tbody>
-               {% for plan in page_obj %}
-                   <tr>
-                       <td>{{ plan.purchased_item.item_name }}</td>
-                       <td>₦{{ plan.selling_price_per_unit }}</td>
-                       <td>{{ plan.quantity }}</td>
-                       <td>₦{{ plan.line_total|floatformat:2 }}</td>
-                       <td>{{ plan.date_created }}</td>
-                       <td>
-                           <div class="d-flex gap-2">
-                           <a href="{% url 'selling_plan_detail' plan.pk %}" class="btn btn-sm btn-info p-1 me-1">view</a>
-                            {% comment %} <a href="{% url 'adjustment_create' plan.id %}" class="btn btn-sm btn-warning p-1 me-1">
-                            AdjustPrice
-                            </a> {% endcomment %}
-                       </td>
-                   </tr>
-               {% empty %}
-                   <tr><td colspan="5">No selling plans found.</td></tr>
-               {% endfor %}
-           </tbody>
-       </table>
-   </div>
-
-    <!-- Pagination -->
-    <nav>
-        <ul class="pagination">
-            {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
-            {% endif %}
-            <li class="page-item active"><a class="page-link">{{ page_obj.number }}</a></li>
-            {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
-            {% endif %}
-        </ul>
-    </nav>
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Selling Price/Unit</th>
+                <th>Total Revenue</th>
+                <th>Purchase Cost</th>
+                <th>Profit</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plan in selling_plans %}
+            <tr>
+                <td>{{ plan.purchased_item.item_name }}</td>
+                <td>{{ plan.quantity }}</td>
+                <td>₦{{ plan.selling_price_per_unit|floatformat:2 }}</td>
+                <td>₦{{ plan.total_sale_value|floatformat:2 }}</td>
+                <td>₦{{ plan.purchase_cost|floatformat:2 }}</td>
+                <td>₦{{ plan.total_profit|floatformat:2 }}</td>
+                <td>
+                    <a href="{% url 'selling_plan_detail' plan.id %}" class="btn btn-sm btn-primary">View</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7">No selling plans available.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}
+

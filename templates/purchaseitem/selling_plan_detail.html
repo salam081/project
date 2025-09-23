@@ -1,0 +1,298 @@
+{% extends 'base/base.html' %}
+
+{% load humanize %}
+
+{% block title %}Selling Plan #{{ plan.pk }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Selling Plan Details</h1>
+        <div>
+           <a href="{% url 'selling_plan_edit' pk=selling_plan.pk %}" class="btn btn-warning text-dark me-2">
+            <i class="fas fa-edit me-2"></i>Edit Plan
+        </a>
+        <a href="{% url 'selling_plan_delete' pk=selling_plan.pk %}" class="btn btn-danger text-white">
+            <i class="fas fa-trash-alt me-2"></i>Delete Plan
+        </a>
+            <a href="{% url 'selling_plan_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Plan Information Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Plan Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Plan ID:</strong> #{{ plan.pk }}</p>
+                    <p><strong>Created On:</strong> {{ plan.date_created|date:"F d, Y" }}</p>
+                    <p><strong>Created By:</strong> {{ plan.created_by.get_full_name|default:plan.created_by.username|default:"Unknown" }}</p>
+                    <p>
+                        <strong>Item:</strong>
+                        {% if plan.purchased_item %}
+                        <a href="{% url 'consumable_purchase_request_detail' pk=plan.purchased_item.consumable_purchased_request.pk %}" class="text-decoration-none">
+                            {{ plan.purchased_item.item_name }}
+                        </a>
+                        {% else %}
+                        <span class="text-danger">Item not found (ID: {{ plan.purchased_item_id }})</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Available for Sale:</strong> 
+                        {% if plan.available %}
+                            <span class="status-badge bg-success">Yes</span>
+                        {% else %}
+                            <span class="status-badge bg-danger">No</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Selling Price Per Unit:</strong> ₦{{ plan.selling_price_per_unit|floatformat:2|intcomma }}</p>
+                    <p><strong>Quantity to Sell:</strong> {{ plan.quantity|intcomma }} units</p>
+                    <p><strong>Total Selling Price:</strong> ₦{{ plan.total_sale_value|floatformat:2|intcomma }}</p>
+                    <p><strong>Include Expenditure in Cost:</strong> 
+                        {% if plan.include_expenditure %}
+                            <span class="status-badge bg-info">Yes</span>
+                        {% else %}
+                            <span class="status-badge bg-secondary">No</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% if plan.notes %}
+                <hr>
+                <p><strong>Notes:</strong></p>
+                <div class="alert alert-light">{{ plan.notes|linebreaks }}</div>
+            {% else %}
+                <hr>
+                <p><strong>Notes:</strong> <span class="text-muted">No notes provided.</span></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Associated Item Details Card -->
+    {% if plan.purchased_item %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-box me-2"></i>Associated Item Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Item Name:</strong> {{ plan.purchased_item.item_name }}</p>
+                    <p><strong>Description:</strong> {{ plan.purchased_item.description|default:"No description available" }}</p>
+                    <p><strong>Total Quantity Available:</strong> {{ plan.purchased_item.quantity|intcomma }} units</p>
+                    <p><strong>Original Unit Price:</strong> ₦{{ plan.purchased_item.unit_price|floatformat:2|intcomma }}</p>
+                    <p><strong>Purchase Date:</strong> {{ plan.purchased_item.date_added|date:"F d, Y" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Expenditure Amount:</strong> ₦{{ plan.purchased_item.expenditure_amount|floatformat:2|intcomma }}</p>
+                    <p><strong>Cost Per Unit (with expenditure):</strong> ₦{{ plan.purchased_item.cost_per_unit|floatformat:2|intcomma }}</p>
+                    <p><strong>Total Purchase Cost:</strong> ₦{{ plan.purchased_item.total_price|floatformat:2|intcomma }}</p>
+                    {% if plan.purchased_item.receipt %}
+                        <p><strong>Receipt:</strong> <a href="{{ plan.purchased_item.receipt.url }}" target="_blank" class="btn btn-sm btn-outline-success">View Receipt</a></p>
+                    {% else %}
+                        <p><strong>Receipt:</strong> <span class="text-muted">Not available</span></p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Quantity Comparison -->
+            <hr>
+            <div class="row">
+                <div class="col-md-12">
+                    <h6 class="text-muted">Quantity Analysis:</h6>
+                    <div class="progress mb-2" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {% widthratio plan.quantity plan.purchased_item.quantity 100 %}%"
+                             aria-valuenow="{{ plan.quantity }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="{{ plan.purchased_item.quantity }}">
+                            {{ plan.quantity|intcomma }} / {{ plan.purchased_item.quantity|intcomma }}
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        Planning to sell {{ plan.quantity|intcomma }} out of {{ plan.purchased_item.quantity|intcomma }} units
+                        ({% widthratio plan.quantity plan.purchased_item.quantity 100 %}% of total inventory)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Financial Summary Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Financial Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p><strong>Cost Calculation Method:</strong> 
+                                {% if plan.include_expenditure %}
+                                    Including expenditure
+                                {% else %}
+                                    Excluding expenditure
+                                {% endif %}
+                            </p>
+                            <p><strong>Total Cost:</strong> ₦{{ plan.purchase_cost|floatformat:2|intcomma }}</p>
+                            <p><strong>Total Revenue:</strong> ₦{{ plan.total_sale_value|floatformat:2|intcomma }}</p>
+                            <p><strong>Net Profit/Loss:</strong> 
+                                {% if plan.total_profit > 0 %}
+                                    <span class="text-success fw-bold">₦{{ plan.total_profit|floatformat:2|intcomma }}</span>
+                                {% elif plan.total_profit < 0 %}
+                                    <span class="text-danger fw-bold">₦{{ plan.total_profit|floatformat:2|intcomma }}</span>
+                                {% else %}
+                                    <span class="text-secondary fw-bold">₦0.00</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            {% comment %} <p><strong>Profit Margin:</strong> 
+                                {% if plan.purchase_cost > 0 %}
+                                    {% widthratio plan.total_profit plan.purchase_cost 100 %}%
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </p> {% endcomment %}
+                            {% comment %} <p><strong>Cost Per Unit:</strong> ₦{{ plan.purchase_cost.quantity|floatformat:2|intcomma }}</p> {% endcomment %}
+                            {% comment %} <p><strong>Profit Per Unit:</strong> 
+                                {% if plan.total_profit %}
+                                    ₦{{ plan.total_profit.quantity|floatformat:2|intcomma }}
+                                {% else %}
+                                    ₦0.00
+                                {% endif %}
+                            </p> {% endcomment %}
+                            {% comment %} <p><strong>Markup Percentage:</strong>
+                                {% if plan.purchase_cost > 0 %}
+                                    {% widthratio plan.total_profit plan.purchase_cost 100 %}%
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </p> {% endcomment %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <!-- Profit Visualization -->
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">Profit Overview</h6>
+                            {% if plan.total_profit > 0 %}
+                                <div class="text-success">
+                                    <i class="fas fa-arrow-up fa-2x"></i>
+                                    <h4 class="mt-2">Profitable</h4>
+                                </div>
+                            {% elif plan.total_profit < 0 %}
+                                <div class="text-danger">
+                                    <i class="fas fa-arrow-down fa-2x"></i>
+                                    <h4 class="mt-2">Loss</h4>
+                                </div>
+                            {% else %}
+                                <div class="text-secondary">
+                                    <i class="fas fa-minus fa-2x"></i>
+                                    <h4 class="mt-2">Break Even</h4>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Request Information -->
+    {% if plan.purchased_item.consumable_purchased_request %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Original Purchase Request</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Request ID:</strong> #{{ plan.purchased_item.consumable_purchased_request.pk }}</p>
+                    <p><strong>Requested By:</strong> {{ plan.purchased_item.consumable_purchased_request.requested_by.get_full_name|default:plan.purchased_item.consumable_purchased_request.requested_by.username }}</p>
+                    <p><strong>Purpose:</strong> {{ plan.purchased_item.consumable_purchased_request.purpose }}</p>
+                    <p><strong>Date Requested:</strong> {{ plan.purchased_item.consumable_purchased_request.date_requested|date:"F d, Y" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Status:</strong> 
+                        {% if plan.purchased_item.consumable_purchased_request.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">{{ plan.purchased_item.consumable_purchased_request.get_status_display }}</span>
+                        {% elif plan.purchased_item.consumable_purchased_request.status == 'approved' %}
+                            <span class="badge bg-success">{{ plan.purchased_item.consumable_purchased_request.get_status_display }}</span>
+                        {% elif plan.purchased_item.consumable_purchased_request.status == 'accounted' %}
+                            <span class="badge bg-primary">{{ plan.purchased_item.consumable_purchased_request.get_status_display }}</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Amount Requested:</strong> ₦{{ plan.purchased_item.consumable_purchased_request.amount_requested|floatformat:2|intcomma }}</p>
+                    {% if plan.purchased_item.consumable_purchased_request.approved_amount %}
+                        <p><strong>Amount Approved:</strong> ₦{{ plan.purchased_item.consumable_purchased_request.approved_amount|floatformat:2|intcomma }}</p>
+                    {% endif %}
+                    {% if plan.purchased_item.consumable_purchased_request.approved_by %}
+                        <p><strong>Approved By:</strong> {{ plan.purchased_item.consumable_purchased_request.approved_by.get_full_name|default:plan.purchased_item.consumable_purchased_request.approved_by.username }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Price Adjustments Card -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Price Adjustments History</h5>
+        </div>
+        <div class="card-body">
+            {% if plan.adjustments.exists %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Date</th>
+                                <th>Old Price</th>
+                                <th>New Price</th>
+                                <th>Change</th>
+                                <th>Reason</th>
+                                <th>Adjusted By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for adjustment in plan.adjustments.all %}
+                            <tr>
+                                <td>{{ adjustment.date_adjusted|date:"M d, Y H:i" }}</td>
+                                <td>₦{{ adjustment.old_price|floatformat:2|intcomma }}</td>
+                                <td>₦{{ adjustment.new_price|floatformat:2|intcomma }}</td>
+                                <td>
+                                    {% if adjustment.new_price > adjustment.old_price %}
+                                        {% comment %} <span class="text-success">+₦{{ adjustment.new_price|adjustment.old_price|floatformat:2|intcomma }}</span> {% endcomment %}
+                                    {% elif adjustment.new_price < adjustment.old_price %}
+                                        {% comment %} <span class="text-danger">-₦{{ adjustment.old_price|adjustment.new_price|floatformat:2|intcomma }}</span> {% endcomment %}
+                                    {% else %}
+                                        <span class="text-muted">No change</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ adjustment.reason|default:"No reason provided" }}</td>
+                                <td>{{ adjustment.adjusted_by.get_full_name|default:adjustment.adjusted_by.username|default:"Unknown" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info mb-0" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>No price adjustments have been recorded for this plan.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

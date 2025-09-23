@@ -3,6 +3,7 @@ import calendar
 from decimal import Decimal,DecimalException
 from datetime import datetime
 from django.db import transaction
+from django.http import HttpResponse
 from datetime import timedelta
 from django.db.models import Q, Sum, Count
 from django.http import JsonResponse
@@ -14,7 +15,10 @@ from django.utils import timezone
 from django.conf import settings
 from django.contrib import messages
 from django.db.models.functions import TruncMonth
-from projectfinance.models import ProjectFinanceRequest
+from PurchasedItems.models import *
+
+
+from projectfinance.models import *
 from .models import *
 from accounts.models import *
 from consumable.models import *
@@ -31,14 +35,16 @@ from decimal import Decimal
 from django.db.models import Sum
 from django.db.models.functions import ExtractMonth, ExtractYear
 from accounts.utils import get_cooperative_withdrawal_stats, get_members_eligible_for_withdrawal
-
+from datetime import datetime
+import datetime
 from django.shortcuts import render
 
 
 
 def admin_dashboard(request):
     # Get the current year
-    current_year = datetime.now().year
+    # current_year = datetime.now().year
+    current_year = datetime.datetime.now().year
     
     # Data retrieval for the current year
     total_members = Member.objects.count()
@@ -411,3 +417,150 @@ def member_active_requests(request):
         "pending_withdrawals": pending_withdrawals,
         "can_withdraw": can_withdraw,
     })
+
+from decimal import Decimal
+from django.db import transaction
+from django.shortcuts import render, redirect
+from django.contrib import messages
+import openpyxl
+from .models import Member, Savings, Loanable, Investment
+
+@transaction.atomic
+def upload_opening_balances(request):
+    if request.method == "POST" and request.FILES.get("file"):
+        file = request.FILES["file"]
+        wb = openpyxl.load_workbook(file)
+        ws = wb.active
+
+        created, updated, skipped = 0, 0, 0
+        opening_date = "2025-01-01"  # fixed opening balance date
+
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            ippis, savings_total, loanable_total, investment_total = row
+
+            if not ippis:
+                continue
+
+            try:
+                member = Member.objects.get(ippis=str(ippis).strip())
+
+                # update member's total savings directly
+                member.total_savings = Decimal(savings_total or 0)
+                member.save(update_fields=["total_savings"])
+
+                # --- Savings ---
+                if savings_total:
+                    savings_obj, created_flag = Savings.objects.update_or_create(
+                        member=member,
+                        month=opening_date,
+                        defaults={
+                            "month_saving": Decimal(savings_total or 0),
+                            "original_amount": Decimal(savings_total or 0),
+                        },
+                    )
+                    if created_flag:
+                        created += 1
+                    else:
+                        updated += 1
+
+                # --- Loanable ---
+                loanable_obj, created_flag = Loanable.objects.update_or_create(
+                    member=member,
+                    month=opening_date,
+                    defaults={
+                        "amount": Decimal(loanable_total or 0),
+                        "total_amount": Decimal(loanable_total or 0),
+                    },
+                )
+                if created_flag:
+                    created += 1
+                else:
+                    updated += 1
+
+                # --- Investment ---
+                investment_obj, created_flag = Investment.objects.update_or_create(
+                    member=member,
+                    month=opening_date,
+                    defaults={
+                        "amount": Decimal(investment_total or 0),
+                        "total_amount": Decimal(investment_total or 0),
+                    },
+                )
+                if created_flag:
+                    created += 1
+                else:
+                    updated += 1
+
+            except Member.DoesNotExist:
+                skipped += 1
+                messages.warning(request, f"⚠️ Member with IPPIS {ippis} not found, skipped")
+
+        messages.success(
+            request,
+            f"✅ Opening balances processed! {created} created, {updated} updated, {skipped} skipped."
+        )
+        return redirect("upload_opening_balances")
+
+    return render(request, "main/upload_opening_balances.html")
+
+
+from collections import OrderedDict
+from django.db.models.functions import TruncMonth
+from django.db.models import Sum
+
+@login_required
+def loan_totals(request):
+    # Aggregate by month
+    savings_by_month = (
+        Savings.objects.annotate(period=TruncMonth("date_created"))
+        .values("period")
+        .annotate(total_savings=Sum("original_amount"))
+    )
+    loanable_by_month = (
+        Loanable.objects.annotate(period=TruncMonth("date_created"))
+        .values("period")
+        .annotate(total_loanable=Sum("amount"))
+    )
+    investment_by_month = (
+        Investment.objects.annotate(period=TruncMonth("date_created"))
+        .values("period")
+        .annotate(total_investment=Sum("amount"))
+    )
+    interest_by_month = (
+        Interest.objects.annotate(period=TruncMonth("date_deducted"))
+        .values("period")
+        .annotate(total_interest=Sum("amount_deducted"))
+    )
+
+    loans_by_month = (
+        LoanRequest.objects.annotate(period=TruncMonth("application_date"))
+        .values("period", "loan_type__name")
+        .annotate(
+            total_requested=Sum("amount"),
+            total_approved=Sum("approved_amount"),
+        )
+    )
+
+    # --- Normalize months to datetime.date and collect unique months ---
+    all_months_set = set()
+    for qs in [savings_by_month, loanable_by_month, investment_by_month, interest_by_month]:
+        for item in qs:
+            period = item["period"]
+            if isinstance(period, datetime.datetime):
+                period = period.date()
+            all_months_set.add(period)
+
+    all_months = sorted(all_months_set, reverse=True)  # now safe
+
+    context = {
+        "all_months": all_months,
+        "savings_by_month": savings_by_month,
+        "loanable_by_month": loanable_by_month,
+        "investment_by_month": investment_by_month,
+        "interest_by_month": interest_by_month,
+        "loans_by_month": loans_by_month,
+    }
+    return render(request, "main/loan_totals.html", context)
+
+# =============================================
+

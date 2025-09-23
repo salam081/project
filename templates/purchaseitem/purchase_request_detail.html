@@ -1,0 +1,305 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Request #{{ consumable_request.pk }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Purchase Request #{{ consumable_request.pk }}</h1>
+        <div>
+            <a href="{% url 'consumable_purchase_request_list' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-list me-2"></i>Back to List
+            </a>
+            {% if consumable_request.status == 'pending' %}
+                <a href="{% url 'edit_purchased_item' pk=consumable_request.pk %}" class="btn btn-warning text-dark me-2">
+                    <i class="fas fa-edit me-2"></i>Edit Request
+                </a>
+                <a href="{% url 'consumable_purchase_approve' pk=consumable_request.pk %}" class="btn btn-success">
+                    <i class="fas fa-check me-2"></i>Approve Request
+                </a>
+            {% elif consumable_request.status == 'approved' %}
+                <a href="{% url 'purchased_item_create' request_pk=consumable_request.pk %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add Purchased Item
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Status Alert -->
+    {% if consumable_request.status == 'pending' %}
+        <div class="alert alert-warning" role="alert">
+            <i class="fas fa-clock me-2"></i><strong>Pending Approval:</strong> This request is waiting for administrative approval.
+        </div>
+    {% elif consumable_request.status == 'approved' %}
+        <div class="alert alert-success" role="alert">
+            <i class="fas fa-check-circle me-2"></i><strong>Approved:</strong> This request has been approved and items can now be purchased.
+        </div>
+    {% elif consumable_request.status == 'accounted' %}
+        <div class="alert alert-primary" role="alert">
+            <i class="fas fa-clipboard-check me-2"></i><strong>Fully Accounted:</strong> All purchases for this request have been completed and accounted for.
+        </div>
+    {% endif %}
+
+    <!-- Request Details Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Request Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Item:</strong> {{ consumable_request.item }}</p>
+                    <p><strong>Purpose:</strong> {{ consumable_request.purpose }}</p>
+                    <p><strong>Requested By:</strong> 
+                        <a href="#" class="text-decoration-none">
+                            {{ consumable_request.requested_by.get_full_name|default:consumable_request.requested_by.username }}
+                        </a>
+                    </p>
+                    <p><strong>Status:</strong>
+                        {% if consumable_request.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">{{ consumable_request.get_status_display }}</span>
+                        {% elif consumable_request.status == 'approved' %}
+                            <span class="badge bg-success">{{ consumable_request.get_status_display }}</span>
+                        {% elif consumable_request.status == 'accounted' %}
+                            <span class="badge bg-primary">{{ consumable_request.get_status_display }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ consumable_request.get_status_display }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Date Requested:</strong> {{ consumable_request.date_requested|date:"F d, Y" }}</p>
+                    {% if consumable_request.date_approved %}
+                        <p><strong>Date Approved:</strong> {{ consumable_request.date_approved|date:"F d, Y" }}</p>
+                    {% endif %}
+                    {% if consumable_request.approved_by %}
+                        <p><strong>Approved By:</strong> 
+                            <a href="#" class="text-decoration-none">
+                                {{ consumable_request.approved_by.get_full_name|default:consumable_request.approved_by.username }}
+                            </a>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% if consumable_request.remarks %}
+                <hr>
+                <div class="mt-3">
+                    <strong>Remarks:</strong>
+                    <div class="alert alert-light mt-2">{{ consumable_request.remarks|linebreaks }}</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Financial Summary Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Financial Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">Amount Requested</h6>
+                            <h4 class="text-primary">₦{{ consumable_request.amount_requested|floatformat:2|intcomma }}</h4>
+                            <small class="text-muted">Initial budget request</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">Amount Approved</h6>
+                            {% if consumable_request.approved_amount %}
+                                <h4 class="text-info">₦{{ consumable_request.approved_amount|floatformat:2|intcomma }}</h4>
+                                <small class="text-muted">Approved budget</small>
+                            {% else %}
+                                <h4 class="text-muted">Not set</h4>
+                                <small class="text-muted">Awaiting approval</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">Total Spent</h6>
+                            <h4 class="text-warning">₦{{ total_spent_correct|floatformat:2|intcomma }}</h4>
+                            <small class="text-muted">Actual expenditure</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">Balance Remaining</h6>
+                            {% if consumable_request.approved_amount %}
+                                {% with balance=consumable_request.balance_remaining %}
+                                    {% if balance > 0 %}
+                                        <h4 class="text-success">₦{{ balance|floatformat:2|intcomma }}</h4>
+                                        <small class="text-success">Available</small>
+                                    {% elif balance < 0 %}
+                                        <h4 class="text-danger">₦{{ balance|floatformat:2|intcomma }}</h4>
+                                        <small class="text-danger">Over budget</small>
+                                    {% else %}
+                                        <h4 class="text-secondary">₦0.00</h4>
+                                        <small class="text-muted">Fully utilized</small>
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                <h4 class="text-muted">-</h4>
+                                <small class="text-muted">Not applicable</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchased Items Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-box me-2"></i>Purchased Items</h5>
+            {% if consumable_request.status == 'approved' %}
+                <a href="{% url 'purchased_item_create' request_pk=consumable_request.pk %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus me-2"></i>Add Item
+                </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if consumable_request.items.exists %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Description</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Expenditure</th>
+                                <th>Total Cost</th>
+                                <th>Cost/Unit</th>
+                                <th>Purchased On</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in consumable_request.items.all %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ item.item_name }}</div>
+                                    {% if item.selling_plan %}
+                                        <small class="text-success">
+                                            <i class="fas fa-chart-line me-1"></i>Has selling plan
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 150px;" title="{{ item.description }}">
+                                        {{ item.description|default:"No description" }}
+                                    </div>
+                                </td>
+                                <td>{{ item.quantity|intcomma }}</td>
+                                <td>₦{{ item.unit_price|floatformat:2|intcomma }}</td>
+                                <td>₦{{ item.expenditure_amount|floatformat:2|intcomma }}</td>
+                                <td class="fw-bold">₦{{ item.total_price|floatformat:2|intcomma }}</td>
+                                <td>₦{{ item.cost_per_unit|floatformat:2|intcomma }}</td>
+                                <td>{{ item.date_added|date:"M d, Y" }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'purchased_item_detail' pk=item.pk %}" 
+                                           class="btn btn-outline-info" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if not item.selling_plan %}
+                                            <a href="{% url 'selling_plan_create' pk=item.pk %}" class="btn btn-outline-success" title="Create Selling Plan">
+                                                <i class="fas fa-chart-line"></i>
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'selling_plan_detail' pk=item.selling_plan.pk %}" 
+                                               class="btn btn-outline-primary" title="View Selling Plan">
+                                                <i class="fas fa-chart-bar"></i>
+                                            </a>
+                                        {% endif %}
+                                        <a href="#" class="btn btn-outline-secondary" title="Edit Item">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="5" class="text-end">Total Expenditure:</th>
+                                <th>₦{{ total_spent_correct|floatformat:2|intcomma }}</th>
+                                <th colspan="3"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info mb-0" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No purchased items have been associated with this request yet.
+                    {% if consumable_request.status == 'approved' %}
+                        <div class="mt-3">
+                            <a href="{% url 'purchased_item_create' request_pk=consumable_request.pk %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Add First Item
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action Buttons Card -->
+    {% if consumable_request.status == 'approved' and consumable_request.items.exists %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Available Actions</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <p class="mb-3">This request has purchased items and can be marked as fully accounted if all purchases are complete.</p>
+                    {% with balance=consumable_request.balance_remaining %}
+                        {% if balance < 0 %}
+                            <div class="alert alert-warning" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Budget Exceeded:</strong> This request has exceeded its approved budget by ₦{{ balance|floatformat:2|intcomma }}.
+                            </div>
+                        {% elif balance > 100 %}
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Budget Remaining:</strong> There is still ₦{{ balance|floatformat:2|intcomma }} remaining in the approved budget.
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                <div class="col-md-4 text-end">
+                    <button type="button" class="btn btn-success btn-lg" onclick="markAsAccounted({{ consumable_request.pk }})">
+                        <i class="fas fa-clipboard-check me-2"></i>Mark as Fully Accounted
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- JavaScript -->
+<script>
+function markAsAccounted(requestId) {
+    if (confirm('Are you sure you want to mark this request as fully accounted?\n\nThis will:\n- Set the approved amount to match total spent\n- Change status to "Fully Accounted"\n- Prevent further modifications\n\nThis action cannot be undone.')) {
+        // Redirect to mark as accounted URL
+        window.location.href = `/admin/consumables/request/${requestId}/mark-accounted/`;
+    }
+}
+</script>
+{% endblock %}

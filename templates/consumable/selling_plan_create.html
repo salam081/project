@@ -1,34 +1,37 @@
 {% extends 'base/base.html' %}
 
-{% block title %}Admin Dashboard - Consumable Requests{% endblock %}
+{% block title %}Admin Dashboard - Profit Calculator{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="row">
+        <!-- Profit Calculator -->
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
                     <h3><i class="fas fa-calculator"></i> Profit Calculator for {{ purchased_item.item_name }}</h3>
                 </div>
                 <div class="card-body">
+                    <!-- Item Summary -->
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <strong>Purchase Price:</strong> ₦{{ purchased_item.unit_price|floatformat:2 }}
+                            <strong>Unit Cost:</strong> ₦{{ purchased_item.unit_price|floatformat:2 }}
                         </div>
                         <div class="col-md-4">
-                            <strong>Total Cost:</strong> ₦{{ purchased_item.total_price|floatformat:2 }}
+                            <strong>Total Purchase Cost:</strong> ₦{{ purchased_item.total_price|floatformat:2 }}
                         </div>
                         <div class="col-md-4">
                             <strong>Available Stock:</strong> {{ purchased_item.quantity }}
                         </div>
                     </div>
 
+                    <!-- Profit Calculation Form -->
                     <form method="post" class="mb-4">
                         {% csrf_token %}
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="selling_price">Selling Price (₦):</label>
+                                    <label for="selling_price_per_unit">Selling Price (₦):</label>
                                     <input type="number" step="0.01" name="selling_price_per_unit" id="selling_price_per_unit" 
                                            class="form-control" required
                                            value="{{ form.selling_price_per_unit.value|default:'' }}">
@@ -47,20 +50,8 @@
                             <i class="fas fa-calculator"></i> Calculate Profit
                         </button>
                     </form>
-                    <div class="card border-success shadow-sm mt-3" id="profit-card" style="display:none;">
-    <div class="card-body">
-        <h5 class="card-title text-success"><i class="fas fa-chart-line"></i> Profit Analysis</h5>
-        <div class="row">
-            <div class="col-md-4"><p><strong>Total Sale:</strong> <span class="text-success" id="total-sale">₦0.00</span></p></div>
-            <div class="col-md-4"><p><strong>Total Cost:</strong> <span class="text-danger" id="total-cost">₦0.00</span></p></div>
-            <div class="col-md-4"><p><strong>Estimated Profit:</strong> <span class="fw-bold" id="profit">₦0.00</span></p></div>
-        </div>
-        <div class="alert mt-3" id="profit-alert" style="display:none;">
-            <i class="fas" id="profit-icon"></i> <span id="profit-message"></span>
-        </div>
-    </div>
-</div>
 
+                    <!-- Profit Analysis -->
                     {% if profit is not None %}
                         <div class="card bg-light">
                             <div class="card-body">
@@ -72,7 +63,7 @@
                                         </p>
                                     </div>
                                     <div class="col-md-4">
-                                        <p><strong>Total Cost:</strong> 
+                                        <p><strong>Purchase Cost (Qty × Unit):</strong> 
                                             <span class="text-danger">₦{{ total_purchase_cost|floatformat:2 }}</span>
                                         </p>
                                     </div>
@@ -84,7 +75,17 @@
                                         </p>
                                     </div>
                                 </div>
+
+                                <!-- Expenditure Info -->
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <p><strong>Expenditure (Other Costs):</strong> 
+                                            ₦{{ purchased_item.expenditure_amount|floatformat:2 }}
+                                        </p>
+                                    </div>
+                                </div>
                                 
+                                <!-- Alerts -->
                                 {% if profit > 0 %}
                                     <div class="alert alert-success mt-3">
                                         <i class="fas fa-thumbs-up"></i> 
@@ -108,6 +109,7 @@
             </div>
         </div>
         
+        <!-- Sidebar: Item Details -->
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
@@ -115,10 +117,10 @@
                 </div>
                 <div class="card-body">
                     <p><strong>Item Name:</strong> {{ purchased_item.item_name }}</p>
-                    <p><strong>Quantity:</strong> {{ purchased_item.quantity }}</p>
+                    <p><strong>Available Quantity:</strong> {{ purchased_item.quantity }}</p>
                     <p><strong>Unit Price:</strong> ₦{{ purchased_item.unit_price|floatformat:2 }}</p>
                     <p><strong>Expenditure:</strong> ₦{{ purchased_item.expenditure_amount|floatformat:2 }}</p>
-                    <p><strong>Total Price:</strong> ₦{{ purchased_item.total_price|floatformat:2 }}</p>
+                    <p><strong>Total Purchase Cost:</strong> ₦{{ purchased_item.total_price|floatformat:2 }}</p>
                     <p><strong>Date Added:</strong> {{ purchased_item.date_added|date:"F d, Y" }}</p>
                 </div>
             </div>
@@ -128,77 +130,13 @@
                     <h6><i class="fas fa-cog"></i> Actions</h6>
                 </div>
                 <div class="card-body">
-                    <a href="" 
+                    <a href="{% url 'purchase_consumable_dashboard' %}" 
                        class="btn btn-secondary btn-sm">
-                        <i class="fas fa-arrow-left"></i> Back to Request
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
                     </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const sellingPriceInput = document.getElementById('selling_price_per_unit');
-    const quantityInput = document.getElementById('quantity_to_sell');
-
-    const totalSaleEl = document.getElementById('total-sale');
-    const totalCostEl = document.getElementById('total-cost');
-    const profitEl = document.getElementById('profit');
-    const profitCard = document.getElementById('profit-card');
-    const profitAlert = document.getElementById('profit-alert');
-    const profitIcon = document.getElementById('profit-icon');
-    const profitMessage = document.getElementById('profit-message');
-
-    // Purchased item info from template context
-    const unitPrice = parseFloat("{{ purchased_item.unit_price }}");
-    const quantityAvailable = parseInt("{{ purchased_item.quantity }}");
-    const expenditureAmount = parseFloat("{{ purchased_item.expenditure_amount }}");
-
-    function calculateProfit() {
-        const sellPrice = parseFloat(sellingPriceInput.value) || 0;
-        const quantity = parseInt(quantityInput.value) || 0;
-
-        if(quantity > quantityAvailable) {
-            alert("Quantity cannot exceed available stock!");
-            quantityInput.value = quantityAvailable;
-            return;
-        }
-
-        const totalCost = (unitPrice * quantity) + (expenditureAmount * (quantity / quantityAvailable));
-        const totalSale = sellPrice * quantity;
-        const profit = totalSale - totalCost;
-
-        // Update UI
-        totalSaleEl.textContent = `₦${totalSale.toFixed(2)}`;
-        totalCostEl.textContent = `₦${totalCost.toFixed(2)}`;
-        profitEl.textContent = `₦${profit.toFixed(2)}`;
-
-        profitCard.style.display = 'block';
-        profitAlert.style.display = 'block';
-
-        if(profit > 0) {
-            profitAlert.className = 'alert alert-success mt-3';
-            profitIcon.className = 'fas fa-thumbs-up';
-            profitMessage.textContent = `Great! Profit of ₦${profit.toFixed(2)}`;
-            profitEl.className = 'fw-bold text-success';
-        } else if(profit === 0) {
-            profitAlert.className = 'alert alert-warning mt-3';
-            profitIcon.className = 'fas fa-balance-scale';
-            profitMessage.textContent = 'Break-even: No profit or loss';
-            profitEl.className = 'fw-bold text-warning';
-        } else {
-            profitAlert.className = 'alert alert-danger mt-3';
-            profitIcon.className = 'fas fa-exclamation-triangle';
-            profitMessage.textContent = `Warning: Loss of ₦${profit.toFixed(2)}`;
-            profitEl.className = 'fw-bold text-danger';
-        }
-    }
-
-    sellingPriceInput.addEventListener('input', calculateProfit);
-    quantityInput.addEventListener('input', calculateProfit);
-});
-</script>
-
 {% endblock content %}

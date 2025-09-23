@@ -1,0 +1,58 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Approve Request #{{ consumable_request.pk }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white text-center">
+                    <h1 class="h3 mb-0">Approve Consumable Request</h1>
+                </div>
+                <div class="card-body">
+                    {# Django messages for success or error feedback #}
+                    {% if messages %}
+                        <div class="messages mb-3">
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <h5 class="card-title mb-3">Request Details</h5>
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item"><strong>Item:</strong> {{ consumable_request.item }}</li>
+                        <li class="list-group-item"><strong>Purpose:</strong> {{ consumable_request.purpose }}</li>
+                        <li class="list-group-item"><strong>Requested By:</strong> {{ consumable_request.requested_by.get_full_name|default:consumable_request.requested_by.username }}</li>
+                        <li class="list-group-item"><strong>Amount Requested:</strong> ${{ consumable_request.amount_requested|intcomma }}</li>
+                    </ul>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_approved_amount" class="form-label fw-bold">Approved Amount ($)</label>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-lg" 
+                                   id="id_approved_amount" name="approved_amount" 
+                                   value="{{ consumable_request.amount_requested|stringformat:'f' }}" required>
+                            <div class="form-text">Enter the final approved amount for this request.</div>
+                        </div>
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle me-2"></i>Approve Request
+                            </button>
+                            <a href="{% url 'consumable_purchase_request_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

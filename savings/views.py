@@ -553,203 +553,6 @@ def upload_savings(request):
     return render(request, "saving/upload_savings.html")
 
 
-# @transaction.atomic
-# def upload_savings(request):
-#     if request.method == "POST" and request.FILES.get("file"):
-#         try:
-#             # Get selected month
-#             selected_month = request.POST.get("month")
-#             if not selected_month:
-#                 messages.error(request, "Please select a month.")
-#                 return redirect("upload_savings")
-
-#             month = pd.to_datetime(selected_month).date().replace(day=1)
-#             file = request.FILES["file"]
-
-#             # Read Excel or CSV
-#             if file.name.endswith(('.xlsx', '.xls')):
-#                 df = pd.read_excel(file, dtype={'IPPIS': str})
-#             else:
-#                 df = pd.read_csv(file, dtype={'IPPIS': str})
-
-#             # ✅ Validate required columns
-#             required_columns = ["IPPIS", "Amount"]
-#             missing_columns = [col for col in required_columns if col not in df.columns]
-#             if missing_columns:
-#                 messages.error(
-#                     request,
-#                     f"Missing columns: {', '.join(missing_columns)}. "
-#                     f"Found columns: {', '.join(df.columns.tolist())}"
-#                 )
-#                 return redirect("upload_savings")
-
-#             # Clean data
-#             df = df.dropna(subset=['IPPIS', 'Amount'])
-#             df["IPPIS"] = df["IPPIS"].astype(str).str.strip()
-#             df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
-#             df = df[(df["Amount"] > 0) & df["Amount"].notna()]
-
-#             if len(df) == 0:
-#                 messages.error(request, "No valid data found in file.")
-#                 return redirect("upload_savings")
-            
-
-#             file_ippis = df["IPPIS"].tolist()
-#             members_qs = Member.objects.filter(ippis__in=file_ippis).only("id", "ippis", "member")
-#             members_dict = {str(m.ippis).strip(): m for m in members_qs}
-
-#             # file_ippis = df["IPPIS"].tolist()
-
-#             existing_savings_ids = set(
-#                 Savings.objects.filter(month=month, member__ippis__in=file_ippis)
-#                 .values_list("member_id", flat=True)
-#             )
-#             try:
-#                 global_interest = InterestAmount.objects.latest("date_created").amount
-#             except InterestAmount.DoesNotExist:
-#                 messages.error(request, "No Subscription amount has been set. Please add one first.")
-#                 return redirect("upload_savings")
-
-#             # Prepare bulk insert lists
-#             savings_to_create = []
-#             interests_to_create = []
-#             loanables_to_create = []
-#             investments_to_create = []
-#             savings_member_ids_added = set()
-#             interest_member_ids_added = set()
-
-#             skipped_members_report = []
-#             records = df.to_dict("records")
-#             for row in records:
-#                 ippis = str(row["IPPIS"]).strip()
-#                 amount = Decimal(str(row["Amount"]))
-           
-#                 # Member lookup
-#                 member = members_dict.get(ippis)
-#                 if not member:
-#                     skipped_members_report.append({
-#                         "IPPIS": ippis,
-#                         "Member Name": "N/A",
-#                         "Reason": "IPPIS not found"
-#                     })
-#                     continue
-
-#                 # Skip if already saved
-#                 if member.id in existing_savings_ids:
-#                     skipped_members_report.append({
-#                         "IPPIS": ippis,
-#                         "Member Name": member.member,
-#                         "Reason": "Savings already exist"
-#                     })
-#                     continue
-
-#                 # Deduct interest only once per member
-#                 final_amount = max(amount - global_interest, Decimal("0.00"))
-#                 if member.id not in interest_member_ids_added:
-#                     interests_to_create.append(
-#                         Interest(member=member, month=month, amount_deducted=global_interest)
-#                     )
-#                     interest_member_ids_added.add(member.id)
-
-#                 # Prepare savings record
-#                 savings_to_create.append(
-#                     Savings(member=member, month=month, month_saving=final_amount, original_amount=amount)
-#                 )
-#                 savings_member_ids_added.add(member.id)
-
-#                 # Split into loanable & investment
-#                 half_amount = (final_amount / 2).quantize(Decimal("0.01"))
-
-#                 # Get current totals before adding new records
-#                 current_loanable_total = Loanable.objects.filter(member=member).aggregate(
-#                     total=Sum("amount")
-#                 )["total"] or Decimal("0.00")
-
-#                 current_investment_total = Investment.objects.filter(member=member).aggregate(
-#                     total=Sum("amount")
-#                 )["total"] or Decimal("0.00")
-
-#                 # Create updated loanable record
-#                 loanables_to_create.append(
-#                     Loanable(
-#                         member=member,
-#                         month=month,
-#                         amount=half_amount,
-#                         total_amount=current_loanable_total + half_amount
-#                     )
-#                 )
-
-#                 # Create updated investment record
-#                 investments_to_create.append(
-#                     Investment(
-#                         member=member,
-#                         month=month,
-#                         amount=half_amount,
-#                         total_amount=current_investment_total + half_amount
-#                     )
-#                 )
-
-#             # Bulk insert
-#             with transaction.atomic():
-#                 if interests_to_create:
-#                     Interest.objects.bulk_create(interests_to_create, batch_size=1000)
-#                 # if savings_to_create:
-#                 #     Savings.objects.bulk_create(savings_to_create, batch_size=1000)
-#                 if savings_to_create:
-#                     Savings.objects.bulk_create(savings_to_create, batch_size=1000)
-
-#                     # ✅ Efficiently update totals in one query
-#                     totals = (
-#                         Savings.objects.filter(member__in=savings_member_ids_added)
-#                         .values("member")
-#                         .annotate(total=Sum("month_saving"))
-#                     )
-
-#                     # Bulk update each member's total_savings
-#                     for row in totals:
-#                         Member.objects.filter(id=row["member"]).update(total_savings=row["total"])
-
-#                 if loanables_to_create:
-#                     Loanable.objects.bulk_create(loanables_to_create, batch_size=1000)
-#                 if investments_to_create:
-#                     Investment.objects.bulk_create(investments_to_create, batch_size=1000)
-
-        
-#             created_count = len(savings_to_create)
-
-#             # ✅ If skipped members exist, generate downloadable Excel
-#             if skipped_members_report:
-#                 skipped_df = pd.DataFrame(skipped_members_report)
-#                 response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-#                 response['Content-Disposition'] = f'attachment; filename="skipped_members_{month}.xlsx"'
-#                 skipped_df.to_excel(response, index=False)
-#                 messages.warning(request, f"⚠️ {len(skipped_members_report)} members skipped. Download report for details.")
-#                 return response
-
-        
-#             total_uploaded_amount = sum([s.month_saving for s in savings_to_create])
-
-#             total_interest_deducted = len(interests_to_create) * global_interest
-#             total_remaining_balance = total_uploaded_amount - total_interest_deducted
-#             half_amount = (total_remaining_balance / 2).quantize(Decimal("0.01"))
-
-#             messages.success(
-#                 request,
-#                 f"✅ Uploaded {created_count} records!<br>"
-#                 f"💰 Total Uploaded: <b>₦{total_uploaded_amount:,.2f}</b><br>"
-#                 f"📌 Subscription Deducted: <b>₦{total_interest_deducted:,.2f}</b><br>"
-#                 f"🏦 Loanable: <b>₦{half_amount:,.2f}</b> | 📈 Investment: <b>₦{half_amount:,.2f}</b>"
-#             )
-#             return redirect("upload_savings")
-
-#         except Exception as e:
-#             transaction.set_rollback(True)
-#             messages.error(request, f"Error processing file: {str(e)}")
-#             return redirect("upload_savings")
-
-#     return render(request, "saving/upload_savings.html")
-
-
 @transaction.atomic
 def edit_saving(request, saving_id):
     # Get the savings record
@@ -961,144 +764,6 @@ def list_savings(request):
     return render(request, "saving/list_savings.html", context)
 
 
-# def list_savings(request):
-#     selected_month = request.GET.get("month")
-#     search_name = request.GET.get("name", "").strip()
-#     search_ippis = request.GET.get("ippis", "").strip()
-#     per_page = request.GET.get("per_page", "25")
-
-#     # Validate per_page value
-#     try:
-#         per_page = int(per_page)
-#         if per_page not in [10, 25, 50, 100]:
-#             per_page = 25
-#     except (ValueError, TypeError):
-#         per_page = 25
-
-#     # Base queryset with optimized select_related
-#     savings = Savings.objects.select_related(
-#         "member__member"  # This gets the User model through Member
-#     )
-
-#     # Parse month filter once
-#     month_filter = {}
-#     if selected_month:
-#         try:
-#             year, month_num = selected_month.split("-")
-#             month_filter = {"month__year": year, "month__month": month_num}
-#             savings = savings.filter(**month_filter)
-#         except (ValueError, IndexError):
-#             pass
-
-#     # Filter by member name (from User model)
-#     if search_name:
-#         savings = savings.filter(
-#             Q(member__member__first_name__icontains=search_name) |
-#             Q(member__member__last_name__icontains=search_name)
-#         )
-
-#     # Filter by IPPIS
-#     if search_ippis:
-#         savings = savings.filter(member__ippis__icontains=search_ippis)
-
-#     # Order results by user's first name (moved before pagination for consistency)
-#     savings = savings.order_by("-id", "member__member__first_name")
-
-#     # Pagination
-#     paginator = Paginator(savings, per_page)
-#     page_number = request.GET.get("page")
-#     page_obj = paginator.get_page(page_number)
-
-#     # Get member IDs from current page only
-#     current_page_member_ids = [saving.member_id for saving in page_obj.object_list]
-    
-#     # Build dictionaries for O(1) lookup instead of nested loops
-#     loanable_dict = {}
-#     investment_dict = {}
-    
-#     if current_page_member_ids:
-#         # Get loanables for current page members
-#         loanable_filter = {"member_id__in": current_page_member_ids}
-#         if month_filter:
-#             loanable_filter.update(month_filter)
-            
-#         loanables = Loanable.objects.filter(**loanable_filter).values('member_id', 'amount', 'month')
-        
-#         # Debug: Check what loanables we're getting
-#         if settings.DEBUG:
-#             print("Loanables found:", list(loanables))
-        
-#         # Create lookup dictionary: (member_id, month) -> amount
-#         for loanable in loanables:
-#             key = (loanable['member_id'], loanable['month'])
-#             loanable_dict[key] = loanable['amount']
-        
-#         # Get investments for current page members
-#         investment_filter = {"member_id__in": current_page_member_ids}
-#         if month_filter:
-#             investment_filter.update(month_filter)
-            
-#         investments = Investment.objects.filter(**investment_filter).values('member_id', 'amount', 'month')
-        
-#         # Debug: Check what investments we're getting
-#         if settings.DEBUG:
-#             print("Investments found:", list(investments))
-        
-#         # Create lookup dictionary: (member_id, month) -> amount
-#         for investment in investments:
-#             key = (investment['member_id'], investment['month'])
-#             investment_dict[key] = investment['amount']
-
-#     # Debug: Check the dictionaries we built
-#     if settings.DEBUG:
-#         print("Loanable dict:", loanable_dict)
-#         print("Investment dict:", investment_dict)
-
-#     # Efficiently assign amounts using dictionary lookups
-#     for saving in page_obj.object_list:
-#         lookup_key = (saving.member_id, saving.month)
-#         saving.loanable_amount = loanable_dict.get(lookup_key, Decimal("0.00"))
-#         saving.investment_amount = investment_dict.get(lookup_key, Decimal("0.00"))
-        
-#         # Debug: Check each lookup
-#         if settings.DEBUG:
-#             print(f"Looking up key {lookup_key}: loanable={saving.loanable_amount}, investment={saving.investment_amount}")
-
-#     # Debugging output (consider removing in production)
-#     if settings.DEBUG:  # Only show debug info in development
-#         print("Savings Debug =>", [
-#             (
-#                 s.member.member.first_name,
-#                 s.member.member.last_name,
-#                 s.member.ippis,
-#                 s.month,
-#                 s.month_saving,
-#                 s.loanable_amount,
-#                 s.investment_amount
-#             )
-#             for s in page_obj.object_list
-#         ])
-
-#     context = {
-#         "page_obj": page_obj,
-#         "selected_month": selected_month,
-#         "search_name": search_name,
-#         "search_ippis": search_ippis,
-#         "per_page": per_page,
-#         "total_records": paginator.count,
-#         "pagination_info": {
-#             "current_page": page_obj.number,
-#             "total_pages": paginator.num_pages,
-#             "has_previous": page_obj.has_previous(),
-#             "has_next": page_obj.has_next(),
-#             "previous_page": page_obj.previous_page_number() if page_obj.has_previous() else None,
-#             "next_page": page_obj.next_page_number() if page_obj.has_next() else None,
-#         },
-#     }
-
-#     return render(request, "saving/list_savings.html", context)
-
-
 def subscription_fee(request):
     if request.method == 'POST':
         amount = request.POST.get("amount")
@@ -1122,10 +787,8 @@ def edit_subscription_fee(request,id):
 
 def monthly_savings_uploads(request):
     # Get monthly savings uploads
-    monthly_savings = (
-        Savings.objects
-        .annotate(month_only=TruncMonth("month"))
-        .values("month_only")
+
+    monthly_savings = ( Savings.objects.annotate(month_only=TruncMonth("month")).values("month_only")
         .annotate(
             total_uploaded=Sum("month_saving"),
             total_members=Count("member", distinct=True),
@@ -1134,18 +797,20 @@ def monthly_savings_uploads(request):
     )
 
     # Get monthly loanable totals
-    monthly_loanable = (
-        Loanable.objects
-        .annotate(month_only=TruncMonth("month"))
-        .values("month_only")
+    month_original_amount = (Savings.objects.annotate(month_only=TruncMonth("month")).values("month_only")
+        .annotate(total_original_amount=Sum("original_amount"))
+    )
+    original_amount_dict = {item["month_only"]: item["total_original_amount"] for item in month_original_amount}
+
+
+    # Get monthly loanable totals
+    monthly_loanable = (Loanable.objects.annotate(month_only=TruncMonth("month")).values("month_only")
         .annotate(total_loanable=Sum("amount"))
     )
     loanable_dict = {item["month_only"]: item["total_loanable"] for item in monthly_loanable}
 
     # Get monthly investment totals
-    monthly_investment = (
-        Investment.objects
-        .annotate(month_only=TruncMonth("month"))
+    monthly_investment = (Investment.objects .annotate(month_only=TruncMonth("month"))
         .values("month_only")
         .annotate(total_investment=Sum("amount"))
     )
@@ -1168,6 +833,7 @@ def monthly_savings_uploads(request):
             "month_only": month,
             "total_uploaded": item["total_uploaded"] or 0,
             "total_members": item["total_members"] or 0,
+            "total_original_amount":original_amount_dict.get(month, 0),
             "total_loanable": loanable_dict.get(month, 0),
             "total_investment": investment_dict.get(month, 0),
             "total_interest": interest_dict.get(month, 0),

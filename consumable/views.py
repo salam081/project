@@ -823,7 +823,16 @@ def upload_consumable_payment(request):
 
         with transaction.atomic():
             for _, row in df.iterrows():
-                ippis = str(row["IPPIS"]).strip()
+                raw_ippis = row["IPPIS"]
+
+                if pd.isna(raw_ippis):  # skip empty IPPIS
+                    skipped.append("Empty IPPIS")
+                    continue
+
+                if isinstance(raw_ippis, (int, float)):
+                    ippis = str(int(raw_ippis))
+                else:
+                    ippis = str(raw_ippis).strip()
 
                 # ✅ Convert amount to Decimal safely
                 try:
@@ -836,6 +845,7 @@ def upload_consumable_payment(request):
                 if not req:
                     skipped.append(ippis)
                     continue
+
 
                 # Skip duplicates
                 if PaybackConsumable.objects.filter(

@@ -883,95 +883,6 @@ def admin_repayment_tracking(request):
 
 # Import the query functions from your previous artifact
 
-def monthly_paybacks_summary():
-    """Get monthly payback totals"""
-    return LoanRepayback.objects.extra(
-        select={'month': "strftime('%%Y-%%m', repayment_date)"}
-    ).values('month').annotate(
-        total_payments=Sum('amount_paid'),
-        number_of_payments=Count('id'),
-        average_payment=Sum('amount_paid') / Count('id')
-    ).order_by('month')
-
-def total_payments_by_loan_type():
-    """Get total payments by each loan type"""
-    return LoanRepayback.objects.values(
-        'loan_request__loan_type__name'
-    ).annotate(
-        total_amount=Sum('amount_paid')
-    ).order_by('-total_amount')
-
-def monthly_payments_by_loan_type():
-    """Get monthly breakdown AND loan type totals combined"""
-    return LoanRepayback.objects.extra(
-        select={'month': "strftime('%%Y-%%m', repayment_date)"}
-    ).values(
-        'month', 
-        'loan_request__loan_type__name'
-    ).annotate(
-        total_amount=Sum('amount_paid'),
-        payment_count=Count('id'),
-        average_payment=Sum('amount_paid') / Count('id')
-    ).order_by('month', 'loan_request__loan_type__name')
-
-# MAIN VIEW FUNCTION WITH PAGINATION
-def loan_analytics_view(request):
-    
-    # Get the three main datasets
-    monthly_payments = monthly_paybacks_summary()
-    loan_type_totals = total_payments_by_loan_type()
-    detailed_breakdown = monthly_payments_by_loan_type()
-    
-    # Pagination for detailed breakdown
-    paginator = Paginator(detailed_breakdown, 10)  # 10 items per page
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
-    
-    # Calculate summary statistics
-    all_payments = LoanRepayback.objects.aggregate(
-        total=Sum('amount_paid'),
-        count=Count('id')
-    )
-    
-    # Get current month total
-    current_month = timezone.now().date().replace(day=1)
-    current_month_payments = LoanRepayback.objects.filter(
-        repayment_date__gte=current_month
-    ).aggregate(total=Sum('amount_paid'))
-    
-    # Calculate percentages for loan types (for progress bars)
-    total_all = all_payments['total'] or 0
-    loan_type_list = []
-    for item in loan_type_totals:
-        percentage = (item['total_amount'] / total_all * 100) if total_all > 0 else 0
-        loan_type_list.append({
-            'loan_request__loan_type__name': item['loan_request__loan_type__name'],
-            'total_amount': item['total_amount'],
-            'percentage': percentage
-        })
-    
-    # Prepare context for template
-    context = {
-        # Main data for charts/tables
-        'monthly_payments': monthly_payments,
-        'loan_type_totals': loan_type_list,  # Modified with percentages
-        'detailed_breakdown': page_obj,  # Paginated data
-        
-        # Summary statistics for cards
-        'total_all_payments': all_payments['total'] or 0,
-        'total_transactions': all_payments['count'] or 0,
-        'current_month_total': current_month_payments['total'] or 0,
-        
-        # Additional data
-        'today': timezone.now().date(),
-        
-        # Pagination data
-        'page_obj': page_obj,
-        'is_paginated': page_obj.has_other_pages(),
-    }
-    
-    return render(request, 'loan/loan_analytics.html', context)
-
 # def monthly_paybacks_summary():
 #     """Get monthly payback totals"""
 #     return LoanRepayback.objects.extra(
@@ -984,13 +895,18 @@ def loan_analytics_view(request):
 
 # def total_payments_by_loan_type():
 #     """Get total payments by each loan type"""
-#     return LoanRepayback.objects.values( 'loan_request__loan_type__name').annotate(
+#     return LoanRepayback.objects.values(
+#         'loan_request__loan_type__name'
+#     ).annotate(
 #         total_amount=Sum('amount_paid')
 #     ).order_by('-total_amount')
 
 # def monthly_payments_by_loan_type():
 #     """Get monthly breakdown AND loan type totals combined"""
-#     return LoanRepayback.objects.extra(select={'month': "strftime('%%Y-%%m', repayment_date)"}).values('month', 
+#     return LoanRepayback.objects.extra(
+#         select={'month': "strftime('%%Y-%%m', repayment_date)"}
+#     ).values(
+#         'month', 
 #         'loan_request__loan_type__name'
 #     ).annotate(
 #         total_amount=Sum('amount_paid'),
@@ -998,12 +914,19 @@ def loan_analytics_view(request):
 #         average_payment=Sum('amount_paid') / Count('id')
 #     ).order_by('month', 'loan_request__loan_type__name')
 
-# # MAIN VIEW FUNCTION
+
+# # MAIN VIEW FUNCTION WITH PAGINATION
 # def loan_analytics_view(request):
+    
 #     # Get the three main datasets
 #     monthly_payments = monthly_paybacks_summary()
 #     loan_type_totals = total_payments_by_loan_type()
 #     detailed_breakdown = monthly_payments_by_loan_type()
+    
+#     # Pagination for detailed breakdown
+#     paginator = Paginator(detailed_breakdown, 10)  # 10 items per page
+#     page_number = request.GET.get('page', 1)
+#     page_obj = paginator.get_page(page_number)
     
 #     # Calculate summary statistics
 #     all_payments = LoanRepayback.objects.aggregate(
@@ -1033,7 +956,7 @@ def loan_analytics_view(request):
 #         # Main data for charts/tables
 #         'monthly_payments': monthly_payments,
 #         'loan_type_totals': loan_type_list,  # Modified with percentages
-#         'detailed_breakdown': detailed_breakdown,
+#         'detailed_breakdown': page_obj,  # Paginated data
         
 #         # Summary statistics for cards
 #         'total_all_payments': all_payments['total'] or 0,
@@ -1042,12 +965,115 @@ def loan_analytics_view(request):
         
 #         # Additional data
 #         'today': timezone.now().date(),
+        
+#         # Pagination data
+#         'page_obj': page_obj,
+#         'is_paginated': page_obj.has_other_pages(),
 #     }
     
-#     return render(request, 'loan_analytics.html', context)
+#     return render(request, 'loan/loan_analytics.html', context)
+
+from django.db.models import Sum, Count, Avg
+from django.db.models.functions import TruncMonth
+from django.core.paginator import Paginator
+from django.utils import timezone
+
+# --- HELPERS ---
+
+def monthly_paybacks_summary():
+    """Get monthly payback totals"""
+    return (
+        LoanRepayback.objects
+        .annotate(month=TruncMonth("repayment_date"))
+        .values("month")
+        .annotate(
+            total_payments=Sum("amount_paid"),
+            number_of_payments=Count("id"),
+            average_payment=Avg("amount_paid")  # ✅ more efficient than Sum/Count
+        )
+        .order_by("month")
+    )
 
 
+def total_payments_by_loan_type():
+    """Get total payments by each loan type"""
+    return (
+        LoanRepayback.objects
+        .values("loan_request__loan_type__name")
+        .annotate(total_amount=Sum("amount_paid"))
+        .order_by("-total_amount")
+    )
 
 
+def monthly_payments_by_loan_type():
+    """Get monthly breakdown AND loan type totals combined"""
+    return (
+        LoanRepayback.objects
+        .annotate(month=TruncMonth("repayment_date"))
+        .values("month", "loan_request__loan_type__name")
+        .annotate(
+            total_amount=Sum("amount_paid"),
+            payment_count=Count("id"),
+            average_payment=Avg("amount_paid")
+        )
+        .order_by("month", "loan_request__loan_type__name")
+    )
 
 
+# --- MAIN VIEW FUNCTION ---
+
+def loan_analytics_view(request):
+    # Get the three main datasets
+    monthly_payments = monthly_paybacks_summary()
+    loan_type_totals = total_payments_by_loan_type()
+    detailed_breakdown = monthly_payments_by_loan_type()
+
+    # Pagination for detailed breakdown
+    paginator = Paginator(detailed_breakdown, 10)  # 10 items per page
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+
+    # Calculate summary statistics
+    all_payments = LoanRepayback.objects.aggregate(
+        total=Sum("amount_paid"),
+        count=Count("id")
+    )
+
+    # Get current month total
+    current_month = timezone.now().date().replace(day=1)
+    current_month_payments = LoanRepayback.objects.filter(
+        repayment_date__gte=current_month
+    ).aggregate(total=Sum("amount_paid"))
+
+    # Calculate percentages for loan types (for progress bars)
+    total_all = all_payments["total"] or 0
+    loan_type_list = []
+    for item in loan_type_totals:
+        percentage = (item["total_amount"] / total_all * 100) if total_all > 0 else 0
+        loan_type_list.append({
+            "loan_request__loan_type__name": item["loan_request__loan_type__name"],
+            "total_amount": item["total_amount"],
+            "percentage": percentage
+        })
+
+    # Prepare context for template
+    context = {
+        # Main data for charts/tables
+        "monthly_payments": monthly_payments,
+        "loan_type_totals": loan_type_list,  # Modified with percentages
+        "detailed_breakdown": page_obj,      # Paginated data
+
+        # Summary statistics for cards
+        "total_all_payments": all_payments["total"] or 0,
+        "total_transactions": all_payments["count"] or 0,
+        "current_month_total": current_month_payments["total"] or 0,
+
+        # Additional data
+        "today": timezone.now().date(),
+
+        # Pagination data
+        "page_obj": page_obj,
+        "is_paginated": page_obj.has_other_pages(),
+    }
+
+    return render(request, "loan/loan_analytics.html", context)

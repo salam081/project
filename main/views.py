@@ -320,10 +320,7 @@ def guest_request_consumable(request):
                     quantity = details["quantity"]
 
                     if quantity > selling_item.quantity:
-                        messages.error(
-                            request,
-                            f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}.",
-                        )
+                        messages.error(request, f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}.",)
                         raise ValueError("Insufficient stock.")
 
                     ConsumableRequestDetail.objects.create(
@@ -349,11 +346,7 @@ def guest_request_consumable(request):
     selling_plans = SellingPlan.objects.filter(quantity__gt=0)
     consumable_types = ConsumableType.objects.filter(available=True)
 
-    return render(
-        request,
-        "guest/request_consumable.html",
-        {"consumable_types": consumable_types, "selling_plans": selling_plans},
-    )
+    return render(request, "guest/request_consumable.html",{"consumable_types": consumable_types, "selling_plans": selling_plans},)
 
 
 @login_required

@@ -150,13 +150,13 @@
                             </td>
                             <td>
                                 {% if request.status == 'pending' %}
-                                    <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="status-badge bg-warning text-dark">Pending</span>
                                 {% elif request.status == 'approved' %}
-                                    <span class="badge bg-success">Approved</span>
+                                    <span class="status-badge bg-success">Approved</span>
                                 {% elif request.status == 'accounted' %}
-                                    <span class="badge bg-primary">Accounted</span>
+                                    <span class="status-badge bg-primary">Accounted</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ request.get_status_display }}</span>
+                                    <span class="status-badge bg-secondary">{{ request.get_status_display }}</span>
                                 {% endif %}
                             </td>
                             <td class="text-nowrap">

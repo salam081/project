@@ -385,8 +385,8 @@
   </style>
 
 <div class="request-detail-container fade-in">
-  <div class="detail-header d-flex justify-content-between align-items-center">
-    <h5>Consumable Request <span class="request-id">#{{ consumable_request.id }}</span></h5>
+  <div class="detail-header d-flex justify-content-between align-items-center gap-3">
+    <h5> <a href="{% url 'admin_consumables_list' %}" class="btn btn-sm btn-secondary">← Back to List</a></h5>
     <span class="status-badge status-{{ consumable_request.status }}">{{ consumable_request.status }}</span>
   </div>
 
@@ -396,36 +396,59 @@
         <div class="card-body">
           <h5>📋 Request Details</h5>
           <div class="detail-section">
-            <div class="row">
-              <dt class="col-sm-4">👤 Requested By:</dt>
-              <dd class="col-sm-8">{{ consumable_request.user.get_full_name|default:consumable_request.user.username }}</dd>
+            <div class="table-responsive">
 
-              <dt class="col-sm-4">📦 Consumable Type:</dt>
-              <dd class="col-sm-8">{{ consumable_request.consumable_type.name }}</dd>
+              <div class="row">
+                <table class="table table-bordered">
+                  <tbody>
+                    <tr>
+                      <th>👤 Requested By</th>
+                      <td>
+                        {% if consumable_request.user %}
+                          {{ consumable_request.user.first_name }} {{ consumable_request.user.last_name }}
+                        {% else %}
+                          {{ consumable_request.guest_name }}
+                        {% endif %}
+                      </td>
+                    </tr>
 
-              <dt class="col-sm-4">📅 Loan Term:</dt>
-              <dd class="col-sm-8">
-                {% if consumable_request.details.first %}
-                  <span class="info-icon">⏱</span>{{ consumable_request.details.first.loan_term_months }} Months
-                {% else %}
-                  <span class="text-muted">N/A</span>
-                {% endif %}
-              </dd>
+                    <tr>
+                      <th>📦 Consumable Type</th>
+                      <td>{{ consumable_request.consumable_type.name }}</td>
+                    </tr>
 
-              <dt class="col-sm-4">🕒 Date Submitted:</dt>
-              <dd class="col-sm-8">{{ consumable_request.date_created|date:'F j, Y, P' }}</dd>
+                    <tr>
+                      <th>📅 Duration</th>
+                      <td>
+                        {% if consumable_request.details.first %}
+                          ⏱ {{ consumable_request.details.first.loan_term_months }} Months
+                        {% else %}
+                          <span class="text-muted">N/A</span>
+                        {% endif %}
+                      </td>
+                    </tr>
 
-              {% if consumable_request.file_payslpt %}
-                <dt class="col-sm-4">💰 Payslip:</dt>
-                <dd class="col-sm-5">
-                  <a href="{{ consumable_request.file_payslpt.url }}" target="_blank" class="btn btn-sm btn-primary payslip-link">
-                    View Payslip
-                  </a>
-                </dd>
-              {% endif %}
+                    <tr>
+                      <th>🕒 Date Submitted</th>
+                      <td>{{ consumable_request.date_created|date:'F j, Y, P' }}</td>
+                    </tr>
+
+                    {% if consumable_request.file_payslpt %}
+                      <tr>
+                        <th>💰 Payslip</th>
+                        <td>
+                          <a href="{{ consumable_request.file_payslpt.url }}" target="_blank" 
+                            class=" payslip-link">
+                            View Payslip
+                          </a>
+                        </td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <a href="{% url 'admin_consumables_list' %}" class="btn btn-secondary">← Back to List</a>
 
             {% if consumable_request.status == 'Pending' %}
               <form action="{% url 'admin_request_approve' consumable_request.id %}" method="post" style="display:inline;">
@@ -444,14 +467,14 @@
           <div class="col-md-12">
             <div class="card shadow mt-2">
               <div class="card-body">
-                <h4>Payment Summary</h4>
+                <h6>Payment Summary</h6>
                 <ul class="items-list">
                   <li class="d-flex justify-content-between align-items-center">
-                    <div class="item-details fs-5">Total Paid:</div>
+                    <div class="item-details fs-6">Total Paid:</div>
                     <div class="item-price">₦{{ total_paid|floatformat:2 }}</div>
                   </li>
                   <li class="d-flex justify-content-between align-items-center">
-                    <div class="item-details fs-5">Total Balance:</div>
+                    <div class="item-details fs-6">Total Balance:</div>
                     <div class="item-price">₦{{ balance|floatformat:2 }}</div>
                   </li>
                 </ul>
@@ -478,7 +501,7 @@
                 </li>
               {% endfor %}
             </ul>
-            <div class="total-price-summary">
+            <div class="total-price-summary fs-6">
               💰 Total Amount: ₦{{ consumable_request.calculate_total_price|floatformat:2 }}
             </div>
           {% else %}

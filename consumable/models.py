@@ -143,8 +143,13 @@ class ConsumableFormFee(models.Model):
         ("used", "Used for Loan"),     
         ("expired", "Expired/Closed"), # optional, if you want expiration
     ]
-    member = models.ForeignKey(Member,on_delete=models.CASCADE,related_name='consumable_fee')
+    member = models.ForeignKey(Member,on_delete=models.CASCADE,related_name='consumable_fee', null=True, blank=True)
     consumable_type = models.ForeignKey(ConsumableType, on_delete=models.CASCADE)
+
+    # Guest info (used if no member is attached)
+    guest_name = models.CharField(max_length=255, null=True, blank=True)
+    guest_ippis = models.CharField(max_length=20, null=True, blank=True)
+
     form_fee = models.DecimalField(max_digits=10, decimal_places=2)  
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="paid")
     created_by = models.ForeignKey(User,on_delete=models.CASCADE)
@@ -152,7 +157,6 @@ class ConsumableFormFee(models.Model):
 
     def __str__(self):
         return f"{self.member.member.first_name} {self.member.member.last_name} - ₦{self.form_fee}"
-
 
 
 class PickedLog(models.Model):

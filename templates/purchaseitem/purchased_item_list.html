@@ -40,7 +40,7 @@
             <thead>
                 <tr>
                     <th>Item Name</th>
-                    <th>Request ID</th>
+                    {% comment %} <th>Request ID</th> {% endcomment %}
                     <th>Quantity</th>
                     <th>Unit Price</th>
                     <th>Total Cost</th>
@@ -52,15 +52,15 @@
                 {% for item in page_obj %}
                 <tr>
                     <td>{{ item.item_name }}</td>
-                    <td>
-                        <a href="{% url 'consumable_request_detail' request_id=item.consumable_purchased_request.pk %}">
+                    {% comment %} <td>
+                        <a href="">
                             #{{ item.consumable_purchased_request.pk }}
                         </a>
-                    </td>
+                    </td> {% endcomment %}
                     <td>{{ item.quantity|intcomma }}</td>
-                    <td>${{ item.unit_price|intcomma }}</td>
-                    <td>${{ item.total_cost|intcomma }}</td>
-                    <td>{{ item.purchased_on|date:"M d, Y" }}</td>
+                    <td>₦{{ item.unit_price|intcomma }}</td>
+                    <td>₦{{ item.total_price|intcomma }}</td>
+                    <td>{{ item.date_added|date:"M d, Y" }}</td>
                     <td>
                         <a href="{% url 'purchased_item_detail' pk=item.pk %}" class="btn btn-sm btn-info text-white" title="View Details">
                             <i class="fas fa-eye"></i>

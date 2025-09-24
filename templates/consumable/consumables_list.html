@@ -84,70 +84,103 @@
                             </thead>
                             <tbody>
                                 {% for request_obj in consumables_list %}
-                                    <tr>
-                                        <td>#{{ request_obj.id }}</td>
-                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.user.first_name }} {{ request_obj.user.last_name }}</td>
-                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.consumable_type.name }}</td>
-                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.calculate_total_price }}</td>
-                                        <td class="text-nowrap" style="min-width: 120px;">{{ request_obj.date_created|date:'M j, Y, P' }}</td>
-                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">
-                                           
-                                            <span class="status-badge 
-                                                {% if request_obj.status == 'Pending' %}status-pending
-                                                {% elif request_obj.status == 'Approved' %}status-active
-                                                {% elif request_obj.status == 'Itempicked' %}status-itempicked
-                                                {% elif request_obj.status == 'FullyPaid' %}status-completed
-                                                {% elif request_obj.status == 'Declined' %}status-cancelled
-                                                {% else %}bg-secondary{% endif %}">
-                                                {{ request_obj.status }}
-                                            </span>
-                                        </td>
-                                       
-                                       <td>
-                                        <div class="d-flex">
-                                            <a href="{% url 'admin_consumable_detail' request_obj.id %}" class="btn btn-sm btn-outline-primary p-1 me-1" title="View Details">
-                                                <i class="bi bi-eye"></i>
+                            <tr>
+                                <td>#{{ request_obj.id }}</td>
+
+                                <!-- Requested By -->
+                                <td class="text-nowrap" style="min-width: 150px;">
+                                    {% if request_obj.user %}
+                                        {{ request_obj.user.first_name }} {{ request_obj.user.last_name }}
+                                    {% else %}
+                                        {{ request_obj.guest_name }}
+                                        <b class="text-danger">-Guest</b>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Consumable Type -->
+                                <td class="text-nowrap" style="min-width: 150px;">
+                                    {{ request_obj.consumable_type.name }}
+                                </td>
+
+                                <!-- Total Price -->
+                                <td class="text-nowrap" style="min-width: 120px;">
+                                    ₦{{ request_obj.calculate_total_price }}
+                                </td>
+
+                                <!-- Date -->
+                                <td class="text-nowrap" style="min-width: 160px;">
+                                    {{ request_obj.date_created|date:'M j, Y, P' }}
+                                </td>
+
+                                <!-- Status -->
+                                <td class="text-nowrap text-truncate" style="max-width: 200px;">
+                                    <span class="status-badge 
+                                        {% if request_obj.status == 'Pending' %}status-pending
+                                        {% elif request_obj.status == 'Approved' %}status-active
+                                        {% elif request_obj.status == 'Itempicked' %}status-itempicked
+                                        {% elif request_obj.status == 'FullyPaid' %}status-completed
+                                        {% elif request_obj.status == 'Declined' %}status-cancelled
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ request_obj.status }}
+                                    </span>
+                                </td>
+
+                                <!-- Actions -->
+                                <td>
+                                    <div class="d-flex">
+                                        <!-- View -->
+                                        <a href="{% url 'admin_consumable_detail' request_obj.id %}" 
+                                        class="btn btn-sm btn-outline-primary p-1 me-1" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+
+                                        {% if request_obj.status == 'Pending' %}
+                                            <!-- Approve -->
+                                            {% comment %} <a href="" class="btn btn-sm btn-success p-1 me-1" title="Approve">
+                                                <i class="bi bi-check-circle"></i>
+                                            </a> {% endcomment %}
+                                            <!-- Edit -->
+                                            <a href="{% url 'admin_edit_consumable_request' request_obj.id %}" 
+                                            class="btn btn-sm btn-warning p-1 me-1" title="Edit">
+                                                <i class="bi bi-pen"></i>
                                             </a>
-                                            {% if request_obj.status == 'Pending' %}
-                                                <a href="" class="btn btn-sm btn-success p-1 me-1" title="Approve">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </a>
-                                                <a href="{% url 'admin_edit_consumable_request' request_obj.id %}" class="btn btn-sm btn-warning p-1 me-1" title="Edit">
-                                                    <i class="bi bi-pen"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-danger btn-sm p-1" data-bs-toggle="modal" 
-                                                        data-bs-target="#declineConfirmModal" 
-                                                        data-request-id="{{ request_obj.id }}"
-                                                        data-url="{% url 'admin_request_reject' request_obj.id %}"
-                                                        title="Decline">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            {% elif request_obj.status == 'Approved' %}
-                                                <a href="{% url 'admin_request_taking' request_obj.id %}" class="btn btn-sm btn-info p-1 me-1" title="Mark as Item Picked">
-                                                    <i class="bi bi-box-seam"></i>
-                                                </a>
-                                                <a href="{% url 'admin_edit_consumable_request' request_obj.id %}" class="btn btn-sm btn-primary p-1 me-1" title="Edit">
-                                                    <i class="bi bi-pen"></i>
-                                                </a>
-                                                {% comment %} <button type="button" class="btn btn-sm btn-warning p-1" title="Add Payment"
-                                                        data-bs-toggle="modal" data-bs-target="#addPaymentModal"
-                                                        data-request-id="{{ request_obj.id }}"
-                                                        data-balance="{{ request_obj.balance|floatformat:2 }}">
-                                                    <i class="bi bi-currency-dollar"></i>
-                                                </button> {% endcomment %}
-                                            {% elif request_obj.status == 'Itempicked' %}
-                                                <button type="button" class="btn btn-sm btn-warning p-1" title="Add Payment"
-                                                        data-bs-toggle="modal" data-bs-target="#addPaymentModal"
-                                                        data-request-id="{{ request_obj.id }}"
-                                                        data-balance="{{ request_obj.balance|floatformat:2 }}"
-                                                        data-url="{% url 'add_payment' request_obj.id %}">
-                                                    <i class="bi bi-currency-dollar"></i>
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    </tr>
-                                {% endfor %}
+                                            <!-- Decline -->
+                                            <button type="button" class="btn btn-danger btn-sm p-1"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#declineConfirmModal" 
+                                                    data-request-id="{{ request_obj.id }}"
+                                                    data-url="{% url 'admin_request_reject' request_obj.id %}"
+                                                    title="Decline">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+
+                                        {% elif request_obj.status == 'Approved' %}
+                                            <!-- Mark as Item Picked -->
+                                            <a href="{% url 'admin_request_taking' request_obj.id %}" 
+                                            class="btn btn-sm btn-info p-1 me-1" title="Mark as Item Picked">
+                                                <i class="bi bi-box-seam"></i>
+                                            </a>
+                                            <!-- Edit -->
+                                            <a href="{% url 'admin_edit_consumable_request' request_obj.id %}" 
+                                            class="btn btn-sm btn-primary p-1 me-1" title="Edit">
+                                                <i class="bi bi-pen"></i>
+                                            </a>
+
+                                        {% elif request_obj.status == 'Itempicked' %}
+                                            <!-- Add Payment -->
+                                            <button type="button" class="btn btn-sm btn-warning p-1" title="Add Payment"
+                                                    data-bs-toggle="modal" data-bs-target="#addPaymentModal"
+                                                    data-request-id="{{ request_obj.id }}"
+                                                    data-balance="{{ request_obj.balance|floatformat:2 }}"
+                                                    data-url="{% url 'add_payment' request_obj.id %}">
+                                                <i class="bi bi-currency-dollar"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+
                             </tbody>
                         </table>
                     </div>

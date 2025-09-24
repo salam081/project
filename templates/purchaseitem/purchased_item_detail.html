@@ -30,16 +30,16 @@
                 <div class="col-md-6">
                     <p><strong>Item Name:</strong> {{ item.item_name }}</p>
                     <p><strong>Quantity:</strong> {{ item.quantity|intcomma }}</p>
-                    <p><strong>Unit Price:</strong> ${{ item.unit_price|intcomma }}</p>
-                    <p><strong>Total Cost:</strong> ${{ item.total_cost|intcomma }}</p>
-                    <p><strong>Purchased On:</strong> {{ item.purchased_on|date:"F d, Y" }}</p>
+                    <p><strong>Unit Price:</strong> ₦{{ item.unit_price|intcomma }}</p>
+                    <p><strong>Total Cost:</strong> ₦{{ item.total_price|intcomma }}</p>
+                    <p><strong>Purchased On:</strong> {{ item.date_added|date:"F d, Y" }}</p>
                 </div>
                 <div class="col-md-6">
                     <p>
-                        <strong>Associated Request:</strong>
-                        {% comment %} <a href="{% url 'consumable_purchase_request_detail' request_id=item.consumable_purchased_request.pk %}">
-                            #{{ item.consumable_purchased_request.pk }}
-                        </a> {% endcomment %}
+                        <strong> Approved By:</strong>
+                       
+                            #{{ item.consumable_purchased_request }}
+                       
                     </p>
                     <p><strong>Description:</strong> {{ item.description|default:"No description provided." }}</p>
                     {% if item.receipt %}
@@ -60,7 +60,7 @@
             <h5 class="mb-0">Expenditure and Adjustments</h5>
         </div>
         <div class="card-body">
-            <p><strong>Initial Expenditure Amount:</strong> ${{ item.expenditure_amount|intcomma }}</p>
+            <p><strong>Initial Expenditure Amount:</strong> ₦{{ item.expenditure_amount|intcomma }}</p>
             {% if adjustments %}
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
@@ -75,7 +75,7 @@
                             {% for adjustment in adjustments %}
                             <tr>
                                 <td>{{ adjustment.reason }}</td>
-                                <td>${{ adjustment.amount|intcomma }}</td>
+                                <td>₦{{ adjustment.amount|intcomma }}</td>
                                 <td>{{ adjustment.created_at|date:"M d, Y" }}</td>
                             </tr>
                             {% endfor %}

@@ -277,12 +277,28 @@ def guest_request_consumable(request):
             messages.error(request, "Guest details (name, phone, IPPIS) are required.")
             return redirect("guest_request_consumable")
 
-        # Check if guest already has a pending request
+        # ✅ Check if guest already has a pending request
         has_pending = ConsumableRequest.objects.filter(
             guest_ippis=guest_ippis, status="Pending"
         ).exists()
         if has_pending:
             messages.error(request, "You already have a pending request. Please wait for it to be processed.")
+            return redirect("guest_request_consumable")
+
+        # ✅ NEW: Check if guest has paid form fee
+        consumable_type_obj = get_object_or_404(ConsumableType, id=consumable_type_id)
+        has_paid_fee = ConsumableFormFee.objects.filter(
+            guest_name=guest_name.strip(),
+            guest_ippis=guest_ippis.strip(),
+            consumable_type=consumable_type_obj,
+            status="paid"
+        ).exists()
+
+        if not has_paid_fee:
+            messages.error(
+                request,
+                f"{guest_name} (IPPIS {guest_ippis}) You must pay the consumable form fee at the Cooperative before making a request."
+            )
             return redirect("guest_request_consumable")
 
         # Collect item quantities
@@ -297,9 +313,9 @@ def guest_request_consumable(request):
                 messages.error(request, f"Invalid quantity for item ID {item_id}.")
                 return redirect("guest_request_consumable")
 
+        # ✅ Create request + details inside transaction
         with transaction.atomic():
             try:
-                consumable_type_obj = get_object_or_404(ConsumableType, id=consumable_type_id)
                 loan_term_months = int(loan_term_months)
 
                 # Create request
@@ -320,7 +336,10 @@ def guest_request_consumable(request):
                     quantity = details["quantity"]
 
                     if quantity > selling_item.quantity:
-                        messages.error(request, f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}.",)
+                        messages.error(
+                            request,
+                            f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}.",
+                        )
                         raise ValueError("Insufficient stock.")
 
                     ConsumableRequestDetail.objects.create(
@@ -346,7 +365,111 @@ def guest_request_consumable(request):
     selling_plans = SellingPlan.objects.filter(quantity__gt=0)
     consumable_types = ConsumableType.objects.filter(available=True)
 
-    return render(request, "guest/request_consumable.html",{"consumable_types": consumable_types, "selling_plans": selling_plans},)
+    return render(
+        request,
+        "guest/request_consumable.html",
+        {"consumable_types": consumable_types, "selling_plans": selling_plans},
+    )
+
+
+
+# def guest_request_consumable(request):
+#     now = timezone.now()
+
+#     if request.method == "POST":
+#         consumable_type_id = request.POST.get("consumable_type")
+#         loan_term_months = request.POST.get("loan_term_months")
+#         payslip_file = request.FILES.get("file_payslpt")
+#         selected_item_ids = request.POST.getlist("selected_items")
+
+#         # Validation
+#         if not loan_term_months or not loan_term_months.isdigit() or int(loan_term_months) <= 0:
+#             messages.error(request, "A valid loan term (in months) must be provided.")
+#             return redirect("guest_request_consumable")
+
+#         if not selected_item_ids:
+#             messages.error(request, "You must select at least one item.")
+#             return redirect("guest_request_consumable")
+
+#         # Guest details
+#         guest_name = request.POST.get("guest_name")
+#         guest_phone = request.POST.get("guest_phone")
+#         guest_ippis = request.POST.get("guest_ippis")
+
+#         if not guest_name or not guest_phone or not guest_ippis:
+#             messages.error(request, "Guest details (name, phone, IPPIS) are required.")
+#             return redirect("guest_request_consumable")
+
+#         # Check if guest already has a pending request
+#         has_pending = ConsumableRequest.objects.filter(
+#             guest_ippis=guest_ippis, status="Pending"
+#         ).exists()
+#         if has_pending:
+#             messages.error(request, "You already have a pending request. Please wait for it to be processed.")
+#             return redirect("guest_request_consumable")
+
+#         # Collect item quantities
+#         item_details = {}
+#         for item_id in selected_item_ids:
+#             try:
+#                 quantity = int(request.POST.get(f"quantity_{item_id}", 0))
+#                 if quantity <= 0:
+#                     raise ValueError("Quantity must be positive.")
+#                 item_details[item_id] = {"quantity": quantity}
+#             except (ValueError, TypeError):
+#                 messages.error(request, f"Invalid quantity for item ID {item_id}.")
+#                 return redirect("guest_request_consumable")
+
+#         with transaction.atomic():
+#             try:
+#                 consumable_type_obj = get_object_or_404(ConsumableType, id=consumable_type_id)
+#                 loan_term_months = int(loan_term_months)
+
+#                 # Create request
+#                 consumable_request = ConsumableRequest.objects.create(
+#                     consumable_type=consumable_type_obj,
+#                     file_payslpt=payslip_file,
+#                     status="Pending",
+#                     guest_name=guest_name,
+#                     guest_phone=guest_phone,
+#                     guest_ippis=guest_ippis,
+#                 )
+
+#                 # Process items
+#                 for item_id, details in item_details.items():
+#                     selling_item = get_object_or_404(
+#                         SellingPlan.objects.select_related("purchased_item"), id=item_id
+#                     )
+#                     quantity = details["quantity"]
+
+#                     if quantity > selling_item.quantity:
+#                         messages.error(request, f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}.",)
+#                         raise ValueError("Insufficient stock.")
+
+#                     ConsumableRequestDetail.objects.create(
+#                         request=consumable_request,
+#                         selling_item=selling_item,
+#                         quantity=quantity,
+#                         item_price=selling_item.selling_price_per_unit,
+#                         loan_term_months=loan_term_months,
+#                     )
+
+#                     # reduce stock
+#                     selling_item.quantity -= quantity
+#                     selling_item.save(update_fields=["quantity"])
+
+#                 messages.success(request, "Your consumable request has been submitted successfully!")
+#                 return redirect("guest_request_consumable")
+
+#             except Exception as e:
+#                 messages.error(request, f"An unexpected error occurred: {e}")
+#                 return redirect("guest_request_consumable")
+
+#     # GET
+#     selling_plans = SellingPlan.objects.filter(quantity__gt=0)
+#     consumable_types = ConsumableType.objects.filter(available=True)
+
+#     return render(request, "guest/request_consumable.html",{"consumable_types": consumable_types, "selling_plans": selling_plans},)
 
 
 @login_required

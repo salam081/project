@@ -358,10 +358,18 @@
     <h6>Request Consumable As None Member</h6>
 </div>
 <div class="content-card mt-1">
+       
     <div class="form-content">
+         {% if messages %}
+        <ul class="messages text-info ">
+            {% for message in messages %}
+                <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+        <h3 class="section-title">None Member Details</h3>
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
-            <h3 class="section-title">None Member Details</h3>
             <div class="row">
                 <div class="form-group col-md-4">
                     <label for="id_guest_name">Full Name</label>

@@ -70,7 +70,7 @@
                                             {% if request_obj.user.member %}
                                                 ({{ request_obj.user.member.ippis }})
                                             {% else %}
-                                                {{request_obj.guest_name}} {{ request_obj.guest_ippiss }}
+                                                {{request_obj.guest_name}} {{ request_obj.guest_ippiss }} (Gurst)
                                             {% endif %}
                                         </td>
                                         <td>₦{{ request_obj.calculate_total_price|floatformat:2 }}</td>

@@ -107,7 +107,11 @@
                 {% for item in outstanding_data %}
                 <tr>
                     <td>#{{ item.request.id }}</td>
+                    {% if item.user  %}
                     <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ item.request.user.get_full_name|default:item.request.user.username }}</td>
+                      {% else %}
+                        {{ item.guest_name }} ({{ req.guest_ippiss }})
+                    {% endif %}
                     <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ item.request.date_created|date:"Y-m-d" }}</td>
                     <td>₦{{ item.total_price|floatformat:2|intcomma }}</td>
                     <td>₦{{ item.total_paid|floatformat:2|intcomma }}</td>

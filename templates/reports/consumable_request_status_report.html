@@ -199,7 +199,14 @@
                                 {% for req in requests %}
                                 <tr>
                                     <td><strong>{{ req.id }}</strong></td>
-                                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.user.get_full_name|default:req.user.username }}</td>
+                                    {% comment %} <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.user.get_full_name|default:req.user.username }}</td> {% endcomment %}
+                                    <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                                        {% if req.user %}
+                                            {{ req.user.get_full_name|default:req.user.username }}
+                                        {% else %}
+                                            {{ req.guest_name }} ({{ req.guest_ippiss }})
+                                        {% endif %}
+                                    </td>
                                     <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.date_created|date:"Y-m-d H:i" }}</td>
                                     <td class="text-nowrap text-truncate" style="max-width: 270px;">
                                         <span class="status-badge 

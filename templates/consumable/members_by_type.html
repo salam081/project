@@ -64,7 +64,15 @@
                                     {% for request_obj in page_obj  %}
                                     <tr>
                                         {% comment %} <td>#{{ request_obj.id }}</td> {% endcomment %}
-                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ request_obj.user.first_name }} {{ request_obj.user.last_name }} {{ request_obj.user.member.ippis }}</td>
+                                        {% comment %} <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ request_obj.user.first_name }} {{ request_obj.user.last_name }} {{ request_obj.user.member.ippis }}</td> {% endcomment %}
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                                            {{ request_obj.user.first_name }} {{ request_obj.user.last_name }}
+                                            {% if request_obj.user.member %}
+                                                ({{ request_obj.user.member.ippis }})
+                                            {% else %}
+                                                {{request_obj.guest_name}} {{ request_obj.guest_ippiss }}
+                                            {% endif %}
+                                        </td>
                                         <td>₦{{ request_obj.calculate_total_price|floatformat:2 }}</td>
                                         <td>₦{{ request_obj.balance|floatformat:2 }}</td>
                                       <td class="text-nowrap text-truncate" style="max-width: 270px;">

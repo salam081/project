@@ -18,5 +18,7 @@ urlpatterns = [
     path("active-requests/", views.member_active_requests, name="member_active_requests"),
     path("upload_opening_balances/", views.upload_opening_balances, name="upload_opening_balances"),
     path("loan-totals/", views.loan_totals, name="loan_totals"),
+
+
    
 ]

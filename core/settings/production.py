@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'consumable',
     'loan',
     'member',
+    'nonstaff_app',
     'savings',
     'PurchasedItems',
     'report',
@@ -98,6 +99,16 @@ DATABASES = {
 #     }
 # }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': "cms",
+#         'USER': "appdev2",
+#         'PASSWORD': "Password@2",
+#         'HOST': "localhost",
+#         'PORT': "3306",
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

@@ -41,11 +41,11 @@
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label for="id_unit_price" class="form-label">Unit Price (₦) <span class="text-danger">*</span></label>
-                                <input type="number" step="0.01" min="0" class="form-control" id="id_unit_price" name="unit_price" value="{{ item.unit_price|stringformat:'f' }}" required>
+                                <input type="number" step="0.01" min="0" class="form-control" id="id_unit_price" name="unit_price" value="{{ item.unit_price}}" required>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label for="id_expenditure_amount" class="form-label">Other Expenditure (₦)</label>
-                                <input type="number" step="0.01" min="0" class="form-control" id="id_expenditure_amount" name="expenditure_amount" value="{{ item.expenditure_amount|stringformat:'f' }}">
+                                <input type="number" step="0.01" min="0" class="form-control" id="id_expenditure_amount" name="expenditure_amount" value="{{ item.expenditure_amount }}">
                             </div>
                         </div>
                         <div class="mb-3">

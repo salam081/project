@@ -129,7 +129,7 @@
     }
 
     .item-row input[type="checkbox"] {
-        width: 18px;
+        width: 12px;
         height: 18px;
         cursor: pointer;
         accent-color: var(--primary-color);
@@ -182,7 +182,7 @@
     .item-row input[type="number"] {
         width: 80px;
         max-width: 100%;
-        padding: 6px 8px;
+        padding: 6px 5px;
         border: 2px solid var(--border-color);
         border-radius: 6px;
         font-size: 0.9rem;
@@ -212,7 +212,7 @@
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
         color: white;
         border: none;
-        padding: 13px 22px;
+        padding: 7px 15px;
         font-size: 1.1rem;
         font-weight: 600;
         border-radius: 8px;
@@ -355,6 +355,8 @@
 </style>
 
 <div class="form-header">
+    <a href="{% url 'login' %}" class="btn btn-primary text-end">Back</a>
+
     <h6>Request Consumable As None Member</h6>
 </div>
 <div class="content-card mt-1">
@@ -367,7 +369,7 @@
             {% endfor %}
         </ul>
     {% endif %}
-        <h3 class="section-title">None Member Details</h3>
+        <h3 class="section-title">Enter Your Details</h3>
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="row">

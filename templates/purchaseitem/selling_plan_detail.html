@@ -226,11 +226,11 @@
                 <div class="col-md-6">
                     <p><strong>Status:</strong> 
                         {% if plan.purchased_item.consumable_purchased_request.status == 'pending' %}
-                            <span class="badge bg-warning text-dark">{{ plan.purchased_item.consumable_purchased_request.get_status_display }}</span>
+                            <span class="status-badge bg-warning text-dark">{{ plan.purchased_item.consumable_purchased_request.get_status_display }}</span>
                         {% elif plan.purchased_item.consumable_purchased_request.status == 'approved' %}
-                            <span class="badge bg-success">{{ plan.purchased_item.consumable_purchased_request.get_status_display }}</span>
+                            <span class="status-badge bg-success">{{ plan.purchased_item.consumable_purchased_request.get_status_display }}</span>
                         {% elif plan.purchased_item.consumable_purchased_request.status == 'accounted' %}
-                            <span class="badge bg-primary">{{ plan.purchased_item.consumable_purchased_request.get_status_display }}</span>
+                            <span class="status-badge bg-primary">{{ plan.purchased_item.consumable_purchased_request.get_status_display }}</span>
                         {% endif %}
                     </p>
                     <p><strong>Amount Requested:</strong> ₦{{ plan.purchased_item.consumable_purchased_request.amount_requested|floatformat:2|intcomma }}</p>

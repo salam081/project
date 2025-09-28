@@ -12,12 +12,17 @@ from django.db.models import Sum
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from datetime import datetime
+import datetime
 from django.conf import settings
 from django.contrib import messages
 from django.db.models.functions import TruncMonth
+from decimal import Decimal
+
+import openpyxl
+from accounts.decorators import *
+
 from PurchasedItems.models import *
-
-
 from projectfinance.models import *
 from .models import *
 from accounts.models import *
@@ -25,22 +30,11 @@ from consumable.models import *
 from loan.models import *
 from savings.models import *
 from main.models import Withdrawal
-# from .models import FinancialSummary
-# Create your views here.
-
-
-import calendar
-from datetime import datetime
-from decimal import Decimal
-from django.db.models import Sum
 from django.db.models.functions import ExtractMonth, ExtractYear
 from accounts.utils import get_cooperative_withdrawal_stats, get_members_eligible_for_withdrawal
-from datetime import datetime
-import datetime
-from django.shortcuts import render
 
-
-
+@login_required
+@group_required(['admin', 'staff'])
 def admin_dashboard(request):
     # Get the current year
     # current_year = datetime.now().year
@@ -133,13 +127,13 @@ def admin_dashboard(request):
     }
     return render(request, 'admin/admin_dashboad.html', context)
 
-
+@login_required
 def list_financial_summaries(request):
     summaries = FinancialSummary.objects.select_related('user').all()
     context = {'summaries': summaries}
     return render(request, 'main/summary_list.html', context)
 
-
+@login_required
 def delete_financial_summary(request, pk):
     summary = get_object_or_404(FinancialSummary, pk=pk)
     if request.method == 'POST':
@@ -153,6 +147,7 @@ def is_admin(user):
 
 
 @login_required
+@group_required(['admin'])
 def list_withdrawal_requests(request):
     requests = Withdrawal.objects.select_related('member', 'approved_by').all()
     stats = get_cooperative_withdrawal_stats()
@@ -160,14 +155,8 @@ def list_withdrawal_requests(request):
 
 
 
-# @login_required
-# def approve_withdrawal_request(request, pk):
-#     withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
-#     withdrawal_request.approve(request.user)
-#     messages.success(request, f"Request by {withdrawal_request.member} approved.")
-#     return redirect('list_withdrawal_requests')
-
 @login_required
+@group_required(['admin'])
 def approve_withdrawal_request(request, pk):
     withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
     member = withdrawal_request.member  
@@ -205,7 +194,9 @@ def approve_withdrawal_request(request, pk):
         "active_consumables": active_consumables,
         "active_project_finance": active_project_finance, })
 
+
 @login_required
+@group_required(['admin'])
 def decline_withdrawal_request(request, pk):
     withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
 
@@ -224,14 +215,12 @@ def decline_withdrawal_request(request, pk):
 
 
 @login_required
-
 def eligible_members_view(request):
     eligible_members = get_members_eligible_for_withdrawal()
-    return render(request, 'withdrawal/members/eligible_members.html', {
-        'eligible_members': eligible_members,
-    })
+    return render(request, 'withdrawal/members/eligible_members.html', {'eligible_members': eligible_members,})
 
-
+@login_required
+@group_required(['admin'])
 def cooperative_summary(request):
     summary_totals = FinancialSummary.objects.aggregate(
         total_savings=Sum('total_savings'),
@@ -249,6 +238,7 @@ def cooperative_summary(request):
         
     }
     return render(request, "widower/admin/coop_summary.html", context)
+
 
 def guest_request_consumable(request):
     now = timezone.now()
@@ -372,107 +362,8 @@ def guest_request_consumable(request):
     )
 
 
-
-# def guest_request_consumable(request):
-#     now = timezone.now()
-
-#     if request.method == "POST":
-#         consumable_type_id = request.POST.get("consumable_type")
-#         loan_term_months = request.POST.get("loan_term_months")
-#         payslip_file = request.FILES.get("file_payslpt")
-#         selected_item_ids = request.POST.getlist("selected_items")
-
-#         # Validation
-#         if not loan_term_months or not loan_term_months.isdigit() or int(loan_term_months) <= 0:
-#             messages.error(request, "A valid loan term (in months) must be provided.")
-#             return redirect("guest_request_consumable")
-
-#         if not selected_item_ids:
-#             messages.error(request, "You must select at least one item.")
-#             return redirect("guest_request_consumable")
-
-#         # Guest details
-#         guest_name = request.POST.get("guest_name")
-#         guest_phone = request.POST.get("guest_phone")
-#         guest_ippis = request.POST.get("guest_ippis")
-
-#         if not guest_name or not guest_phone or not guest_ippis:
-#             messages.error(request, "Guest details (name, phone, IPPIS) are required.")
-#             return redirect("guest_request_consumable")
-
-#         # Check if guest already has a pending request
-#         has_pending = ConsumableRequest.objects.filter(
-#             guest_ippis=guest_ippis, status="Pending"
-#         ).exists()
-#         if has_pending:
-#             messages.error(request, "You already have a pending request. Please wait for it to be processed.")
-#             return redirect("guest_request_consumable")
-
-#         # Collect item quantities
-#         item_details = {}
-#         for item_id in selected_item_ids:
-#             try:
-#                 quantity = int(request.POST.get(f"quantity_{item_id}", 0))
-#                 if quantity <= 0:
-#                     raise ValueError("Quantity must be positive.")
-#                 item_details[item_id] = {"quantity": quantity}
-#             except (ValueError, TypeError):
-#                 messages.error(request, f"Invalid quantity for item ID {item_id}.")
-#                 return redirect("guest_request_consumable")
-
-#         with transaction.atomic():
-#             try:
-#                 consumable_type_obj = get_object_or_404(ConsumableType, id=consumable_type_id)
-#                 loan_term_months = int(loan_term_months)
-
-#                 # Create request
-#                 consumable_request = ConsumableRequest.objects.create(
-#                     consumable_type=consumable_type_obj,
-#                     file_payslpt=payslip_file,
-#                     status="Pending",
-#                     guest_name=guest_name,
-#                     guest_phone=guest_phone,
-#                     guest_ippis=guest_ippis,
-#                 )
-
-#                 # Process items
-#                 for item_id, details in item_details.items():
-#                     selling_item = get_object_or_404(
-#                         SellingPlan.objects.select_related("purchased_item"), id=item_id
-#                     )
-#                     quantity = details["quantity"]
-
-#                     if quantity > selling_item.quantity:
-#                         messages.error(request, f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}.",)
-#                         raise ValueError("Insufficient stock.")
-
-#                     ConsumableRequestDetail.objects.create(
-#                         request=consumable_request,
-#                         selling_item=selling_item,
-#                         quantity=quantity,
-#                         item_price=selling_item.selling_price_per_unit,
-#                         loan_term_months=loan_term_months,
-#                     )
-
-#                     # reduce stock
-#                     selling_item.quantity -= quantity
-#                     selling_item.save(update_fields=["quantity"])
-
-#                 messages.success(request, "Your consumable request has been submitted successfully!")
-#                 return redirect("guest_request_consumable")
-
-#             except Exception as e:
-#                 messages.error(request, f"An unexpected error occurred: {e}")
-#                 return redirect("guest_request_consumable")
-
-#     # GET
-#     selling_plans = SellingPlan.objects.filter(quantity__gt=0)
-#     consumable_types = ConsumableType.objects.filter(available=True)
-
-#     return render(request, "guest/request_consumable.html",{"consumable_types": consumable_types, "selling_plans": selling_plans},)
-
-
 @login_required
+@group_required(['admin'])
 def member_active_requests(request):
     ippis = request.GET.get("ippis", "").strip()
     member = None
@@ -534,14 +425,9 @@ def member_active_requests(request):
         "can_withdraw": can_withdraw,
     })
 
-from decimal import Decimal
-from django.db import transaction
-from django.shortcuts import render, redirect
-from django.contrib import messages
-import openpyxl
-from .models import Member, Savings, Loanable, Investment
 
 @transaction.atomic
+@login_required
 def upload_opening_balances(request):
     if request.method == "POST" and request.FILES.get("file"):
         file = request.FILES["file"]
@@ -613,18 +499,17 @@ def upload_opening_balances(request):
 
         messages.success(
             request,
-            f"✅ Opening balances processed! {created} created, {updated} updated, {skipped} skipped."
+            f" Opening balances processed! {created} created, {updated} updated, {skipped} skipped."
         )
         return redirect("upload_opening_balances")
 
     return render(request, "main/upload_opening_balances.html")
 
 
-from collections import OrderedDict
-from django.db.models.functions import TruncMonth
-from django.db.models import Sum
+
 
 @login_required
+@group_required(['admin'])
 def loan_totals(request):
     # Aggregate by month
     savings_by_month = (
@@ -677,6 +562,4 @@ def loan_totals(request):
         "loans_by_month": loans_by_month,
     }
     return render(request, "main/loan_totals.html", context)
-
-# =============================================
 

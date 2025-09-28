@@ -159,7 +159,7 @@
 
                     </form>
                      <!-- Cost Calculator Card -->
-                    {% comment %} <div class="card bg-warning bg-opacity-10 mb-4">
+                     <div class="card bg-warning bg-opacity-10 mb-4">
                         <div class="card-header bg-warning bg-opacity-25">
                             <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Cost Calculator</h6>
                         </div>
@@ -194,7 +194,7 @@
                                 <div id="budget_alert" class="alert d-none" role="alert"></div>
                             </div>
                         </div>
-                    </div> {% endcomment %}
+                    </div> 
 
                 </div>
             </div>
@@ -202,8 +202,7 @@
     </div>
 </div>
 
-{% endblock content %}
-{% block extra_js %}
+
 <script>
 function formatCurrency(amount) {
     return '₦' + Number(amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -276,4 +275,4 @@ document.addEventListener('DOMContentLoaded', function() {
     updateCalculator();
 });
 </script>
-{% endblock %}
+{% endblock content %}

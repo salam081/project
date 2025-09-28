@@ -38,7 +38,7 @@
             <button class="nav-link active" id="member-tab" data-bs-toggle="tab" data-bs-target="#member" type="button" role="tab">Member Payment</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="guest-tab" data-bs-toggle="tab" data-bs-target="#guest" type="button" role="tab">Guest Payment</button>
+            <button class="nav-link" id="guest-tab" data-bs-toggle="tab" data-bs-target="#guest" type="button" role="tab">None Member  Payment</button>
           </li>
         </ul>
 
@@ -97,11 +97,11 @@
                 <form method="post">
                   {% csrf_token %}
                   <div class="mb-3">
-                    <label class="form-label small">Guest Name</label>
+                    <label class="form-label small">None Member  Name</label>
                     <input type="text" name="guest_name" class="form-control form-control-sm" required>
                   </div>
                   <div class="mb-3">
-                    <label class="form-label small">Guest IPPIS</label>
+                    <label class="form-label small">None Member IPPIS</label>
                     <input type="text" name="guest_ippis" class="form-control form-control-sm" required>
                   </div>
                   <div class="mb-3">

@@ -113,167 +113,6 @@ def all_member_saving_search(request):
     return render(request, 'saving/all_member_saving_search.html', context)
 
 
-
-
-
-
-# @transaction.atomic
-# def upload_savings(request):
-#     if request.method == "POST" and request.FILES.get("file"):
-#         try:
-#             # Get selected month from template
-#             selected_month = request.POST.get("month")
-#             if not selected_month:
-#                 messages.error(request, "⚠️ Please select a month.")
-#                 return redirect("upload_savings")
-
-#             # Convert to first day of the selected month
-#             month = pd.to_datetime(selected_month).date().replace(day=1)
-#             file = request.FILES["file"]
-
-#             # Read Excel or CSV
-#             if file.name.endswith(('.xlsx', '.xls')):
-#                 df = pd.read_excel(file, dtype={'IPPIS': str})
-#             else:
-#                 df = pd.read_csv(file, dtype={'IPPIS': str})
-
-#             # Validate required columns
-#             required_columns = ["IPPIS", "Amount"]
-#             missing_columns = [col for col in required_columns if col not in df.columns]
-#             if missing_columns:
-#                 messages.error(request, f"⚠️ Missing columns: {', '.join(missing_columns)}.")
-#                 return redirect("upload_savings")
-
-#             # Clean data
-#             df = df.dropna(subset=['IPPIS', 'Amount'])
-#             df["IPPIS"] = df["IPPIS"].astype(str).str.strip()
-#             df["Amount"] = pd.to_numeric(df["Amount"], errors='coerce')
-#             df = df[(df["Amount"] > 0) & df["Amount"].notna()]
-
-#             if len(df) == 0:
-#                 messages.error(request, "⚠️ No valid data found in file.")
-#                 return redirect("upload_savings")
-
-#             # Get latest subscription/interest amount
-#             try:
-#                 global_interest = InterestAmount.objects.latest("date_created").amount
-#             except InterestAmount.DoesNotExist:
-#                 messages.error(request, "⚠️ No Subscription amount set. Please add one first.")
-#                 return redirect("upload_savings")
-
-#             # Prepare bulk create lists
-#             savings_to_create = []
-#             interests_to_create = []
-#             loanables_to_create = []
-#             investments_to_create = []
-#             savings_member_ids_added = set()
-#             interest_member_ids_added = set()
-#             duplicate_savings = []
-#             skipped_members = []
-
-#             # Fetch all members for matching
-#             members = {str(m.ippis).strip(): m for m in Member.objects.all()}
-
-#             # Fetch all existing savings for this month
-#             existing_savings_ids = set(
-#                 Savings.objects.filter(month=month).values_list("member_id", flat=True)
-#             )
-
-#             # Loop through Excel rows
-#             for _, row in df.iterrows():
-#                 try:
-#                     ippis = str(row["IPPIS"]).strip()
-#                     amount = Decimal(str(row["Amount"]))
-
-#                     # Check if member exists
-#                     member = members.get(ippis)
-#                     if not member:
-#                         skipped_members.append(ippis)
-#                         continue
-
-#                     # Skip members who already have savings for this month
-#                     if member.id in existing_savings_ids or member.id in savings_member_ids_added:
-#                         duplicate_savings.append(ippis)
-#                         continue
-
-#                     # Deduct interest only if not already deducted
-#                     if member.id not in interest_member_ids_added:
-#                         final_amount = max(amount - global_interest, Decimal("0.00"))
-#                         interests_to_create.append(
-#                             Interest(member=member, month=month, amount_deducted=global_interest)
-#                         )
-#                         interest_member_ids_added.add(member.id)
-#                     else:
-#                         final_amount = amount
-
-#                     # Add savings record
-#                     savings_to_create.append(
-#                         Savings(member=member, month=month, month_saving=final_amount, original_amount=amount)
-#                     )
-#                     savings_member_ids_added.add(member.id)
-
-#                     # Split final amount into Loanable & Investment
-#                     loanable_amount = (final_amount / 2).quantize(Decimal("0.01"))
-#                     investment_amount = (final_amount / 2).quantize(Decimal("0.01"))
-
-#                     loanables_to_create.append(
-#                         Loanable(member=member, month=month, amount=loanable_amount, total_amount=loanable_amount)
-#                     )
-#                     investments_to_create.append(
-#                         Investment(member=member, month=month, amount=investment_amount, total_amount=investment_amount)
-#                     )
-
-#                 except Exception as e:
-#                     skipped_members.append(f"{ippis} ({str(e)})")
-#                     continue
-
-#             # Bulk create new records
-#             if interests_to_create:
-#                 Interest.objects.bulk_create(interests_to_create, batch_size=1000, ignore_conflicts=True)
-#             if savings_to_create:
-#                 Savings.objects.bulk_create(savings_to_create, batch_size=1000, ignore_conflicts=True)
-#             if loanables_to_create:
-#                 Loanable.objects.bulk_create(loanables_to_create, batch_size=1000, ignore_conflicts=True)
-#             if investments_to_create:
-#                 Investment.objects.bulk_create(investments_to_create, batch_size=1000, ignore_conflicts=True)
-
-#             created_count = len(savings_to_create)
-#             deducted_count = len(interest_member_ids_added)
-
-#             # Final summary
-#             if created_count > 0:
-#                 total_uploaded_amount = sum(s.original_amount for s in savings_to_create)
-#                 total_interest_deducted = deducted_count * global_interest
-#                 total_remaining_balance = total_uploaded_amount - total_interest_deducted
-#                 half_amount = (total_remaining_balance / 2).quantize(Decimal("0.01"))
-
-#                 messages.success(
-#                     request,
-#                     f"✅ Successfully uploaded <b>{created_count}</b> savings records!<br>"
-#                     f"💰 Total Uploaded Amount: <b>₦{total_uploaded_amount:,.2f}</b><br>"
-#                     f"📌 Total Subscription Deducted: <b>₦{total_interest_deducted:,.2f}</b><br>"
-#                     f"🏦 Sent to Loanable: <b>₦{half_amount:,.2f}</b><br>"
-#                     f"📈 Sent to Investment: <b>₦{half_amount:,.2f}</b>"
-#                 )
-#             else:
-#                 messages.warning(request, "⚠️ No new records created. All members already have savings for this month.")
-
-#             # Show skipped and duplicate info
-#             if skipped_members:
-#                 messages.warning(request, f"⛔ Skipped {len(skipped_members)} members not found in DB.")
-#             if duplicate_savings:
-#                 messages.info(request, f"ℹ️ Skipped {len(duplicate_savings)} existing savings records.")
-
-#             return redirect("upload_savings")
-
-#         except Exception as e:
-#             transaction.set_rollback(True)
-#             messages.error(request, f"⚠️ Error processing file: {str(e)}")
-#             return redirect("upload_savings")
-
-#     return render(request, "saving/upload_savings.html")
-
-
 @login_required
 def process_member_savings(request, id):
     member = get_object_or_404(Member, id=id)
@@ -291,39 +130,39 @@ def process_member_savings(request, id):
             # Parse month and amount
             month = timezone.datetime.strptime(month_str, "%Y-%m-%d").date()
             month_saving = Decimal(month_saving_str)
+            
 
-            # 1️⃣ Skip if savings already exist for this month
-            if Savings.objects.filter(member=member, month=month).exists():
-                messages.warning(request, f"⚠️ Savings for **{member.member}** in {month.strftime('%B %Y')} already exist.")
+            if Savings.objects.filter(member=member,month__year=month.year,month__month=month.month).exists():
+                messages.warning( request,f" Savings for **{member.member}** in {month.strftime('%B %Y')} already exist.")
                 return redirect("add_individual_savings", id=id)
-
+           
             try:
                 global_interest = InterestAmount.objects.latest("date_created").amount
             except InterestAmount.DoesNotExist:
-                messages.error(request, "⚠️ No Subscription amount has been set. Please set one first.")
+                messages.error(request, " No Subscription amount has been set. Please set one first.")
                 return redirect("add_individual_savings", id=id)
 
-            # 3️⃣ Check if saving amount is valid
+            #  Check if saving amount is valid
             if month_saving <= global_interest:
-                messages.error( request, f"⚠️ Savings must be greater than the interest amount (₦{global_interest:,.2f})." )
+                messages.error( request, f" Savings must be greater than the interest amount (₦{global_interest:,.2f})." )
                 return redirect("add_individual_savings", id=id)
 
-            # 4️⃣ Calculate amount after interest
+            #  Calculate amount after interest
             amount_after_interest = month_saving - global_interest
             half_amount = amount_after_interest / 2
 
-            # 5️⃣ Create Savings record with NET savings
+            #  Create Savings record with NET savings
             savings_record = Savings.objects.create(
                 member=member,
                 month=month,
-                month_saving=amount_after_interest,   # ✅ Save NET amount
-                original_amount=month_saving          # ✅ Keep original amount
+                month_saving=amount_after_interest,   
+                original_amount=month_saving         
             )
 
-            # 6️⃣ Deduct Interest (only once)
+            #  Deduct Interest (only once)
             Interest.objects.create( member=member, month=month,amount_deducted=global_interest)
 
-            # 7️⃣ Distribute Remaining Amount into Loanable and Investment (if not already distributed)
+            #  Distribute Remaining Amount into Loanable and Investment (if not already distributed)
             if not Loanable.objects.filter(member=member, month=month).exists():
                 current_loanable_total = Loanable.objects.filter(member=member).aggregate(
                     total=Sum("amount")
@@ -340,20 +179,20 @@ def process_member_savings(request, id):
                 Investment.objects.create( member=member, month=month, amount=half_amount,
                     total_amount=current_investment_total + half_amount)
 
-            # 8️⃣ Success Message
+            #  Success Message
             messages.success(
                 request,
-                f"✅ Savings of ₦{month_saving:,.2f} added for **{member.member}** "
-                f"({month.strftime('%B %Y')}). Interest deducted: ₦{global_interest:,.2f}. "
+                f" Savings of ₦{month_saving:,.2f} added for **{member.member}** "
+                f"({month.strftime('%B %Y')}). subscription deducted: ₦{global_interest:,.2f}. "
                 f"Loanable: ₦{half_amount:,.2f}, Investment: ₦{half_amount:,.2f}."
             )
 
             return redirect("add_individual_savings", id=id)
 
         except (ValueError, DecimalException):
-            messages.error(request, "⚠️ Invalid date format or saving amount.")
+            messages.error(request, " Invalid date format or saving amount.")
         except Exception as e:
-            messages.error(request, f"⚠️ Unexpected error: {e}")
+            messages.error(request, f" Unexpected error: {e}")
 
     context = {"member": member}
     return render(request, "saving/add_individual_savings.html", context)
@@ -378,7 +217,7 @@ def upload_savings(request):
             else:
                 df = pd.read_csv(file, dtype={'IPPIS': str})
 
-            # ✅ Validate required columns
+            # Validate required columns
             required_columns = ["IPPIS", "Amount"]
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
@@ -501,7 +340,7 @@ def upload_savings(request):
                 if savings_to_create:
                     Savings.objects.bulk_create(savings_to_create, batch_size=1000)
 
-                    # ✅ Efficiently update totals using bulk_update
+                    #  Efficiently update totals using bulk_update
                     totals = (
                         Savings.objects.filter(member__in=savings_member_ids_added)
                         .values("member")
@@ -522,7 +361,7 @@ def upload_savings(request):
 
             created_count = len(savings_to_create)
 
-            # ✅ If skipped members exist, generate downloadable Excel
+            # If skipped members exist, generate downloadable Excel
             if skipped_members_report:
                 skipped_df = pd.DataFrame(skipped_members_report)
                 response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -555,7 +394,6 @@ def upload_savings(request):
 
 @transaction.atomic
 def edit_saving(request, saving_id):
-    # Get the savings record
     saving = get_object_or_404(Savings, id=saving_id)
     member = saving.member
     month = saving.month
@@ -621,13 +459,7 @@ def edit_saving(request, saving_id):
 
     return render(request, "saving/edit_saving.html", {"saving": saving})
 
-from decimal import Decimal
-from django.db.models import Q
-from django.core.paginator import Paginator
-from django.shortcuts import render
-from django.conf import settings
-from django.utils.dateparse import parse_date
-from .models import Savings, Loanable, Investment
+
 
 def list_savings(request):
     selected_month = request.GET.get("month")
@@ -658,7 +490,7 @@ def list_savings(request):
         except (ValueError, IndexError):
             pass
 
-    # ✅ Apply date range filter
+    #  Apply date range filter
     if date_from and date_to:
         try:
             start_date = parse_date(date_from)
@@ -773,6 +605,7 @@ def subscription_fee(request):
     subscription = InterestAmount.objects.all()
     return render(request,"saving/subscription_fee.html",{'subscription':subscription})
 
+
 def edit_subscription_fee(request,id):
     subscription_fee = InterestAmount.objects.get(id=id)
     if request.method == 'POST':
@@ -884,7 +717,7 @@ def view_monthly_savings(request, month):
         })
 
     # Paginate results
-    paginator = Paginator(savings_data, 100)  # ✅ 25 members per page
+    paginator = Paginator(savings_data, 100)  
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
@@ -906,6 +739,7 @@ def view_monthly_savings(request, month):
     }
 
     return render(request, "saving/monthly_savings_details.html", context)
+
 
 
 @login_required
@@ -1215,120 +1049,48 @@ def report_view(request):
     }
     return render(request, 'saving/report.html', context)
 
-# def report_view(request):
-#     start_date_str = request.GET.get('start_date')
-#     end_date_str = request.GET.get('end_date')
-#     export_format = request.GET.get('format')
 
-#     # Start with a base queryset for each model
-#     savings_queryset = Savings.objects.all()
-#     interest_queryset = Interest.objects.all()
-#     loanable_queryset = Loanable.objects.all()
-#     investment_queryset = Investment.objects.all()
 
-#     # Apply date filters if they exist
-#     if start_date_str and end_date_str:
-#         try:
-#             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-#             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            
-#             # Ensure end_date is not before start_date
-#             if end_date < start_date:
-#                 start_date, end_date = end_date, start_date
+# =============member and non member ===============
 
-#             savings_queryset = savings_queryset.filter(month__range=[start_date, end_date])
-#             interest_queryset = interest_queryset.filter(month__range=[start_date, end_date])
-#             loanable_queryset = loanable_queryset.filter(month__range=[start_date, end_date])
-#             investment_queryset = investment_queryset.filter(month__range=[start_date, end_date])
-#         except (ValueError, TypeError):
-#             # Fallback if date parsing fails
-#             start_date = None
-#             end_date = None
-#     else:
-#         start_date = None
-#         end_date = None
+def all_users_savings(request):
+    group_title = request.GET.get('group')
 
-#     # Calculate the totals using the filtered querysets
-#     total_savings = savings_queryset.aggregate(Sum('month_saving'))['month_saving__sum'] or 0
-#     total_interest = interest_queryset.aggregate(Sum('amount_deducted'))['amount_deducted__sum'] or 0
-#     total_loanable = loanable_queryset.aggregate(Sum('amount'))['amount__sum'] or 0
-#     total_investment = investment_queryset.aggregate(Sum('amount'))['amount__sum'] or 0
-    
-#     # Fetch detailed records, ordered chronologically
-#     savings_details = savings_queryset.order_by('month')
-#     interest_details = interest_queryset.order_by('month')
-#     loanable_details = loanable_queryset.order_by('month')
-#     investment_details = investment_queryset.order_by('month')
+    users = User.objects.filter(member__isnull=False).order_by('group__title', 'first_name')
+    if group_title:
+        users = users.filter(group__title=group_title)
 
-#     # Handle Excel export request
-#     if export_format == 'excel':
-#         # Create a new workbook and a worksheet
-#         wb = openpyxl.Workbook()
-#         ws = wb.active
-#         ws.title = "Financial Report"
-        
-#         # Write the report title
-#         ws.cell(row=1, column=1, value="Financial Report")
-#         ws.merge_cells('A1:C1')
+    # Prefetch savings
+    member_ids = [u.member.id for u in users]
+    savings_qs = Savings.objects.filter(member__id__in=member_ids).values('member').annotate(total=Sum('month_saving'))
+    savings_map = {entry['member']: entry['total'] or Decimal('0.00') for entry in savings_qs}
 
-#         # Add a date range if it exists
-#         if start_date and end_date:
-#             ws.cell(row=2, column=1, value=f"Date Range: {start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}")
-#             ws.merge_cells('A2:C2')
-        
-#         # Add summary totals
-#         summary_row = 4
-#         ws.cell(row=summary_row, column=1, value="Total Savings:")
-#         ws.cell(row=summary_row, column=2, value=total_savings)
-#         ws.cell(row=summary_row + 1, column=1, value="Total Interest:")
-#         ws.cell(row=summary_row + 1, column=2, value=total_interest)
-#         ws.cell(row=summary_row + 2, column=1, value="Total Loanable:")
-#         ws.cell(row=summary_row + 2, column=2, value=total_loanable)
-#         ws.cell(row=summary_row + 3, column=1, value="Total Investment:")
-#         ws.cell(row=summary_row + 3, column=2, value=total_investment)
-        
-#         # Add detailed data for each model
-#         current_row = summary_row + 5
+    users_data = []
+    for user in users:
+        total_savings = savings_map.get(user.member.id, Decimal('0.00'))
+        users_data.append({
+            'user': user,
+            'group': user.group.title,
+            'total_savings': total_savings,
+        })
 
-#         def write_details_to_sheet(queryset, title, column_names):
-#             nonlocal current_row
-#             current_row += 2
-#             ws.cell(row=current_row, column=1, value=title)
-#             current_row += 1
-#             ws.append(column_names)
-#             for item in queryset:
-#                 row_data = [item.member.first_name + " " + item.member.last_name] if hasattr(item.member, 'first_name') else [str(item.member)]
-#                 if hasattr(item, 'month'):
-#                     row_data.append(item.month.strftime('%Y-%m-%d'))
-#                 if hasattr(item, 'month_saving'):
-#                     row_data.append(float(item.month_saving))
-#                 if hasattr(item, 'amount_deducted'):
-#                     row_data.append(float(item.amount_deducted))
-#                 if hasattr(item, 'amount'):
-#                     row_data.append(float(item.amount))
-#                 ws.append(row_data)
+    # Pagination
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(users_data, 50)  # Show 10 users per page
+    page_obj = paginator.get_page(page_number)
 
-#         write_details_to_sheet(savings_details, "Savings Details", ["Member", "Month", "Amount"])
-#         write_details_to_sheet(interest_details, "Interest Details", ["Member", "Month", "Amount Deducted"])
-#         write_details_to_sheet(loanable_details, "Loanable Details", ["Member", "Month", "Amount"])
-#         write_details_to_sheet(investment_details, "Investment Details", ["Member", "Month", "Amount"])
+    all_groups = UserGroup.objects.all()
+    group_totals = {}
+    for group in all_groups:
+        total = Savings.objects.filter(member__member__group=group).aggregate(total=Sum('month_saving'))['total'] or Decimal('0.00')
+        group_totals[group.title] = total
+    overall_total = sum(group_totals.values(), Decimal('0.00'))
 
-#         # Save the workbook to a byte stream
-#         output = io.BytesIO()
-#         wb.save(output)
-#         output.seek(0)
-        
-#         # Create the HTTP response for the download
-#         response = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-#         response['Content-Disposition'] = 'attachment; filename=financial_report.xlsx'
-#         return response
-
-#     # If not an Excel export, render the HTML template
-#     context = {
-#         'total_savings': total_savings,'total_interest': total_interest,
-#         'total_loanable': total_loanable,'total_investment': total_investment,
-#         'start_date': start_date,'end_date': end_date,
-#         'savings_details': savings_details,'interest_details': interest_details,
-#         'loanable_details': loanable_details,'investment_details': investment_details,
-#     }
-#     return render(request, 'saving/report.html', context)
+    context = {
+        'page_obj': page_obj,
+        'all_groups': all_groups,
+        'selected_group': group_title,
+        'group_totals': group_totals,
+        'overall_total': overall_total,
+    }
+    return render(request, "saving/all_users_savings.html", context)

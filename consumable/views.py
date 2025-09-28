@@ -8,7 +8,7 @@ from django.core.paginator import Paginator,PageNotAnInteger,EmptyPage
 from django.db.models import Sum, Count, F, DecimalField, ExpressionWrapper
 from django.forms import DecimalField
 from django.http import JsonResponse, HttpResponse
-from django.db.models import F, Q, Sum, DecimalField, Value
+from django.db.models import F, Q, Sum,Count, Avg, DecimalField, Value
 from django.db.models.functions import Coalesce
 from collections import defaultdict
 import pandas as pd
@@ -19,6 +19,10 @@ from decimal import Decimal
 from django.db.models import Count
 from collections import defaultdict
 from django.utils import timezone
+from django.db.models.functions import TruncMonth
+
+
+
 import requests
 from loan.models import *
 from .models import *
@@ -291,104 +295,6 @@ def consumable_fee(request):
     }
     return render(request, "consumable/consumable_fee.html", context)
 
-# @login_required
-# def consumable_fee(request):
-#     member_info = None
-#     consumable_types = ConsumableType.objects.filter(available=True)
-
-#     if request.method == "POST":
-#         # Step 1: Search Member
-#         if "search_member" in request.POST:
-#             ippis = request.POST.get("ippis")
-#             try:
-#                 member = Member.objects.get(ippis=ippis)
-#                 member_info = {
-#                     "id": member.id,
-#                     "name": f"{member.member.first_name} {member.member.last_name}",
-#                     "ippis": member.ippis,
-#                 }
-#             except Member.DoesNotExist:
-#                 messages.error(request, f"No member found with IPPIS {ippis}.")
-
-#         # Step 2: Make Payment
-#         elif "make_payment" in request.POST:
-#             member_id = request.POST.get("member_id")
-#             consumable_type_id = request.POST.get("consumable_type")
-
-#             member = get_object_or_404(Member, id=member_id)
-#             consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
-
-#             if ConsumableFormFee.objects.filter(
-#                 member=member, consumable_type=consumable_type, status="paid"
-#             ).exists():
-#                 messages.warning(
-#                     request, f"{member} already has an active paid fee for {consumable_type.name}."
-#                 )
-#                 return redirect("consumable_fee")
-
-#             ConsumableFormFee.objects.create(
-#                 member=member,
-#                 consumable_type=consumable_type,
-#                 form_fee=consumable_type.request_fee,
-#                 status="paid",
-#                 created_by=request.user
-#             )
-#             messages.success(
-#                 request,
-#                 f"Consumable form fee of ₦{consumable_type.request_fee} recorded for {member}."
-#             )
-#             return redirect("consumable_fee")
-
-#     # ✅ Always load aggregates & fees
-#     total_fee = ConsumableFormFee.objects.aggregate(total=Sum('form_fee'))['total'] or Decimal("0.00")
-#     fee_count = ConsumableFormFee.objects.count()
-
-#     fees = ConsumableFormFee.objects.select_related('member', 'consumable_type').order_by('-created_at')
-#     paginator = Paginator(fees, 50)
-#     page_number = request.GET.get('page')
-#     page_obj = paginator.get_page(page_number)
-
-#     context = {
-#         "total_fee": total_fee,
-#         "fee_count": fee_count,
-#         "page_obj": page_obj,
-#         "consumable_types": consumable_types,
-#         "member_info": member_info,   # ✅ keep this in context so search works
-#     }
-#     return render(request, "consumable/consumable_fee.html", context)
-
-# @login_required
-# # @group_required(['admin'])
-# def consumable_fee(request):
-#     if request.method == 'POST':
-#         member_ippis = request.POST.get('member_ippis')
-#         form_fee = request.POST.get('form_fee')
-        
-#         # Get Member instance using IPPIS number
-#         member = get_object_or_404(Member, ippis=member_ippis)
-#         ConsumableFormFee.objects.create( member=member, form_fee=form_fee,created_by=request.user)
-#         messages.success(request, 'Payment recorded successfully')
-#         return redirect('consumable_fee')
-
-#     fee = ConsumableFormFee.objects.aggregate(total=Sum('form_fee'))['total'] or 0
-#     consumable_req_form = ConsumableFormFee.objects.count()
-#     members = ConsumableFormFee.objects.select_related('member')
-
-#     page_number = request.GET.get('page')
-#     paginator = Paginator(members, 1)  
-
-#     try:
-       
-#         page_obj = paginator.get_page(page_number)
-#     except PageNotAnInteger:
-#         page_obj = paginator.page(1)
-#     except EmptyPage:
-#         page_obj = paginator.page(paginator.num_pages)
-
-#     context = {"fee": fee,"consumable_req_form": consumable_req_form,'members':members, 'page_obj': page_obj}
-#     return render(request, "consumable/consumable_fee.html", context)
-
-
 
 @login_required
 def consumable_items(request):
@@ -518,54 +424,6 @@ def admin_request_reject(request, request_id):
 
 
 @login_required
-# def admin_request_taking(request, request_id):
-#     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
-
-#     with transaction.atomic():
-#         if consumable_request.status == 'Approved':
-#             # Get all the details for the request
-#             request_details = ConsumableRequestDetail.objects.filter(request=consumable_request)
-
-#             for detail in request_details:
-#                 selling_plan = detail.selling_item
-#                 requested_quantity = detail.quantity
-
-#                 # Check if enough stock is available before deducting
-#                 if selling_plan.quantity < requested_quantity:
-#                     messages.error(
-#                         request,
-#                         f"Insufficient stock for {selling_plan.purchased_item.item_name}. Cannot process request."
-#                     )
-#                     # Rollback the transaction
-#                     raise Exception("Insufficient stock")
-
-#                 # Deduct stock
-#                 selling_plan.quantity -= requested_quantity
-#                 selling_plan.save(update_fields=['quantity'])
-
-#                 # Record approval date
-#                 detail.approval_date = timezone.now().date()
-#                 detail.save(update_fields=['approval_date'])
-
-#             # Update main request status
-#             consumable_request.status = 'Itempicked'
-#             consumable_request.approved_by = request.user
-#             consumable_request.save(update_fields=['status', 'approved_by'])
-
-#             messages.success(
-#                 request,
-#                 f"Request #{request_id} has been marked as 'Itempicked' and stock has been reduced."
-#             )
-#         elif consumable_request.status == 'Itempicked':
-#             messages.info(request, f"Request #{request_id} has already been marked as 'Itempicked'.")
-#         else:
-#             messages.error(
-#                 request,
-#                 f"Cannot mark request #{request_id} as 'Itempicked' because its status is '{consumable_request.status}'."
-#             )
-
-#     return redirect('admin_consumable_detail', request_id=request_id)
-
 def admin_request_taking(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
 
@@ -983,21 +841,6 @@ def upload_consumable_payment(request):
     return render(request, "consumable/upload_consumable_payment.html", context)
 
 @login_required
-# def item_list_with_requests(request):
-#     items = (
-#         SellingPlan.objects.all()
-#         .select_related("purchased_item")
-#         .annotate(total_requested=Sum("details__quantity"),))
-
-#     # Add calculated remaining stock
-#     for item in items:
-#         total_requested = item.total_requested or 0
-#         item.remaining_stock = item.quantity - total_requested
-
-#     context = {"items": items}
-#     return render(request, "consumable/item_list.html", context)
-
-@login_required
 def item_list_with_requests(request):
     items = (
         SellingPlan.objects.all()
@@ -1047,3 +890,156 @@ def item_request_list(request, item_id):
         'title': f"Requests for {selling_plan.purchased_item.item_name}"
     }
     return render(request, "consumable/item_request_list.html", context)
+
+
+
+
+# 1. Monthly totals
+def monthly_consumable_paybacks_summary():
+    """Get monthly payback totals for consumables"""
+    return (
+        PaybackConsumable.objects
+        .annotate(month=TruncMonth("repayment_date"))
+        .values("month")
+        .annotate(
+            total_payments=Sum("amount_paid"),
+            number_of_payments=Count("id"),
+            average_payment=Avg("amount_paid")
+        )
+        .order_by("month")
+    )
+
+# 2. Totals by Consumable Type
+def total_consumable_payments_by_type():
+    """Get total repayments grouped by consumable type"""
+    return (
+        PaybackConsumable.objects
+        .values("consumable_request__consumable_type__name")
+        .annotate(total_amount=Sum("amount_paid"))
+        .order_by("-total_amount")
+    )
+
+# 3. Monthly breakdown by Consumable Type
+def monthly_consumable_payments_by_type():
+    """Monthly breakdown of repayments by consumable type"""
+    return (
+        PaybackConsumable.objects
+        .annotate(month=TruncMonth("repayment_date"))
+        .values("month", "consumable_request__consumable_type__name")
+        .annotate(
+            total_amount=Sum("amount_paid"),
+            payment_count=Count("id"),
+            average_payment=Avg("amount_paid")
+        )
+        .order_by("month", "consumable_request__consumable_type__name")
+    )
+
+
+
+# def consumable_analytics_view(request):
+#     # Get datasets
+#     monthly_payments = monthly_consumable_paybacks_summary()
+#     type_totals = total_consumable_payments_by_type()
+#     detailed_breakdown = monthly_consumable_payments_by_type()
+
+#     # Pagination
+#     paginator = Paginator(detailed_breakdown, 10)
+#     page_number = request.GET.get("page", 1)
+#     page_obj = paginator.get_page(page_number)
+
+#     # Summary statistics
+#     all_payments = PaybackConsumable.objects.aggregate(
+#         total=Sum("amount_paid"),
+#         count=Count("id")
+#     )
+
+#     # Current month total
+#     current_month = timezone.now().date().replace(day=1)
+#     current_month_payments = PaybackConsumable.objects.filter(
+#         repayment_date__gte=current_month
+#     ).aggregate(total=Sum("amount_paid"))
+
+#     # Percentages by consumable type
+#     total_all = all_payments["total"] or Decimal("0.00")
+#     type_list = []
+#     for item in type_totals:
+#         percentage = (item["total_amount"] / total_all * 100) if total_all > 0 else 0
+#         type_list.append({
+#             "consumable_type": item["consumable_request__consumable_type__name"],
+#             "total_amount": item["total_amount"],
+#             "percentage": percentage
+#         })
+
+#     context = {
+#         # Data for charts/tables
+#         "monthly_payments": monthly_payments,
+#         "type_totals": type_list,
+#         "detailed_breakdown": page_obj,
+
+#         # Summary statistics
+#         "total_all_payments": total_all,
+#         "total_transactions": all_payments["count"] or 0,
+#         "current_month_total": current_month_payments["total"] or 0,
+
+#         # Pagination
+#         "page_obj": page_obj,
+#         "is_paginated": page_obj.has_other_pages(),
+#         "today": timezone.now().date(),
+#     }
+
+#     return render(request, "consumable/consumable_analytics.html", context)
+def consumable_analytics_view(request):
+    # Get datasets
+    monthly_payments = monthly_consumable_paybacks_summary()
+    type_totals_raw = total_consumable_payments_by_type()
+    detailed_breakdown = monthly_consumable_payments_by_type()
+
+    # Pagination
+    paginator = Paginator(detailed_breakdown, 10)
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+
+    # Summary statistics
+    all_payments = PaybackConsumable.objects.aggregate(
+        total=Sum("amount_paid"),
+        count=Count("id")
+    )
+
+    # Current month total
+    current_month = timezone.now().date().replace(day=1)
+    current_month_payments = PaybackConsumable.objects.filter(
+        repayment_date__gte=current_month
+    ).aggregate(total=Sum("amount_paid"))
+
+    # Build normalized consumable_type_totals with percentages
+    total_all = all_payments["total"] or Decimal("0.00")
+    consumable_type_totals = []
+    for item in type_totals_raw:
+        amt = item.get("total_amount") or Decimal("0.00")
+        percentage = (amt / total_all * 100) if total_all and total_all > 0 else 0
+        consumable_type_totals.append({
+            # simpler key for template
+            "consumable_type": item.get("consumable_request__consumable_type__name"),
+            "total_amount": amt,
+            "percentage": percentage,
+        })
+
+    context = {
+        # Data for charts/tables
+        "monthly_payments": monthly_payments,
+        "consumable_type_totals": consumable_type_totals,   # <-- template expects this
+        "type_totals": consumable_type_totals,              # <-- keep alias if other code uses it
+        "detailed_breakdown": page_obj,
+
+        # Summary statistics
+        "total_all_payments": total_all,
+        "total_transactions": all_payments["count"] or 0,
+        "current_month_total": current_month_payments["total"] or 0,
+
+        # Pagination
+        "page_obj": page_obj,
+        "is_paginated": page_obj.has_other_pages(),
+        "today": timezone.now().date(),
+    }
+
+    return render(request, "consumable/consumable_analytics.html", context)

@@ -22,6 +22,8 @@ urlpatterns = [
 
     path("items/", views.item_list_with_requests, name="item_list"),
     path("item/<int:item_id>/requests/", views.item_request_list, name="item_request_list"),
+
+    path('consumable_analytics_view',views.consumable_analytics_view,name='consumable_analytics_view'),
     
 
 ]

@@ -12,6 +12,7 @@ urlpatterns = [
     path('consumables/', include('consumable.urls')),
     
     path('member/', include('member.urls')),
+    path('', include('nonstaff_app.urls')),
     path('savings/', include('savings.urls')),
     path('', include('PurchasedItems.urls')),
     path('', include('report.urls')),

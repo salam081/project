@@ -32,9 +32,9 @@ INSTALLED_APPS = [
     'accounts', 
     'main', 
     'consumable',
-  
     'loan',
     'member',
+    'nonstaff_app',
     'savings',
     'PurchasedItems',
     'report',

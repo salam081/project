@@ -107,6 +107,7 @@
                     <th>IPPIS</th>
                     <th class="text-nowrap">Savings Month</th>
                     <th class="text-nowrap">Monthly Savings Amount</th>
+                    <th>Group</th>
                 </tr>
             </thead>
             <tbody>
@@ -117,6 +118,7 @@
                     <td>{{ m.member.ippis }}</td>
                     <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.month }}</td>
                     <td>₦{{ m.month_saving|default:0|intcomma }}</td>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.member.member.group }}</td>
                 </tr>
                 {% empty %}
                 <tr>

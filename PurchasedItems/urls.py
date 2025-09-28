@@ -18,6 +18,7 @@ urlpatterns = [
     path('purchased_item/<int:pk>/', views.purchased_item_detail, name='purchased_item_detail'),
     path('purchased_item/<int:pk>/edit/', views.purchased_item_edit, name='edit_purchased_item'),
     path('purchased_item/<int:pk>/delete/', views.purchased_item_delete, name='delete_purchased_item'),
+    
 
 
 
@@ -28,6 +29,7 @@ urlpatterns = [
     path('selling-plans/<int:pk>/delete/', views.selling_plan_delete, name='selling_plan_delete'),
 
     path('requests/<int:pk>/mark-accounted/', views.consumable_request_mark_accounted, name='consumable_request_mark_accounted'),
+    path('requests/account/<int:pk>/', views.refund_and_account_request, name='refund_and_account_request'),
 
     path('items/<int:pk>/selling-plan/create/', views.selling_plan_create, name='selling_plan_create'),
     path('selling-plans/<int:pk>/delete/', views.selling_plan_delete, name='selling_plan_delete'),

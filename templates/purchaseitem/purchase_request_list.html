@@ -195,7 +195,8 @@
                                                 <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
                                             {% endif %}
                                             {% if request.status == 'approved' and request.items.exists %}
-                                                <li><a class="dropdown-item" href="#" onclick="markAsAccounted({{ request.pk }})"><i class="fas fa-clipboard-check me-2"></i>Mark Accounted</a></li>
+                                                <li><a class="dropdown-item" href="{% url 'consumable_request_mark_accounted' request.pk%}" onclick="markAsAccounted({{ request.pk }})"><i class="fas fa-clipboard-check me-2"></i>Mark Accounted</a></li>
+                                                <li><a class="dropdown-item" href="{% url 'refund_and_account_request' request.pk%}" onclick="RefundmarkAsAccounted({{ request.pk }})"><i class="fas fa-clipboard-check me-2"></i>Refund Balance Mark Accounted</a></li>
                                             {% endif %}
                                             {% if request.items.exists %}
                                                 <li><hr class="dropdown-divider"></li>
@@ -279,6 +280,12 @@
 <script>
 function markAsAccounted(requestId) {
     if (confirm('Are you sure you want to mark this request as fully accounted? This action cannot be undone.')) {
+        // You can implement an AJAX call here or redirect to a URL
+        window.location.href = `/admin/consumables/request/${requestId}/mark-accounted/`;
+    }
+}
+function RefundmarkAsAccounted(requestId) {
+    if (confirm('Are you sure you want to Refund Balance Remaining and mark this request as fully accounted? This action cannot be undone.')) {
         // You can implement an AJAX call here or redirect to a URL
         window.location.href = `/admin/consumables/request/${requestId}/mark-accounted/`;
     }

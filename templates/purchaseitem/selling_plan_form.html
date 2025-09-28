@@ -54,7 +54,7 @@
                         </div>
 
                         <!-- Calculator display -->
-                        {% comment %} <div class="card bg-light mb-3">
+                        <div class="card bg-light mb-3">
                             <div class="card-body">
                                 <h5 class="card-title mb-0">Total Selling Price:</h5>
                                 <h4 class="card-text text-success" id="total-selling-price">₦0.00</h4>
@@ -62,7 +62,7 @@
                                 <h5 class="card-title mb-0">Estimated Profit:</h5>
                                 <h4 class="card-text text-primary" id="profit-display">₦0.00</h4>
                             </div>
-                        </div> {% endcomment %}
+                        </div>
 
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="id_include_expenditure" name="include_expenditure">
@@ -93,9 +93,6 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const priceInput = document.getElementById('id_selling_price_per_unit');
@@ -158,3 +155,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 {% endblock %}
+
+
+
+

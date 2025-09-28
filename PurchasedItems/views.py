@@ -1,54 +1,3 @@
-
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Q, Sum,  FloatField, ExpressionWrapper
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from django.forms import modelformset_factory
-from django.utils import timezone
-from decimal import Decimal, InvalidOperation
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField
-from .models import ConsumablePurchasedRequest, PurchasedItem
-# from accounts.decorator import group_required
-from .forms import *
-from  .forms import ProfitCalculatorForm,SellingPlanAdjustmentForm
-from .models import *
-from accounts.models import *
-from consumable.models import *
-from main.models import *
-from member.models import *
-from .models import *
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField
-from .models import ConsumablePurchasedRequest, PurchasedItem
-
-
-from decimal import Decimal, InvalidOperation
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db import transaction
-from django.db.models import Q, Sum, F, ExpressionWrapper, DecimalField, FloatField
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from django.utils import timezone
-
-from .models import (
-    ConsumablePurchasedRequest,
-    PurchasedItem,
-    SellingPlan,
-    PurchasedItemAdjustment,
-    SellingPlanAdjustment,
-)
-from .forms import PurchasedItemForm  # adjust import if form name differs
-
-
-# --------------------------
-# PURCHASE DASHBOARD & CRUD
-# --------------------------
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -56,24 +5,30 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Sum, F
 from django.db.models import Sum, F, DecimalField
 from django.db.models.functions import Coalesce
+import json
 from decimal import Decimal
 from django.http import JsonResponse, HttpResponseRedirect
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from django.urls import reverse
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-import json
+from .forms import *
+from .models import *
+from accounts.models import *
+from consumable.models import *
+from main.models import *
+from member.models import *
+from .models import *
 
-from .models import (
-    ConsumablePurchasedRequest, PurchasedItem, 
-    SellingPlan, PurchasedItemAdjustment,  SellingPlanAdjustment
-    )
+
+
+
 
 @login_required
 def purchase_consumable_dashboard(request):
-    """Dashboard with overview statistics"""
     # Summary statistics
     total_requests = ConsumablePurchasedRequest.objects.count()
     pending_requests = ConsumablePurchasedRequest.objects.filter(
@@ -114,6 +69,7 @@ def purchase_consumable_dashboard(request):
         'recent_plans': recent_plans,
     }
     return render(request, 'purchaseitem/purchase_dashboard.html', context)
+
 # ============== CONSUMABLE PURCHASE REQUEST VIEWS ==============
 
 @login_required
@@ -246,21 +202,78 @@ def consumable_purchase_approve(request, pk):
     return render(request, 'purchaseitem/purchase_request_approve.html', context)
 
 
-@login_required
-def consumable_request_mark_accounted(request, pk):
-    """Mark consumable request as fully accounted"""
-    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
+# @login_required
+# def consumable_request_mark_accounted(request, pk):
+#     """Mark consumable request as fully accounted"""
+#     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
     
-    if request.method == 'POST':
-        try:
-            consumable_request.mark_as_accounted()
-            messages.success(request, 'Request marked as fully accounted!')
-            return redirect('consumable_request_detail', pk=pk)
+#     if request.method == 'POST':
+#         try:
+#             consumable_request.mark_as_accounted()
+#             messages.success(request, 'Request marked as fully accounted!')
+#             return redirect('consumable_request_detail', pk=pk)
             
-        except ValidationError as e:
-            messages.error(request, f'Error: {str(e)}')
+#         except ValidationError as e:
+#             messages.error(request, f'Error: {str(e)}')
     
-    return redirect('consumable_request_detail', pk=pk)
+#     return redirect('consumable_request_detail', pk=pk)
+
+login_required
+def consumable_request_mark_accounted(request, pk):
+    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
+
+    if not (hasattr(request.user, "group") and request.user.group and request.user.group.title == 'admin') \
+       and consumable_request.requested_by != request.user:
+        messages.error(request, "You don't have permission to modify this request.")
+        return redirect('consumable_purchase_request_detail', pk=pk)
+
+    if consumable_request.status != 'approved':
+        messages.error(request, "Request must be approved before marking as accounted.")
+        return redirect('consumable_purchase_request_detail', pk=pk)
+
+    if request.method == 'POST':
+        # set approved_amount to total spent and mark accounted
+        total_spent = consumable_request.total_spent() or Decimal('0.00')
+        consumable_request.approved_amount = total_spent
+        consumable_request.status = 'accounted'
+        consumable_request.remarks = (consumable_request.remarks or '') + f"\n\nAccounted on {timezone.now().date()}"
+        consumable_request.save()
+        messages.success(request, 'Consumable request marked as fully accounted!')
+        return redirect('consumable_purchase_request_detail', pk=pk)
+
+    return render(request, 'purchaseitem/purchase_request_mark_accounted.html', {'consumable_request': consumable_request})
+
+
+@login_required
+@transaction.atomic
+def refund_and_account_request(request, pk):
+    request_obj = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
+
+    if not (hasattr(request.user, "group") and request.user.group and request.user.group.title in ('admin', 'staff')) \
+       and request_obj.requested_by != request.user:
+        messages.error(request, "You are not authorized to perform this action.")
+        return redirect('consumable_purchase_request_detail', pk=pk)
+
+    if request_obj.status != 'approved':
+        messages.warning(request, "This request is not in the 'Approved' state and cannot be accounted for.")
+        return redirect('consumable_purchase_request_detail', pk=pk)
+
+    # total spent using PurchasedItem totals
+    total_spent = request_obj.total_spent() or Decimal('0.00')
+
+    # If spent >= approved_amount, nothing to refund
+    if request_obj.approved_amount is not None and total_spent >= request_obj.approved_amount:
+        messages.warning(request, "No balance to refund. The spent amount is greater than or equal to the approved amount.")
+        return redirect('consumable_purchase_request_detail', pk=pk)
+
+    # Update request as accounted and set approved_amount = actual spent
+    request_obj.approved_amount = total_spent
+    request_obj.status = 'accounted'
+    request_obj.remarks = (request_obj.remarks or '') + f"\n\n- Member refunded the balance. Approved amount updated to ₦{total_spent:.2f}."
+    request_obj.save()
+
+    messages.success(request, f"Request successfully accounted for. Approved amount changed to ₦{total_spent:.2f}.")
+    return redirect('consumable_purchase_request_detail', pk=pk)
 
 
 # ============== PURCHASED ITEM VIEWS ==============

@@ -39,6 +39,10 @@
                     <i class="bi bi-person-plus"></i>
                     <span class="nav-text">Add Member</span>
                 </a>
+                <a href="{% url 'non_staff_members_list'  %}" class="nav-link" >
+                    <i class="bi bi-person-plus"></i>
+                    <span class="nav-text">All Non Staff Member</span>
+                </a>
             </div>
         </div>
 
@@ -173,10 +177,7 @@
                     <i class="bi bi-person-plus"></i>
                     <span class="nav-text">Loan Requests </span>
                 </a> {% endcomment %}
-                {% comment %} <a href="{% url 'all_reject_loan'  %}" class="nav-link" >
-                    <i class="bi bi-person-plus"></i>
-                    <span class="nav-text">All Reject Loan</span>
-                </a> {% endcomment %}
+                
                 <a href="{% url 'upload_consumable_payment'  %}" class="nav-link" >
                     <i class="bi bi-upload"></i>
                     <span class="nav-text">Upload Payment</span>
@@ -185,6 +186,11 @@
                     <i class="bi bi-wallet2"></i>
                     <span class="nav-text">Add Payment </span>
                 </a>
+
+                <a href="{% url 'consumable_analytics_view'  %}" class="nav-link" >
+                    <i class="bi bi-person-plus"></i>
+                    <span class="nav-text">Payments Report</span>
+                </a> 
             </div>
         </div>
  
@@ -207,7 +213,7 @@
               
                 {% endif %}
                  {% if user.is_authenticated and user.group.title == 'staff' %}
-                <a href="{% url 'purchase_request_list' %}" class="nav-link" >
+                <a href="{% url 'consumable_purchase_request_list' %}" class="nav-link" >
                    <i class="bi bi-plus-circle"></i> 
                     <span class="nav-text">Make Request</span>
                 </a>
@@ -323,10 +329,19 @@
         {% else %}
         <!-- member_dashboard -->
           <div class="nav-item">
+             {% if user.is_authenticated and user.group.title == 'members' %}
             <a href="{% url 'member_dashboard' %}" class="nav-link">
                 <i class="bi bi-speedometer2"></i>
                 <span class="nav-text">Dashboard</span>
             </a>
+
+            {% endif %}
+             {% if user.is_authenticated and user.group.title == 'non staff member' %}
+            <a href="{% url 'non_staff_dashboard' %}" class="nav-link">
+                <i class="bi bi-speedometer2"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+             {% endif %}
         </div>
         <!-- Settings -->
         <div class="nav-item">

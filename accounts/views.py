@@ -355,6 +355,12 @@ def login_view(request):
                 if not is_profile_complete(user):
                     return redirect('complete_profile')
                 return redirect('member_dashboard')
+            
+            
+            elif user.group and user.group.title.lower() == 'non staff member':
+                # if not is_profile_complete(user):
+                #     return redirect("complete_profile")
+                return redirect("non_staff_dashboard")
 
             elif user.group and user.group.title.lower() == 'staff':
                 return redirect('admin_dashboard')

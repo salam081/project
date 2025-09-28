@@ -40,8 +40,9 @@
 <body>
     <header>
         None Member Consumable Request Page
+
     </header>
-    {% if messages %}
+    {% comment %} {% if messages %}
         <div class="container mt-3">
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -50,7 +51,7 @@
                 </div>
             {% endfor %}
         </div>
-    {% endif %}
+    {% endif %} {% endcomment %}
     <div class="container">
         {% block content %}
 

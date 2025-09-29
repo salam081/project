@@ -79,38 +79,6 @@ def filter_requests(datefrom, dateto):
     return filtered_requests
 
 
-def all_member_saving_search(request):
-    
-    datefrom = request.GET.get('datefrom')
-    dateto = request.GET.get('dateto')
-    page_number = request.GET.get('page')
-
-    member = None
-    page_total = 0
-    grand_total = 0
-    total_savings = 0
-    total_deductions = 0
-
-    if datefrom or dateto:
-        filtered = filter_requests(datefrom, dateto)
-        paginator = Paginator(filtered, 100)  # paginate 100 per page
-        member = paginator.get_page(page_number)
-
-        # Total for this page
-        page_total = sum(item.month_saving for item in member.object_list)
-
-        # Grand total for all filtered savings
-        grand_total = filtered.aggregate(total=Sum('month_saving'))['total'] or 0
-
-        total_savings = grand_total
-
-        total_deductions = filtered.aggregate(deduct=Sum('original_amount'))['deduct'] or 0
-        print(total_deductions)
-    context = {'member': member,'datefrom': datefrom,'dateto': dateto,
-        'page_total': page_total,'grand_total': grand_total,
-        'total_savings': total_savings,'total_deductions': total_deductions,}
-
-    return render(request, 'saving/all_member_saving_search.html', context)
 
 
 @login_required
@@ -462,9 +430,11 @@ def edit_saving(request, saving_id):
 
 
 def list_savings(request):
+    groups = UserGroup.objects.all()
     selected_month = request.GET.get("month")
     search_name = request.GET.get("name", "").strip()
     search_ippis = request.GET.get("ippis", "").strip()
+    search_group = request.GET.get("group", "").strip()
     date_from = request.GET.get("date_from")
     date_to = request.GET.get("date_to")
     per_page = request.GET.get("per_page", "25")
@@ -525,6 +495,11 @@ def list_savings(request):
     if search_ippis:
         savings = savings.filter(member__ippis__icontains=search_ippis)
 
+    # Filter by IPPIS
+    if search_group.isdigit():
+        savings = savings.filter(member__member__group_id=search_group)
+        # savings = savings.filter(member__member__group__title__icontains=search_group)
+
     # Order results by user's first name
     savings = savings.order_by("-id", "member__member__first_name")
 
@@ -576,9 +551,11 @@ def list_savings(request):
 
     context = {
         "page_obj": page_obj,
+        'groups':groups,
         "selected_month": selected_month,
         "search_name": search_name,
         "search_ippis": search_ippis,
+        "search_group":search_group,
         "per_page": per_page,
         "date_from": date_from,
         "date_to": date_to,
@@ -1053,7 +1030,7 @@ def report_view(request):
 
 # =============member and non member ===============
 
-def all_users_savings(request):
+def all_member_savings(request):
     group_title = request.GET.get('group')
 
     users = User.objects.filter(member__isnull=False).order_by('group__title', 'first_name')

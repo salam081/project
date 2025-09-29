@@ -42,6 +42,7 @@ def admin_dashboard(request):
     
     # Data retrieval for the current year
     total_members = Member.objects.count()
+    print('total_members', total_members)
     total_members_withdrawal = Withdrawal.objects.count()
     total_loans = LoanRequest.objects.filter(date_created__year=current_year).count()
     pending_loans = LoanRequest.objects.filter(status='pending', date_created__year=current_year).count()
@@ -78,6 +79,7 @@ def admin_dashboard(request):
 
     # Total calculations (no pagination here, just sums)
     total_savings = Decimal(sum(item["total"] for item in savings_monthly))
+    print('total_savings',total_savings)
     total_interest = Decimal(sum(item["total"] for item in interest_monthly))
     total_loanable = Decimal(sum(item["total"] for item in loanable_monthly))
     total_investment = Decimal(sum(item["total"] for item in investment_monthly))
@@ -563,3 +565,38 @@ def loan_totals(request):
     }
     return render(request, "main/loan_totals.html", context)
 
+
+
+
+
+from decimal import Decimal
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.core.paginator import Paginator
+from .models import Member
+
+@login_required
+def distribute_dividends(request):
+    dividends = []
+    
+    # Only include members with savings > 0
+    members_with_savings = Member.objects.filter(total_savings__gt=0).order_by('-total_savings')
+    
+    for member in members_with_savings:
+        savings = member.total_savings or Decimal(0)
+        # Dividend = savings ÷ 1000 (rounded to whole number)
+        dividend = round(savings / Decimal(1000))
+        dividends.append({"member": member,"savings": savings, "dividend": dividend, })
+    
+    # Totals
+    total_savings = sum(d["savings"] for d in dividends)
+    print('total_savings',total_savings)
+    total_dividends = sum(d["dividend"] for d in dividends)
+    
+    # Pagination (25 members per page)
+    paginator = Paginator(dividends, 50)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    context = { "dividends": page_obj,"total_savings": total_savings,"total_dividends": total_dividends,}
+    return render(request, "main/dividends_report.html", context)

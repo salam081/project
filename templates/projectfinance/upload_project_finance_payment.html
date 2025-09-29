@@ -2,10 +2,19 @@
 {% load static %}
 {% block content %}
 
-<div class="content-card mt-4">
-    <h3 class="mb-4 text-primary">Upload Project Finance Payments</h3>
+<div class="content-card mt-3">
+    <h3 class="mb-4 text-primary">Upload Project Finance Loan Payments</h3>
 
     <!-- Upload Form -->
+    <div class="alert alert-info">
+          <strong>Required Excel Columns (case-insensitive):</strong>
+                <ul class="mt-2 mb-0">
+                    <li><strong>IPPIS</strong> - Employee IPPIS number</li>
+                    <li><strong>Amount Paid</strong> - Payment amount (numbers only, no ₦ symbol)</li>
+                    <li><strong>Month</strong> - Payment month/date (e.g., 2024-01-01 or January 2024)</li>
+                </ul>
+                <small class="text-muted">Supported formats: .xlsx, .xls</small>
+    </div>
     <form method="POST" enctype="multipart/form-data" class="card p-4 shadow">
         {% csrf_token %}
 
@@ -14,18 +23,12 @@
             <label for="file" class="form-label"><strong>Upload Excel File</strong></label>
             <input type="file" name="file" id="file" accept=".xlsx,.xls" class="form-control" required>
             <div class="form-text">
-                <strong>Required Excel Columns (case-insensitive):</strong>
-                <ul class="mt-2 mb-0">
-                    <li><strong>IPPIS</strong> - Employee IPPIS number</li>
-                    <li><strong>Amount Paid</strong> - Payment amount (numbers only, no ₦ symbol)</li>
-                    <li><strong>Month</strong> - Payment month/date (e.g., 2024-01-01 or January 2024)</li>
-                </ul>
-                <small class="text-muted">Supported formats: .xlsx, .xls</small>
+               
             </div>
         </div>
 
         <!-- Example Format -->
-        <div class="mb-3">
+        {% comment %} <div class="mb-3">
             <details>
                 <summary class="btn btn-outline-info btn-sm">Show Excel Format Example</summary>
                 <div class="mt-2 p-3 bg-light rounded">
@@ -53,7 +56,7 @@
                     </table>
                 </div>
             </details>
-        </div>
+        </div> {% endcomment %}
 
         <!-- Submit Button -->
         <button type="submit" class="btn btn-primary w-100" id="uploadBtn">

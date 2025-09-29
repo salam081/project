@@ -138,5 +138,14 @@ class Withdrawal(models.Model):
         }
 
 
+class DividendHistory(models.Model):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="dividends")
+    savings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    dividend_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_savings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_dividend_pool = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    date_distributed = models.DateTimeField(default=timezone.now)
 
+    def __str__(self):
+        return f"{self.member} - ₦{self.dividend_amount} on {self.date_distributed.date()}"
 

@@ -73,7 +73,7 @@
                                                 {% for req in requests %}
                                                     <option value="{{ req.id }}">
                                                         Approved Amount: ₦{{ req.approved_amount|floatformat:2 }}
-                                                        <br>(Amount Paid: ₦{{ req.total_paid|default:0|floatformat:2 }}, 
+                                                        <br>, 
                                                         Remaining: ₦{{ req.remaining_balance|floatformat:2 }})
                                                     </option>
                                                 {% endfor %}

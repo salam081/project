@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.shortcuts import render,redirect,get_object_or_404
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
@@ -11,6 +12,7 @@ from django.db.models import QuerySet,Q
 from django.db import models
 from django.contrib.auth.models import User
 from .models import *
+from django.contrib.auth import get_user_model
 # Create your views here.
 
 
@@ -73,20 +75,45 @@ def upload_users(request):
             users_to_create.append(user)
             ippis_to_user.append(ippis)
 
+        # with transaction.atomic():
+        #     # created_users = User.objects.bulk_create(users_to_create)
+        #     created_users = User.objects.bulk_create(users_to_create, return_ids=True)
+
+           
+        #     # Set default password for all created users
+        #     User.objects.filter(id__in=[user.id for user in created_users]).update(
+        #         password=make_password("default123")
+        #     )
+
+        #     members = [
+        #         Member(member=user, ippis=ippis)
+        #         for user, ippis in zip(created_users, ippis_to_user)
+        #         if ippis is not None
+        #     ]
+        #     Member.objects.bulk_create(members)
+
         with transaction.atomic():
-            created_users = User.objects.bulk_create(users_to_create)
-            
-            # Set default password for all created users
-            User.objects.filter(id__in=[user.id for user in created_users]).update(
-                password=make_password("default123")
+            # Bulk insert users
+            User.objects.bulk_create(users_to_create)
+
+            # Re-fetch with IDs populated
+            created_users = list(
+                User.objects.filter(username__in=[u.username for u in users_to_create])
             )
 
+            # Set default password
+            User.objects.filter(
+                id__in=[user.id for user in created_users]
+            ).update(password=make_password("default123"))
+
+            # Create members
             members = [
                 Member(member=user, ippis=ippis)
                 for user, ippis in zip(created_users, ippis_to_user)
                 if ippis is not None
             ]
             Member.objects.bulk_create(members)
+
 
         added_count = len(created_users)
         skipped_count = len(df) - added_count
@@ -507,25 +534,33 @@ def changePassword(request):
     return render(request, 'accounts/change_password.html')
 
 
-@login_required
-def reset_password_view(request, id):
-    if request.user.group.title.lower() != 'admin':
-        messages.error(request, "Only admin can reset passwords.")
-        return redirect('all_members')
+User = get_user_model()
+
+def reset_password_view(request, identifier):
     try:
-        user_to_reset = get_object_or_404(User, id=id)
+        # Try User.id first
+        user = User.objects.get(id=identifier)
     except User.DoesNotExist:
-        messages.error(request, 'user Dont Exist')     
+        try:
+            # Try Member.id instead
+            member = Member.objects.get(id=identifier)
+            user = member.member
+        except Member.DoesNotExist:
+            messages.error(request, "User does not exist.")
+            return redirect("all_members")
 
-    if user_to_reset == request.user:
+    # Prevent resetting your own password
+    if user == request.user:
         messages.error(request, "You cannot reset your own password this way.")
-        return redirect('all_members')
+        return redirect("all_members")
 
-    user_to_reset.set_password("pass")  # You can use a more secure default
-    user_to_reset.save()
+    # Reset password
+    user.set_password("pass")
+    user.save()
 
-    messages.success(request, f"Password for {user_to_reset.username} has been reset.")
-    return redirect('all_members')
+    messages.success(request, f"Password for {user.username} has been reset.")
+    return redirect("all_members")
+
 
 
 @login_required

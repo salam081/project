@@ -296,17 +296,71 @@ def is_admin(user):
 #=======admin approved loan============
 @login_required
 @user_passes_test(is_admin)
+# def approve_loan_request(request, id):
+#     loan_request = get_object_or_404(LoanRequest, id=id, status='pending')
+#     member = loan_request.member
+#     loanable = Loanable.objects.filter(member=member).aggregate(
+#         total=Sum('amount')
+#     )['total'] or Decimal("0.00")
+#     print(loanable)
+#     # Check if guarantor has accepted
+#     if not loan_request.guarantor_accepted:
+#         messages.error(request, "This loan cannot be approved because the guarantor has not accepted yet.")
+#         return redirect('admin_loan_requests') 
+
+#     if request.method == "POST":
+#         approved_amount = request.POST.get('approved_amount')
+
+#         if not approved_amount:
+#             messages.error(request, "Please enter the approved loan amount.")
+#             return redirect('approve_loan_request', id=id)
+
+#         try:
+#             approved_amount = float(approved_amount)
+#             if approved_amount <= 0:
+#                 messages.error(request, "Approved amount must be greater than zero.")
+#                 return redirect('approve_loan_request', id=id)
+
+#             if (
+#                 loan_request.loan_type 
+#                 and loan_request.loan_type.max_amount is not None 
+#                 and approved_amount > loan_request.loan_type.max_amount):
+#                     messages.error( request,f"Approved amount cannot exceed the maximum allowed: {loan_request.loan_type.max_amount}" )
+#                     return redirect('approve_loan_request', id=id)
+
+#             loan_request.approved_amount = approved_amount
+#             loan_request.approval_date = timezone.now().date()
+#             loan_request.status = 'approved'
+#             loan_request.approved_by = request.user
+#             loan_request.save()
+            
+
+#             messages.success(request,f"Loan request ID {loan_request.id} has been approved for ₦{loan_request.approved_amount}.")
+#             return redirect('admin_loan_requests')
+
+#         except ValueError:
+#             messages.error(request, "Invalid approved amount.")
+#             return redirect('approve_loan_request', id=id)
+
+#     context = {'loan_request': loan_request,'loanable':loanable}
+#     return render(request, 'loan/approve_loan.html', context)
+
+@login_required
+@user_passes_test(is_admin)
 def approve_loan_request(request, id):
     loan_request = get_object_or_404(LoanRequest, id=id, status='pending')
     member = loan_request.member
+
     loanable = Loanable.objects.filter(member=member).aggregate(
         total=Sum('amount')
     )['total'] or Decimal("0.00")
-    print(loanable)
-    # Check if guarantor has accepted
-    if not loan_request.guarantor_accepted:
-        messages.error(request, "This loan cannot be approved because the guarantor has not accepted yet.")
-        return redirect('admin_loan_requests') 
+
+    #  Only require guarantor acceptance for NON short-term loans
+    if loan_request.loan_type and "short" not in loan_request.loan_type.name.lower():
+        if not loan_request.guarantor_accepted:
+            messages.error(request, "This loan cannot be approved because the guarantor has not accepted yet.")
+            return redirect('admin_loan_requests')
+
 
     if request.method == "POST":
         approved_amount = request.POST.get('approved_amount')
@@ -324,25 +378,35 @@ def approve_loan_request(request, id):
             if (
                 loan_request.loan_type 
                 and loan_request.loan_type.max_amount is not None 
-                and approved_amount > loan_request.loan_type.max_amount):
-                    messages.error( request,f"Approved amount cannot exceed the maximum allowed: {loan_request.loan_type.max_amount}" )
-                    return redirect('approve_loan_request', id=id)
+                and approved_amount > loan_request.loan_type.max_amount
+            ):
+                messages.error(
+                    request,
+                    f"Approved amount cannot exceed the maximum allowed: {loan_request.loan_type.max_amount}"
+                )
+                return redirect('approve_loan_request', id=id)
 
+            # ✅ Save approval
             loan_request.approved_amount = approved_amount
             loan_request.approval_date = timezone.now().date()
             loan_request.status = 'approved'
             loan_request.approved_by = request.user
             loan_request.save()
-            
 
-            messages.success(request,f"Loan request ID {loan_request.id} has been approved for ₦{loan_request.approved_amount}.")
+            messages.success(
+                request,
+                f"Loan request ID {loan_request.id} has been approved for ₦{loan_request.approved_amount}."
+            )
             return redirect('admin_loan_requests')
 
         except ValueError:
             messages.error(request, "Invalid approved amount.")
             return redirect('approve_loan_request', id=id)
 
-    context = {'loan_request': loan_request,'loanable':loanable}
+    context = {
+        'loan_request': loan_request,
+        'loanable': loanable
+    }
     return render(request, 'loan/approve_loan.html', context)
 
 

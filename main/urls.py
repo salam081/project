@@ -20,6 +20,6 @@ urlpatterns = [
     path("loan-totals/", views.loan_totals, name="loan_totals"),
 
 
-    path("distribute_dividends/", views.distribute_dividends, name="distribute_dividends"),
+    path("distribute_dividends/", views.dividend_report, name="distribute_dividends"),
    
 ]

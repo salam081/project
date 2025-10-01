@@ -23,6 +23,8 @@ import openpyxl
 from accounts.decorators import *
 
 from PurchasedItems.models import *
+from django import forms
+from django.db.models import F
 from projectfinance.models import *
 from .models import *
 from accounts.models import *
@@ -566,37 +568,133 @@ def loan_totals(request):
     return render(request, "main/loan_totals.html", context)
 
 
+class ProfitForm(forms.Form):
+    profit = forms.DecimalField(label="Enter Profit", decimal_places=2, max_digits=15)
 
 
+# @login_required
+# def distribute_dividends(request):
+#     shares = []
 
-from decimal import Decimal
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from django.core.paginator import Paginator
-from .models import Member
+#     # Only include members with savings > 0
+#     members_with_savings = Member.objects.filter(total_savings__gt=0).order_by('-total_savings')
 
-@login_required
-def distribute_dividends(request):
-    dividends = []
-    
-    # Only include members with savings > 0
-    members_with_savings = Member.objects.filter(total_savings__gt=0).order_by('-total_savings')
-    
-    for member in members_with_savings:
-        savings = member.total_savings or Decimal(0)
-        # Dividend = savings ÷ 1000 (rounded to whole number)
-        dividend = round(savings / Decimal(1000))
-        dividends.append({"member": member,"savings": savings, "dividend": dividend, })
-    
-    # Totals
-    total_savings = sum(d["savings"] for d in dividends)
-    print('total_savings',total_savings)
-    total_dividends = sum(d["dividend"] for d in dividends)
-    
-    # Pagination (25 members per page)
-    paginator = Paginator(dividends, 50)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
+#     for member in members_with_savings:
+#         savings = member.total_savings or Decimal(0)
+#         share = round(savings / Decimal(1000))  # shares = savings ÷ 1000
+#         shares.append({"member": member, "savings": savings, "share": share})
 
-    context = { "dividends": page_obj,"total_savings": total_savings,"total_dividends": total_dividends,}
-    return render(request, "main/dividends_report.html", context)
+#     # Totals
+#     total_savings = sum(d["savings"] for d in shares)
+#     total_shares = sum(d["share"] for d in shares)
+
+#     profit = None
+#     unit_profit = None   # renamed from per_share_value
+
+#     if request.method == "POST":
+#         form = ProfitForm(request.POST)
+#         if form.is_valid():
+#             profit = form.cleaned_data["profit"]
+
+#             if total_shares > 0:
+#                 unit_profit = profit / total_shares   # ✅ Profit ÷ Total Shares = Unit Profit
+
+#                 for d in shares:
+#                     member = d["member"]
+#                     dividend = unit_profit * d["share"]   # ✅ Unit Profit × Member Shares
+
+#                     #  Update cumulative total_profit
+#                     member.total_profit = (member.total_profit or Decimal(0)) + dividend
+#                     member.save()
+
+#                     #  Save a record of this distribution
+#                     Dividend.objects.create(
+#                         member=member,
+#                         profit=profit,
+#                         dividend_amount=dividend,
+#                     )
+
+#                     d["dividend"] = dividend
+#             else:
+#                 unit_profit = Decimal(0)
+
+#     else:
+#         form = ProfitForm()
+
+#     # Pagination
+#     paginator = Paginator(shares, 50)
+#     page_number = request.GET.get("page")
+#     page_obj = paginator.get_page(page_number)
+
+#     context = {
+#         "shares": page_obj,
+#         "total_savings": total_savings,
+#         "total_shares": total_shares,
+#         "profit": profit,
+#         "unit_profit": unit_profit, 
+#         "form": form,
+#     }
+#     return render(request, "main/dividends_report.html", context)
+
+
+def dividend_report(request):
+    total_savings = Member.objects.aggregate(total=Sum("total_savings"))["total"] or 0
+    total_shares = total_savings / 1000 if total_savings else 0
+
+    profit = None
+    unit_profit = None
+
+    if request.method == "POST":
+        form = ProfitForm(request.POST)
+        if form.is_valid():
+            profit = form.cleaned_data["profit"]
+            if total_shares > 0:
+                unit_profit = profit / total_shares
+
+                # distribute profit to members
+                members = Member.objects.all()
+                for member in members:
+                    member_shares = member.total_savings / 1000
+                    dividend_amount = member_shares * unit_profit
+
+                    Dividend.objects.create(
+                        member=member,
+                        profit=profit,
+                        unit_profit=unit_profit,   # ✅ save unit profit for this round
+                        dividend_amount=dividend_amount,
+                    )
+
+                    # update member total profit
+                    member.total_profit += dividend_amount
+                    member.save()
+
+            return redirect("dividend_report")
+    else:
+        form = ProfitForm()
+
+    # fetch members with latest dividend info
+    members = Member.objects.select_related("member").all()
+    enriched_members = []
+    for m in members:
+        last_dividend = m.member_dividends.last()
+        enriched_members.append({
+            "member": m,
+            "savings": m.total_savings,
+            "share": int(m.total_savings / 1000),
+            "unit_profit": getattr(last_dividend, "unit_profit", None),
+            "dividend_amount": getattr(last_dividend, "dividend_amount", None),
+        })
+
+    # paginate
+    paginator = Paginator(enriched_members, 10)
+    page_number = request.GET.get("page", 1)
+    shares = paginator.get_page(page_number)
+
+    return render(request, "main/dividends_report.html", {
+        "shares": shares,
+        "form": form,
+        "total_savings": total_savings,
+        "total_shares": total_shares,
+        "profit": profit,
+        "unit_profit": unit_profit,
+    })

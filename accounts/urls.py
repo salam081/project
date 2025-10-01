@@ -17,8 +17,13 @@ urlpatterns = [
     path('deactivate_users', views.deactivate_users, name='deactivate_users'),
     path('activate_users', views.activate_users, name='activate_users'),
 
-    path('reset_password_view/<int:id>/', views.reset_password_view, name='reset_password'),
+    # path('reset_password_view/<int:id>/', views.reset_password_view, name='reset_password'),
     path('changePassword', views.changePassword, name='change_password'),
     path('add_user_to_group/<int:id>/', views.add_user_to_group, name='add_user_to_group'),
+
+
+    path("reset_password_view/<int:identifier>/", views.reset_password_view, name="reset_password"),
+
+    
 
 ]

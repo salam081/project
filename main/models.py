@@ -149,3 +149,13 @@ class DividendHistory(models.Model):
     def __str__(self):
         return f"{self.member} - ₦{self.dividend_amount} on {self.date_distributed.date()}"
 
+
+class Dividend(models.Model):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="member_dividends")
+    profit = models.DecimalField(max_digits=15, decimal_places=2)  # The profit entered by admin
+    unit_profit = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)  # Profit per share
+    dividend_amount = models.DecimalField(max_digits=15, decimal_places=2)  # What this member got
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Dividend {self.dividend_amount} (Unit Profit: {self.unit_profit}) for {self.member} on {self.created_at.date()}"

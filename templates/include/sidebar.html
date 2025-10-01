@@ -302,12 +302,16 @@
             </div>
         </div>
         <div class="nav-item">
+            <a href="{% url 'distribute_dividends' %}" class="nav-link" >
+                <i class="bi bi-wallet-fill"></i>
+                <span class="nav-text">Dividends Report</span>
+            </a>
             <a href="{% url 'list_withdrawal_requests' %}" class="nav-link" >
                 <i class="bi bi-people"></i>
                 <span class="nav-text">Withdrawal Requests List</span>
             </a>
             <a href="{% url 'member_active_requests' %}" class="nav-link" >
-                <i class="bi bi-people"></i>
+                <i class="bi bi-sliders"></i>
                 <span class="nav-text">Member Active Requests</span>
             </a>
         </div> 

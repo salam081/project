@@ -73,9 +73,9 @@
                                     <a href="{% url 'add_individual_savings' id=member.id %}" class="btn btn-sm btn-add-savings" title='Add Savings'>
                                         <i class="fas fa-plus-circle me-1"></i> 
                                     </a>
-                                    <a href="{% url 'reset_password' id=member.id %}" class="btn btn-sm btn-reset-password" title='reset password'>
+                                     {% comment %} <a href="" class="btn btn-sm btn-reset-password" title='reset password'>
                                         <i class="fas fa-key me-1"></i> 
-                                    </a>
+                                    </a>  {% endcomment %}
                                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop{{ member.id }}" title='Assign User To Group'>
                                     <i class="fas fa-users"></i>
                                     </button>

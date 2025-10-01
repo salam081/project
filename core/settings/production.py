@@ -102,9 +102,9 @@ DATABASES = {
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': "core",
+#         'NAME': "tmcsDb",
 #         'USER': "root",
-#         'PASSWORD': "abdulamin1984",
+#         'PASSWORD': "abdulamin1984.",
 #         'HOST': "localhost",
 #         'PORT': "3306",
 #     }

@@ -3,17 +3,31 @@
 {% block content %}
 <div class="container-fluid">
   <div class="row justify-content-center">
-    <div class="col-md-10 col-lg-10 col-xl-8">
-      {% if dividends %}
+    <div class="col-md-12 col-lg-12 col-xl-8">
+      {% if shares %}
         <!-- Dividend Report -->
         <div class="card shadow-sm">
-          <div class="card-header bg-success text-white">
+          <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
             <h4 class="card-title mb-0">
-              <i class="bi bi-graph-up"></i> Dividend Distribution Report
+              <i class="bi bi-graph-up"></i> Dividend Report
             </h4>
           </div>
           <div class="card-body">
-            
+
+            <!-- Profit Input Form -->
+            <form method="post" class="mb-4">
+              {% csrf_token %}
+              <div class="form-control d-flex gap-2 flex-wrap">
+                  {{ form.profit }}
+                  <button type="submit" class="btn btn-primary">
+                      <i class="bi bi-cash-coin"></i> Distribute Profit
+                  </button>
+              </div>
+              {% if form.profit.errors %}
+                  <div class="text-danger small mt-1">{{ form.profit.errors }}</div>
+              {% endif %}
+            </form>
+
             <!-- Summary Cards -->
             <div class="row mb-4">
               <div class="col-sm-6">
@@ -24,120 +38,119 @@
                   </div>
                 </div>
               </div>
-              <div class="col-sm-6 mt-2 shadow">
-                <div class="card bg-light">
+              <div class="col-sm-6">
+                <div class="card bg-light shadow">
                   <div class="card-body text-center">
-                    <h6 class="card-subtitle text-muted">Total Dividend</h6>
-                    <h4 class="card-title text-success">₦{{ total_dividends|floatformat:2|intcomma }}</h4>
+                    <h6 class="card-subtitle text-muted">Total Shares</h6>
+                    <h4 class="card-title text-success">{{ total_shares|intcomma }}</h4>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Dividend Table -->
-            <div class="table-responsive">
-              <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                  <tr>
-                    <th>S/N</th>
-                    <th scope="col"> Member</th>
-                    <th scope="col">Ippis</th>
-                    <th scope="col" class="text-end">Savings</th>
-                    <th scope="col" class="text-end">Dividend</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for d in dividends %}
-                    <tr>
-                      <td>{{forloop.counter}}</td>
-                      <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ d.member.member.first_name }} {{ d.member.member.last_name }}</td>
-                      <td>{{ d.member.ippis }}</td>
-                      <td class="text-end font-monospace">₦{{ d.savings|floatformat:2|intcomma }}</td>
-                      <td class="text-end font-monospace text-success fw-bold">₦{{ d.dividend|floatformat:2|intcomma }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
+         {% if profit %}
+  <div class="alert alert-info">
+    <strong>Profit Entered:</strong> ₦{{ profit|floatformat:2|intcomma }} <br>
+    <strong>Unit Profit:</strong> ₦{{ unit_profit|floatformat:2|intcomma }}
+  </div>
+{% endif %}
+
+<!-- Dividend Table -->
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead class="table-dark">
+      <tr>
+        <th>S/N</th>
+        <th>Member</th>
+        <th>Ippis</th>
+        <th class="text-end">Savings</th>
+        <th class="text-end">Shares</th>
+        <th class="text-end">Unit Profit</th>
+        <th class="text-end">Dividend Amount</th>
+        <th class="text-end">Total Profit</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in shares %}
+        <tr>
+          <td>{{ forloop.counter|add:shares.start_index|add:"-1" }}</td>
+          <td class="text-nowrap text-truncate" style="max-width: 270px;">
+            {{ d.member.member.first_name }} {{ d.member.member.last_name }}
+          </td>
+          <td>{{ d.member.ippis }}</td>
+          <td class="text-end font-monospace">
+            ₦{{ d.savings|floatformat:2|intcomma }}
+          </td>
+          <td class="text-end fw-bold text-success">{{ d.share }}</td>
+          <td class="text-end text-primary">
+            {% with last_dividend=d.member.member_dividends.last %}
+              {% if last_dividend and last_dividend.unit_profit %}
+                ₦{{ last_dividend.unit_profit|floatformat:2|intcomma }}
+              {% else %}
+                -
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td class="text-end text-warning fw-bold">
+            {% with last_dividend=d.member.member_dividends.last %}
+              {% if last_dividend %}
+                ₦{{ last_dividend.dividend_amount|floatformat:2|intcomma }}
+              {% else %}
+                -
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td class="text-end text-danger fw-bold">
+            ₦{{ d.member.total_profit|floatformat:2|intcomma }}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 
             <!-- Pagination Info -->
             <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
               <div class="text-muted small">
-                Showing {{ dividends.start_index }} to {{ dividends.end_index }} of {{ dividends.paginator.count }} members
+                Showing {{ shares.start_index }} to {{ shares.end_index }} of {{ shares.paginator.count }} members
               </div>
               <div class="text-muted small">
-                Page {{ dividends.number }} of {{ dividends.paginator.num_pages }}
+                Page {{ shares.number }} of {{ shares.paginator.num_pages }}
               </div>
             </div>
 
             <!-- Pagination -->
-            {% if dividends.has_other_pages %}
+            {% if shares.has_other_pages %}
               <nav aria-label="Dividend pagination">
                 <ul class="pagination pagination-sm justify-content-center mb-4">
-                  
-                  <!-- Previous Page -->
-                  {% if dividends.has_previous %}
-                    <li class="page-item">
-                      <a class="page-link" href="?page=1" aria-label="First">
-                        <span aria-hidden="true">&laquo;&laquo;</span>
-                      </a>
-                    </li>
-                    <li class="page-item">
-                      <a class="page-link" href="?page={{ dividends.previous_page_number }}" aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
-                      </a>
-                    </li>
+                  {% if shares.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page=1">&laquo;&laquo;</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ shares.previous_page_number }}">&laquo;</a></li>
                   {% else %}
-                    <li class="page-item disabled">
-                      <span class="page-link">&laquo;&laquo;</span>
-                    </li>
-                    <li class="page-item disabled">
-                      <span class="page-link">&laquo;</span>
-                    </li>
+                    <li class="page-item disabled"><span class="page-link">&laquo;&laquo;</span></li>
+                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
                   {% endif %}
 
-                  <!-- Page Numbers -->
-                  {% for num in dividends.paginator.page_range %}
-                    {% if num == dividends.number %}
-                      <li class="page-item active" aria-current="page">
-                        <span class="page-link">{{ num }}</span>
-                      </li>
-                    {% elif num > dividends.number|add:'-3' and num < dividends.number|add:'3' %}
-                      <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                      </li>
-                    {% elif num == 1 or num == dividends.paginator.num_pages %}
-                      <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                      </li>
-                    {% elif num == dividends.number|add:'-4' or num == dividends.number|add:'4' %}
-                      <li class="page-item disabled">
-                        <span class="page-link">...</span>
-                      </li>
+                  {% for num in shares.paginator.page_range %}
+                    {% if num == shares.number %}
+                      <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > shares.number|add:'-3' and num < shares.number|add:'3' %}
+                      <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                    {% elif num == 1 or num == shares.paginator.num_pages %}
+                      <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                    {% elif num == shares.number|add:'-4' or num == shares.number|add:'4' %}
+                      <li class="page-item disabled"><span class="page-link">...</span></li>
                     {% endif %}
                   {% endfor %}
 
-                  <!-- Next Page -->
-                  {% if dividends.has_next %}
-                    <li class="page-item">
-                      <a class="page-link" href="?page={{ dividends.next_page_number }}" aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
-                      </a>
-                    </li>
-                    <li class="page-item">
-                      <a class="page-link" href="?page={{ dividends.paginator.num_pages }}" aria-label="Last">
-                        <span aria-hidden="true">&raquo;&raquo;</span>
-                      </a>
-                    </li>
+                  {% if shares.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ shares.next_page_number }}">&raquo;</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ shares.paginator.num_pages }}">&raquo;&raquo;</a></li>
                   {% else %}
-                    <li class="page-item disabled">
-                      <span class="page-link">&raquo;</span>
-                    </li>
-                    <li class="page-item disabled">
-                      <span class="page-link">&raquo;&raquo;</span>
-                    </li>
+                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                    <li class="page-item disabled"><span class="page-link">&raquo;&raquo;</span></li>
                   {% endif %}
-                  
                 </ul>
               </nav>
             {% endif %}
@@ -154,11 +167,10 @@
                 <i class="bi bi-arrow-clockwise"></i> View All Pages
               </a>
             </div>
-            
+
           </div>
         </div>
       {% endif %}
-
     </div>
   </div>
 </div>
@@ -167,19 +179,13 @@
 function exportTableToCSV() {
   const table = document.querySelector('.table');
   let csv = '';
-  
-  // Get headers
   const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
   csv += headers.join(',') + '\n';
-  
-  // Get data rows
   const rows = table.querySelectorAll('tbody tr');
   rows.forEach(row => {
     const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
     csv += cells.join(',') + '\n';
   });
-  
-  // Download CSV
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');

@@ -79,10 +79,14 @@
                 </div>
 
                 <!-- Guarantor IPPIS -->
-                <div class="col-md-6 mb-3">
+                <div class="col-md-6 mb-3" id="guarantor_field">
+                    <label for="guarantor_ippis" class="form-label">Guarantor IPPIS <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="guarantor_ippis" name="guarantor_ippis" placeholder="Enter guarantor IPPIS">
+                </div>
+                {% comment %} <div class="col-md-6 mb-3">
                     <label for="guarantor_ippis" class="form-label">Guarantor IPPIS <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="guarantor_ippis" name="guarantor_ippis" placeholder="Enter guarantor IPPIS" required>
-                </div>
+                </div> {% endcomment %}
             </div>
 
             <!-- Submit Button -->
@@ -116,29 +120,46 @@
         }
     });
 
-    // ✅ Show eligible loan amount & auto-fill loan field
-    $('#loan_type').change(function () {
-        const loanType = $(this).find(':selected');
-        const loanName = loanType.data('name');
-        const maxAmount = parseFloat(loanType.data('max')) || 0;
-        const totalLoanable = parseFloat("{{ loanable }}");
+   // ✅ Show eligible loan amount & auto-fill loan field
+$('#loan_type').change(function () {
+    const loanType = $(this).find(':selected');
+    const loanName = loanType.data('name');
+    const maxAmount = parseFloat(loanType.data('max')) || 0;
+    const totalLoanable = parseFloat("{{ loanable }}");
 
-        let eligibleAmount = 0;
-        if (loanName.toLowerCase().includes('short term')) {
-            eligibleAmount = totalLoanable / 2;
-            if (eligibleAmount > maxAmount) eligibleAmount = maxAmount;
-        } else if (loanName.toLowerCase().includes('long term')) {
-            eligibleAmount = totalLoanable * 2;
-            if (maxAmount > 0 && eligibleAmount > maxAmount) eligibleAmount = maxAmount;
-        }
+    let eligibleAmount = 0;
+    if (loanName.toLowerCase().includes('short term')) {
+        eligibleAmount = totalLoanable / 2;
+        if (eligibleAmount > maxAmount) eligibleAmount = maxAmount;
 
-        $('#eligible_amount_container').show();
-        $('#loan_type_name').text(loanName);
-        $('#eligible_amount').text(`₦${eligibleAmount.toLocaleString()}`);
+        // ✅ Hide guarantor field for short term
+        $('#guarantor_field').hide();
+        $('#guarantor_ippis').prop('required', false).val('');
 
-        // ✅ Auto-fill loan amount field
-        $('#amount').val(eligibleAmount).trigger('input');
-    });
+    } else if (loanName.toLowerCase().includes('long term')) {
+        eligibleAmount = totalLoanable * 2;
+        if (maxAmount > 0 && eligibleAmount > maxAmount) eligibleAmount = maxAmount;
+
+        // ✅ Show guarantor field for long term
+        $('#guarantor_field').show();
+        $('#guarantor_ippis').prop('required', true);
+
+    } else {
+        eligibleAmount = totalLoanable;
+        if (maxAmount > 0 && eligibleAmount > maxAmount) eligibleAmount = maxAmount;
+
+        // ✅ Show guarantor field by default
+        $('#guarantor_field').show();
+        $('#guarantor_ippis').prop('required', true);
+    }
+
+    $('#eligible_amount_container').show();
+    $('#loan_type_name').text(loanName);
+    $('#eligible_amount').text(`₦${eligibleAmount.toLocaleString()}`);
+
+    // ✅ Auto-fill loan amount field
+    $('#amount').val(eligibleAmount).trigger('input');
+});
 
     // ✅ Auto-calculate Monthly Payment
     function calculateMonthlyPayment() {

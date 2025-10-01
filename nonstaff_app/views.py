@@ -155,7 +155,7 @@ def non_staff_member_dashboard(request):
         })
 
     context = {
-        "member": nonstaff,  # ✅ request.user is enough
+        "member": nonstaff, 
         "total_savings": total_savings,
         "monthly_saving": monthly_saving.month_saving if monthly_saving else 0,
         "previous_monthly_saving": previous_monthly_saving.month_saving if previous_monthly_saving else 0,

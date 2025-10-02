@@ -672,7 +672,7 @@ def dividend_report(request):
                     member.total_profit += dividend_amount
                     member.save()
 
-            return redirect("dividend_report")
+            return redirect("distribute_dividends")
     else:
         form = ProfitForm()
 

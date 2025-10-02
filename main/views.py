@@ -677,12 +677,13 @@ def dividend_report(request):
     enriched_members = []
     for m in members:
         last_dividend = m.member_dividends.last()
+        savings = m.total_savings or Decimal("0.00")
         enriched_members.append({
             "member": m,
-            "savings": m.total_savings,
-            "share": int(m.total_savings / 1000),
+            "savings": savings,
+            "share": int(savings / Decimal("1000")),
             "unit_profit": getattr(last_dividend, "unit_profit", None),
-            "dividend_amount": getattr(last_dividend, "dividend_amount", None),
+           "dividend_amount": getattr(last_dividend, "dividend_amount", None),
         })
 
     # paginate

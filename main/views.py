@@ -636,7 +636,6 @@ class ProfitForm(forms.Form):
 #     }
 #     return render(request, "main/dividends_report.html", context)
 
-
 def dividend_report(request):
     total_savings = Member.objects.aggregate(total=Sum("total_savings"))["total"] or 0
     total_shares = total_savings / 1000 if total_savings else 0
@@ -654,7 +653,9 @@ def dividend_report(request):
                 # distribute profit to members
                 members = Member.objects.all()
                 for member in members:
-                    member_shares = member.total_savings / 1000
+                    # ✅ FIX: Handle None values for total_savings
+                    member_savings = member.total_savings or Decimal("0.00")
+                    member_shares = member_savings / 1000
                     dividend_amount = member_shares * unit_profit
 
                     Dividend.objects.create(
@@ -665,6 +666,9 @@ def dividend_report(request):
                     )
 
                     # update member total profit
+                    # ✅ FIX: Handle None values for total_profit
+                    if member.total_profit is None:
+                        member.total_profit = Decimal("0.00")
                     member.total_profit += dividend_amount
                     member.save()
 
@@ -683,7 +687,7 @@ def dividend_report(request):
             "savings": savings,
             "share": int(savings / Decimal("1000")),
             "unit_profit": getattr(last_dividend, "unit_profit", None),
-           "dividend_amount": getattr(last_dividend, "dividend_amount", None),
+            "dividend_amount": getattr(last_dividend, "dividend_amount", None),
         })
 
     # paginate
@@ -692,10 +696,7 @@ def dividend_report(request):
     shares = paginator.get_page(page_number)
 
     return render(request, "main/dividends_report.html", {
-        "shares": shares,
-        "form": form,
+        "shares": shares, "form": form,
         "total_savings": total_savings,
         "total_shares": total_shares,
-        "profit": profit,
-        "unit_profit": unit_profit,
-    })
+        "profit": profit,"unit_profit": unit_profit,})

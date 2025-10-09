@@ -16,14 +16,13 @@ from django.contrib.auth import get_user_model
 # Create your views here.
 
 
-def home(request):
-    return render(request, 'home.html')
+
 
 def all_cases(request):
     return render(request, 'all_cases.html')
 
-@login_required
 
+@login_required
 def upload_users(request):
     if request.method == 'POST' and request.FILES.get('excel_file'):
         excel_file = request.FILES['excel_file']
@@ -59,8 +58,6 @@ def upload_users(request):
                 messages.error(request, f"Group '{group_title}' not found.")
                 return redirect("upload_users")
 
-
-
             user = User(
                 username=username,
                 first_name=row.get("first_name", "").strip(),
@@ -74,23 +71,6 @@ def upload_users(request):
             )
             users_to_create.append(user)
             ippis_to_user.append(ippis)
-
-        # with transaction.atomic():
-        #     # created_users = User.objects.bulk_create(users_to_create)
-        #     created_users = User.objects.bulk_create(users_to_create, return_ids=True)
-
-           
-        #     # Set default password for all created users
-        #     User.objects.filter(id__in=[user.id for user in created_users]).update(
-        #         password=make_password("default123")
-        #     )
-
-        #     members = [
-        #         Member(member=user, ippis=ippis)
-        #         for user, ippis in zip(created_users, ippis_to_user)
-        #         if ippis is not None
-        #     ]
-        #     Member.objects.bulk_create(members)
 
         with transaction.atomic():
             # Bulk insert users
@@ -173,6 +153,18 @@ def user_registration(request):
 @login_required
 def complete_profile(request):
     user = request.user
+    
+    # Safely get existing address and next of kin data
+    try:
+        address = user.address
+    except Address.DoesNotExist:
+        address = None
+    
+    try:
+        next_of_kin = user.nextofkin
+    except NextOfKin.DoesNotExist:
+        next_of_kin = None
+    
     if request.method == 'POST':
         try:
             # Update user fields with proper validation
@@ -185,7 +177,6 @@ def complete_profile(request):
             if date_of_birth:
                 try:
                     from datetime import datetime
-                    # Try to parse the date - adjust format as needed
                     user.date_of_birth = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
                 except ValueError:
                     messages.error(request, "Invalid date format. Please use YYYY-MM-DD format.")
@@ -193,7 +184,10 @@ def complete_profile(request):
                         'genders': Gender.objects.all(),
                         'marital_statuses': MaritalStatus.objects.all(),
                         'religions': Religion.objects.all(),
+                        'states': State.objects.all(),
                         'user': user,
+                        'address': address,
+                        'next_of_kin': next_of_kin,
                     })
             else:
                 user.date_of_birth = None
@@ -205,7 +199,7 @@ def complete_profile(request):
             if group_id and group_id.isdigit():
                 user.group_id = int(group_id)
             
-            # Add other fields that might be missing
+            # Add other fields
             phone1 = request.POST.get('phone1', '').strip()
             phone2 = request.POST.get('phone2', '').strip()
             email = request.POST.get('email', '').strip()
@@ -216,9 +210,8 @@ def complete_profile(request):
                 user.phone2 = phone2
             if email:
                 user.email = email
-           
             
-            # Handle gender, religion, marital_status if they're foreign keys
+            # Handle gender
             gender_id = request.POST.get('gender')
             if gender_id and gender_id.isdigit():
                 try:
@@ -230,9 +223,13 @@ def complete_profile(request):
                         'genders': Gender.objects.all(),
                         'marital_statuses': MaritalStatus.objects.all(),
                         'religions': Religion.objects.all(),
+                        'states': State.objects.all(),
                         'user': user,
+                        'address': address,
+                        'next_of_kin': next_of_kin,
                     })
             
+            # Handle religion
             religion_id = request.POST.get('religion')
             if religion_id and religion_id.isdigit():
                 try:
@@ -244,9 +241,13 @@ def complete_profile(request):
                         'genders': Gender.objects.all(),
                         'marital_statuses': MaritalStatus.objects.all(),
                         'religions': Religion.objects.all(),
+                        'states': State.objects.all(),
                         'user': user,
+                        'address': address,
+                        'next_of_kin': next_of_kin,
                     })
             
+            # Handle marital status
             marital_status_id = request.POST.get('marital_status')
             if marital_status_id and marital_status_id.isdigit():
                 try:
@@ -258,7 +259,10 @@ def complete_profile(request):
                         'genders': Gender.objects.all(),
                         'marital_statuses': MaritalStatus.objects.all(),
                         'religions': Religion.objects.all(),
+                        'states': State.objects.all(),
                         'user': user,
+                        'address': address,
+                        'next_of_kin': next_of_kin,
                     })
             
             # Handle unit field
@@ -274,15 +278,13 @@ def complete_profile(request):
             user.full_clean() 
             user.save()
             
-            # Create or update address using update_or_create
+            # Create or update address
             country = request.POST.get("country", '').strip()
             state_of_origin_id = request.POST.get("state_of_origin") or None
             local_government_area = request.POST.get("local_government_area", '').strip()
             full_address = request.POST.get("address", '').strip()
             
-            # Only create address if we have some data
             if any([country, state_of_origin_id, local_government_area, full_address]):
-                # Handle state_of_origin as foreign key if needed
                 state_of_origin = None
                 if state_of_origin_id and state_of_origin_id.isdigit():
                     try:
@@ -293,25 +295,28 @@ def complete_profile(request):
                             'genders': Gender.objects.all(),
                             'marital_statuses': MaritalStatus.objects.all(),
                             'religions': Religion.objects.all(),
-                            'user': user,})
+                            'states': State.objects.all(),
+                            'user': user,
+                            'address': address,
+                            'next_of_kin': next_of_kin,
+                        })
                 
                 Address.objects.update_or_create(
                     user=user,
                     defaults={
                         'country': country,
                         'local_government_area': local_government_area,
-                        'state_of_origin': state_of_origin,  # Use the object, not ID
+                        'state_of_origin': state_of_origin,
                         'address': full_address,
                     }
                 )
             
-            # Create or update next of kin using update_or_create
+            # Create or update next of kin
             full_names = request.POST.get("kin_full_names", '').strip()
             phone_no = request.POST.get("kin_phone_no", '').strip()
             kin_address = request.POST.get("kin_address", '').strip()
             kin_email = request.POST.get("kin_email", '').strip()
             
-            # Only create next of kin if we have some data
             if any([full_names, phone_no, kin_address, kin_email]):
                 next_of_kin_data = {
                     'full_names': full_names,
@@ -320,7 +325,6 @@ def complete_profile(request):
                     'email': kin_email,
                 }
                 
-                # Handle next of kin passport/photo upload
                 if 'netofkin_passport' in request.FILES:
                     next_of_kin_data['netofkin_passport'] = request.FILES['netofkin_passport']
                 
@@ -336,7 +340,6 @@ def complete_profile(request):
             messages.error(request, f"Validation error: {e}")
         except Exception as e:
             messages.error(request, f"An error occurred: {str(e)}")
-            # Log the error for debugging
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Profile completion error for user {user.id}: {str(e)}")
@@ -346,11 +349,12 @@ def complete_profile(request):
         'genders': Gender.objects.all(),
         'marital_statuses': MaritalStatus.objects.all(),
         'religions': Religion.objects.all(),
-        'user': user,
         'states': State.objects.all(),
-        }
+        'user': user,
+        'address': address,
+        'next_of_kin': next_of_kin,
+    }
     return render(request, 'accounts/complete_profile.html', context)
-
 
 def is_profile_complete(user):
     required_fields = ['first_name', 'last_name', 'date_of_birth', 'department', 'group']

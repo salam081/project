@@ -1,0 +1,41 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block content %}
+    
+<div class="container">    
+{% if rounds %}
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Profit Amount</th>
+            <th>Total Dividends</th>
+            <th>Number of Records</th>
+            <<th>Created By</th>
+            <th>Created At</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for round in rounds %}
+        <tr>
+            <td>₦{{ round.profit|floatformat:2 }}</td>
+            <td>₦{{ round.total_amount|floatformat:2 }}</td>
+            <td>{{ round.count }}</td>
+            <td>{{ round.created_by__first_name }} {{ round.created_by__last_name }}</td>
+            <td>{{ round.created_at|date:"Y-m-d H:i" }}</td>
+            <td>
+                <a href="{% url 'delete_dividend_round' round.profit %}" class="btn btn-danger btn-sm">
+                    Delete
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No dividend rounds found.</p>
+{% endif %}
+</div>
+
+{% endblock %}

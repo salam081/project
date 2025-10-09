@@ -255,6 +255,32 @@
                 </a>
             </div>
         </div> 
+          <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#DividendSubmenu" aria-expanded="false" aria-controls="casesSubmenu">
+                <i class="bi bi-folder"></i>
+                <span class="nav-text">Dividends</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="DividendSubmenu">
+                <a href="{% url 'distribute_dividends'  %}" class="nav-link" >
+                    <i class="bi bi-folder2-open"></i>
+                    <span class="nav-text">Distribute Dividends</span>
+                </a>
+                <a href="{% url 'dividend_list'  %}" class="nav-link" >
+                    <i class="bi bi-folder2-open"></i>
+                    <span class="nav-text">Dividends List</span>
+                </a>
+                {% comment %} <a href="{% url 'upload_project_finance_payment' %}" class="nav-link" >
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span class="nav-text">Upload Payment</span>
+                </a>
+               
+                <a href="{% url 'project_finance_report' %}" class="nav-link" >
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span class="nav-text">Report</span>
+                </a> {% endcomment %}
+            </div>
+        </div> 
         
           <!-- reportSubmenu Dropdown -->
         <div class="nav-item">
@@ -302,10 +328,10 @@
             </div>
         </div>
         <div class="nav-item">
-            <a href="{% url 'distribute_dividends' %}" class="nav-link" >
+            {% comment %} <a href="{% url 'distribute_dividends' %}" class="nav-link" >
                 <i class="bi bi-wallet-fill"></i>
                 <span class="nav-text">Dividends Report</span>
-            </a>
+            </a> {% endcomment %}
             <a href="{% url 'list_withdrawal_requests' %}" class="nav-link" >
                 <i class="bi bi-people"></i>
                 <span class="nav-text">Withdrawal Requests List</span>

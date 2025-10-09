@@ -3,6 +3,7 @@ from .import views
 
 
 urlpatterns = [
+    path('', views.home, name='home'),
     path('dashboard/',views.admin_dashboard,name="admin_dashboard"),
 
     path('financial_list/', views.list_financial_summaries, name='financial_list'),
@@ -21,5 +22,9 @@ urlpatterns = [
 
 
     path("distribute_dividends/", views.dividend_report, name="distribute_dividends"),
+    path("dividendlist/", views.list_dividend_rounds, name="dividend_list"),
+     path('dividend/delete-round/<str:profit_amount>/', views.delete_dividend_round_bulk, name='delete_dividend_round'),
+
+    # path("landing_page/", views.landing_page, name="landing_page"),
    
 ]

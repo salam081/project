@@ -5,7 +5,7 @@ from datetime import datetime
 from django.db import transaction
 from django.http import HttpResponse
 from datetime import timedelta
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Max, F, Min
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Sum
@@ -18,13 +18,13 @@ from django.conf import settings
 from django.contrib import messages
 from django.db.models.functions import TruncMonth
 from decimal import Decimal
-
+from decimal import Decimal, InvalidOperation
+from django.db import transaction
+from decimal import Decimal
 import openpyxl
 from accounts.decorators import *
-
 from PurchasedItems.models import *
 from django import forms
-from django.db.models import F
 from projectfinance.models import *
 from .models import *
 from accounts.models import *
@@ -35,7 +35,14 @@ from main.models import Withdrawal
 from django.db.models.functions import ExtractMonth, ExtractYear
 from accounts.utils import get_cooperative_withdrawal_stats, get_members_eligible_for_withdrawal
 
-@login_required
+
+def home(request):
+    now = timezone.now()
+    popup = Popup.objects.filter(is_active=True,start_date__lte=now, end_date__gte=now).first()
+    return render(request, 'main/home.html',{"popup": popup})
+
+
+@login_required(login_url='login')
 @group_required(['admin', 'staff'])
 def admin_dashboard(request):
     # Get the current year
@@ -129,15 +136,15 @@ def admin_dashboard(request):
         "grand_total": grand_total,
         'investment_loanable': investment_loanable,
     }
-    return render(request, 'admin/admin_dashboad.html', context)
+    return render(request, 'main/admin_dashboad.html', context)
 
-@login_required
+@login_required(login_url='login')
 def list_financial_summaries(request):
     summaries = FinancialSummary.objects.select_related('user').all()
     context = {'summaries': summaries}
     return render(request, 'main/summary_list.html', context)
 
-@login_required
+@login_required(login_url='login')
 def delete_financial_summary(request, pk):
     summary = get_object_or_404(FinancialSummary, pk=pk)
     if request.method == 'POST':
@@ -150,7 +157,7 @@ def is_admin(user):
     return user.is_staff or user.is_superuser
 
 
-@login_required
+@login_required(login_url='login')
 @group_required(['admin'])
 def list_withdrawal_requests(request):
     requests = Withdrawal.objects.select_related('member', 'approved_by').all()
@@ -159,7 +166,7 @@ def list_withdrawal_requests(request):
 
 
 
-@login_required
+@login_required(login_url='login')
 @group_required(['admin'])
 def approve_withdrawal_request(request, pk):
     withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
@@ -199,7 +206,7 @@ def approve_withdrawal_request(request, pk):
         "active_project_finance": active_project_finance, })
 
 
-@login_required
+@login_required(login_url='login')
 @group_required(['admin'])
 def decline_withdrawal_request(request, pk):
     withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
@@ -218,12 +225,12 @@ def decline_withdrawal_request(request, pk):
 
 
 
-@login_required
+@login_required(login_url='login')
 def eligible_members_view(request):
     eligible_members = get_members_eligible_for_withdrawal()
     return render(request, 'withdrawal/members/eligible_members.html', {'eligible_members': eligible_members,})
 
-@login_required
+@login_required(login_url='login')
 @group_required(['admin'])
 def cooperative_summary(request):
     summary_totals = FinancialSummary.objects.aggregate(
@@ -365,8 +372,7 @@ def guest_request_consumable(request):
         {"consumable_types": consumable_types, "selling_plans": selling_plans},
     )
 
-
-@login_required
+@login_required(login_url='login')
 @group_required(['admin'])
 def member_active_requests(request):
     ippis = request.GET.get("ippis", "").strip()
@@ -431,7 +437,7 @@ def member_active_requests(request):
 
 
 @transaction.atomic
-@login_required
+@login_required(login_url='login')
 def upload_opening_balances(request):
     if request.method == "POST" and request.FILES.get("file"):
         file = request.FILES["file"]
@@ -512,7 +518,7 @@ def upload_opening_balances(request):
 
 
 
-@login_required
+@login_required(login_url='login')
 @group_required(['admin'])
 def loan_totals(request):
     # Aggregate by month
@@ -571,71 +577,7 @@ def loan_totals(request):
 class ProfitForm(forms.Form):
     profit = forms.DecimalField(label="Enter Profit", decimal_places=2, max_digits=15)
 
-
-# @login_required
-# def distribute_dividends(request):
-#     shares = []
-
-#     # Only include members with savings > 0
-#     members_with_savings = Member.objects.filter(total_savings__gt=0).order_by('-total_savings')
-
-#     for member in members_with_savings:
-#         savings = member.total_savings or Decimal(0)
-#         share = round(savings / Decimal(1000))  # shares = savings ÷ 1000
-#         shares.append({"member": member, "savings": savings, "share": share})
-
-#     # Totals
-#     total_savings = sum(d["savings"] for d in shares)
-#     total_shares = sum(d["share"] for d in shares)
-
-#     profit = None
-#     unit_profit = None   # renamed from per_share_value
-
-#     if request.method == "POST":
-#         form = ProfitForm(request.POST)
-#         if form.is_valid():
-#             profit = form.cleaned_data["profit"]
-
-#             if total_shares > 0:
-#                 unit_profit = profit / total_shares   # ✅ Profit ÷ Total Shares = Unit Profit
-
-#                 for d in shares:
-#                     member = d["member"]
-#                     dividend = unit_profit * d["share"]   # ✅ Unit Profit × Member Shares
-
-#                     #  Update cumulative total_profit
-#                     member.total_profit = (member.total_profit or Decimal(0)) + dividend
-#                     member.save()
-
-#                     #  Save a record of this distribution
-#                     Dividend.objects.create(
-#                         member=member,
-#                         profit=profit,
-#                         dividend_amount=dividend,
-#                     )
-
-#                     d["dividend"] = dividend
-#             else:
-#                 unit_profit = Decimal(0)
-
-#     else:
-#         form = ProfitForm()
-
-#     # Pagination
-#     paginator = Paginator(shares, 50)
-#     page_number = request.GET.get("page")
-#     page_obj = paginator.get_page(page_number)
-
-#     context = {
-#         "shares": page_obj,
-#         "total_savings": total_savings,
-#         "total_shares": total_shares,
-#         "profit": profit,
-#         "unit_profit": unit_profit, 
-#         "form": form,
-#     }
-#     return render(request, "main/dividends_report.html", context)
-
+@login_required(login_url='login')
 def dividend_report(request):
     total_savings = Member.objects.aggregate(total=Sum("total_savings"))["total"] or 0
     total_shares = total_savings / 1000 if total_savings else 0
@@ -650,37 +592,56 @@ def dividend_report(request):
             if total_shares > 0:
                 unit_profit = profit / total_shares
 
-                # distribute profit to members
-                members = Member.objects.all()
-                for member in members:
-                    # ✅ FIX: Handle None values for total_savings
-                    member_savings = member.total_savings or Decimal("0.00")
-                    member_shares = member_savings / 1000
-                    dividend_amount = member_shares * unit_profit
+                # OPTIMIZATION: Use transaction for atomicity and speed
+                with transaction.atomic():
+                    #  Fetch all members at once with select_for_update to prevent race conditions
+                    members = Member.objects.select_for_update().all()
+                    
+                    dividends_to_create = []
+                    members_to_update = []
+                    
+                    for member in members:
+                        # Handle None values for total_savings
+                        member_savings = member.total_savings or Decimal("0.00")
+                        member_shares = member_savings / 1000
+                        dividend_amount = member_shares * unit_profit
 
-                    Dividend.objects.create(
-                        member=member,
-                        profit=profit,
-                        unit_profit=unit_profit,   # ✅ save unit profit for this round
-                        dividend_amount=dividend_amount,
-                    )
+                        #  Prepare dividend for bulk creation
+                        dividends_to_create.append(
+                            Dividend(
+                                member=member,
+                                profit=profit,
+                                unit_profit=unit_profit,
+                                dividend_amount=dividend_amount,
+                                created_by=request.user 
+                            )
+                        )
 
-                    # update member total profit
-                    # ✅ FIX: Handle None values for total_profit
-                    if member.total_profit is None:
-                        member.total_profit = Decimal("0.00")
-                    member.total_profit += dividend_amount
-                    member.save()
+                        #  Update member total profit in memory
+                        if member.total_profit is None:
+                            member.total_profit = Decimal("0.00")
+                        member.total_profit += dividend_amount
+                        members_to_update.append(member)
+
+                    #  BULK OPERATIONS: Create all dividends at once
+                    Dividend.objects.bulk_create(dividends_to_create)
+                    
+                    #  BULK OPERATIONS: Update all members at once
+                    Member.objects.bulk_update(members_to_update, ['total_profit'])
 
             return redirect("distribute_dividends")
     else:
         form = ProfitForm()
 
-    # fetch members with latest dividend info
-    members = Member.objects.select_related("member").all()
+    # OPTIMIZATION: Use prefetch_related to reduce queries
+    members = Member.objects.prefetch_related("member_dividends").all()
     enriched_members = []
+    
     for m in members:
-        last_dividend = m.member_dividends.last()
+        # Use prefetched data (no additional query)
+        last_dividend = m.member_dividends.all()[:1]
+        last_dividend = last_dividend[0] if last_dividend else None
+        
         savings = m.total_savings or Decimal("0.00")
         enriched_members.append({
             "member": m,
@@ -696,7 +657,117 @@ def dividend_report(request):
     shares = paginator.get_page(page_number)
 
     return render(request, "main/dividends_report.html", {
-        "shares": shares, "form": form,
+        "shares": shares,
+        "form": form,
         "total_savings": total_savings,
         "total_shares": total_shares,
-        "profit": profit,"unit_profit": unit_profit,})
+        "profit": profit,
+        "unit_profit": unit_profit,
+    })
+
+
+@login_required(login_url='login')
+def delete_dividend_round_bulk(request, profit_amount):
+    try:
+        # ✅ Convert profit_amount (string from URL) to Decimal
+        profit_amount = Decimal(profit_amount)
+    except InvalidOperation:
+        messages.error(request, "Invalid profit amount.")
+        return redirect("distribute_dividends")
+
+    if request.method == "POST":
+        with transaction.atomic():
+            # Get all dividends for this profit round
+            dividends = Dividend.objects.filter(profit=profit_amount).select_related('member')
+            count = dividends.count()
+
+            if count == 0:
+                messages.warning(request, "No dividends found for this profit round.")
+                return redirect("distribute_dividends")
+
+            #  Group dividends by member in one pass
+            member_adjustments = {}
+            for dividend in dividends:
+                member_id = dividend.member.id
+                dividend_amount = dividend.dividend_amount or Decimal("0.00")
+                member_adjustments[member_id] = member_adjustments.get(member_id, Decimal("0.00")) + dividend_amount
+
+            #  Fetch all affected members at once
+            member_ids = list(member_adjustments.keys())
+            members = Member.objects.filter(id__in=member_ids).select_for_update()
+
+            #  Adjust profits in memory
+            members_to_update = []
+            for member in members:
+                adjustment = member_adjustments.get(member.id, Decimal("0.00"))
+
+                if member.total_profit is None:
+                    member.total_profit = Decimal("0.00")
+
+                member.total_profit -= adjustment
+
+                # Prevent negative profit
+                if member.total_profit < 0:
+                    member.total_profit = Decimal("0.00")
+
+                members_to_update.append(member)
+
+            #  Bulk update members
+            if members_to_update:
+                Member.objects.bulk_update(members_to_update, ["total_profit"])
+
+            #  Delete all dividends in one query
+            dividends.delete()
+
+            #  Safe Decimal formatting
+            messages.success(
+                request,
+                f"Successfully deleted {count} dividend(s) from profit round of ₦{profit_amount:,.2f}."
+            )
+
+        return redirect("dividend_list")
+
+    # ===== GET request - show confirmation page =====
+    dividends = Dividend.objects.filter(profit=profit_amount).select_related('member').order_by('-dividend_amount')
+    dividend_count = dividends.count()
+
+    #  Use aggregate to calculate total (safer + faster than Python sum)
+    from django.db.models import Sum
+    total_amount = dividends.aggregate(total=Sum("dividend_amount"))["total"] or Decimal("0.00")
+
+    return render(request, "main/confirm_delete_dividend_round.html", {
+        "profit_amount": profit_amount,
+        "dividend_count": dividend_count,
+        "total_amount": total_amount,
+        "dividends": dividends[:10],  # Show preview of first 10
+    })
+
+
+
+@login_required(login_url='login')
+def list_dividend_rounds(request):
+    # Group by profit and created_by, then summarize
+    rounds = (
+        Dividend.objects
+        .values("profit", "created_by", "created_by__first_name", "created_by__last_name")  
+        .annotate(
+            total_amount=Sum("dividend_amount"),
+            count=Count("id"),
+            created_at=Min("created_at")  # first time the round was created
+        )
+        .order_by("-created_at")
+    )
+
+    return render(request, "main/dividend_rounds_list.html", {"rounds": rounds})
+
+
+
+
+# def landing_page(request):
+#     now = timezone.now()
+#     popup = Popup.objects.filter(
+#         is_active=True,
+#         start_date__lte=now,
+#         end_date__gte=now
+#     ).first()
+#     return render(request, "main/landing.html", {"popup": popup})

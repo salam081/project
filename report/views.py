@@ -1219,126 +1219,23 @@ def consolidated_report(request):
         return render(request, "reports/consolidated_report.html", context)
 
 
-# def calculate_total_expenditure(filters):
-#     """Calculate total expenditure with proper error handling"""
-#     date_from = filters.get('date_from')
-#     date_to = filters.get('date_to')
-    
-#     try:
-#         # Build Q objects for filtering
-       
-#         purchase_filter = Q()
-#         consumable_expenditure_filter = Q()
-#         finance_expenditure_filter = Q()
-#         loan_disbursement_filter = Q()
-        
-#         if date_from:
-           
-#             purchase_filter &= Q(date_added__gte=date_from)
-#             consumable_expenditure_filter &= Q(date_created__gte=date_from)
-#             finance_expenditure_filter &= Q(created_at__gte=date_from)
-#             loan_disbursement_filter &= Q(date_created__gte=date_from)
-
-#         if date_to:
-           
-#             purchase_filter &= Q(date_added__lte=date_to)
-#             consumable_expenditure_filter &= Q(date_created__lte=date_to)
-#             finance_expenditure_filter &= Q(created_at__lte=date_to)
-#             loan_disbursement_filter &= Q(date_created__lte=date_to)
-
-       
-        
-#         # 1. Staff purchases with null checks
-#         try:
-#             staff_purchases = PurchasedItem.objects.filter(
-#                 purchase_filter
-#             ).aggregate(
-#                 total=Sum(
-#                     F('unit_price') * F('quantity') + F('expenditure_amount'),
-#                     output_field=models.DecimalField()
-#                 )
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating staff purchases: {str(e)}")
-#             staff_purchases = Decimal('0')
-        
-#         # 2. Member-requested consumables (cost to the organization)
-#         try:
-#             member_consumable_cost = ConsumableRequestDetail.objects.filter(
-#                 consumable_expenditure_filter,
-#                 request__status__in=['Approved', 'Itempicked', 'FullyPaid']
-#             ).aggregate(
-#                 total=Sum(
-#                     F('quantity') * F('item_price'),
-#                     output_field=models.DecimalField()
-#                 )
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating member consumable cost: {str(e)}")
-#             member_consumable_cost = Decimal('0')
-
-#         # 3. Member-requested project finance (loan amount disbursed)
-#         try:
-#             member_finance_loans = ProjectFinanceRequest.objects.filter(
-#                 finance_expenditure_filter,
-#                 status__in=['Reviewed', 'Approved', 'FullyPaid']
-#             ).aggregate(
-#                 total=Sum('requested_amount')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating member finance loans: {str(e)}")
-#             member_finance_loans = Decimal('0')
-#             print(member_finance_loans,'member_finance_loans')
-#         # 4. Member-requested loans (loan amount disbursed)
-#         try:
-#             loan_disbursements = LoanRequest.objects.filter(
-#                 loan_disbursement_filter,
-#                 status__in=['approved', 'Fullpaid'],
-#                 approved_amount__isnull=False
-#             ).aggregate(
-#                 total=Sum('approved_amount')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating loan disbursements: {str(e)}")
-#             loan_disbursements = Decimal('0')
-
-#         return {
-#             'staff_purchases': staff_purchases,
-#             'member_consumable_cost': member_consumable_cost,
-#             'member_finance_loans': member_finance_loans,
-#             'loan_disbursements': loan_disbursements,
-#         }
-        
-#     except Exception as e:
-#         logger.error(f"Error in calculate_total_expenditure: {str(e)}", exc_info=True)
-#         return {
-           
-#             'staff_purchases': Decimal('0'),
-#             'member_consumable_cost': Decimal('0'),
-#             'member_finance_loans': Decimal('0'),
-#             'loan_disbursements': Decimal('0'),
-#         }
-
 def calculate_total_expenditure(filters):
-    """Calculate total expenditure with proper error handling"""
+    """Calculate total expenditure with proper error handling (consumable expenditure removed)"""
     date_from = filters.get('date_from')
     date_to = filters.get('date_to')
 
     # Build Q objects for filtering
     purchase_filter = Q()
-    consumable_expenditure_filter = Q()
     finance_expenditure_filter = Q()
     loan_disbursement_filter = Q()
 
     if date_from:
         purchase_filter &= Q(date_added__gte=date_from)
-        consumable_expenditure_filter &= Q(date_created__gte=date_from)
         finance_expenditure_filter &= Q(created_at__gte=date_from)
         loan_disbursement_filter &= Q(date_created__gte=date_from)
 
     if date_to:
         purchase_filter &= Q(date_added__lte=date_to)
-        consumable_expenditure_filter &= Q(date_created__lte=date_to)
         finance_expenditure_filter &= Q(created_at__lte=date_to)
         loan_disbursement_filter &= Q(date_created__lte=date_to)
 
@@ -1355,16 +1252,7 @@ def calculate_total_expenditure(filters):
         F('unit_price') * F('quantity') + F('expenditure_amount')
     )
 
-    # 2. Member consumables
-    member_consumable_cost = safe_sum(
-        ConsumableRequestDetail.objects.filter(
-            consumable_expenditure_filter,
-            request__status__in=['Approved', 'Itempicked', 'FullyPaid']
-        ),
-        F('quantity') * F('item_price')
-    )
-
-    # 3. Project finance disbursed
+    # 2. Project finance disbursed
     member_finance_loans = safe_sum(
         ProjectFinanceRequest.objects.filter(
             finance_expenditure_filter,
@@ -1373,7 +1261,7 @@ def calculate_total_expenditure(filters):
         'requested_amount'
     )
 
-    # 4. Member loan disbursements
+    # 3. Member loan disbursements
     loan_disbursements = safe_sum(
         LoanRequest.objects.filter(
             loan_disbursement_filter,
@@ -1385,11 +1273,9 @@ def calculate_total_expenditure(filters):
 
     return {
         'staff_purchases': staff_purchases,
-        'member_consumable_cost': member_consumable_cost,
         'member_finance_loans': member_finance_loans,
         'loan_disbursements': loan_disbursements,
     }
-
 
 def calculate_total_income(filters):
     """Calculate total income with proper filtering and error handling"""

@@ -167,103 +167,117 @@
                             </div>
                         
 
-                        <!-- Address Information Section -->
-                        <div class="content-card">
-                        <div class="row mt-1">
-                            <div class="col-12">
-                                <h5 class="text-primary border-bottom pb-2 mb-4">
-                                    <i class="fas fa-map-marker-alt me-2"></i>Address Information
-                                </h5>
-                            </div>
-                        </div>
+<!-- Address Information Section - Replace your current address section with this -->
+<div class="content-card">
+    <div class="row mt-1">
+        <div class="col-12">
+            <h5 class="text-primary border-bottom pb-2 mb-4">
+                <i class="fas fa-map-marker-alt me-2"></i>Address Information
+            </h5>
+        </div>
+    </div>
 
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                               
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold"><i
-                                            class="fas fa-flag me-1 text-muted"></i>Country</label>
-                                    <input type="text" name="country" value="{{ user.address.country }}"
-                                        class="form-control form-control-lg" placeholder="Enter country">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold"><i
-                                            class="fas fa-map me-1 text-muted"></i>State of Origin</label>
-                                    <select name="state_of_origin" class="form-select form-select-lg">
-                                        <option value="">-- Select State --</option>
-                                        {% for state in states %}
-                                        <option value="{{ state.id }}" {% if user.address.state_of_origin_id == state.id %}selected{% endif %}>{{ state.title }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-flag me-1 text-muted"></i>Country
+                </label>
+                <input type="text" name="country" value="{% if address %}{{ address.country }}{% endif %}"
+                    class="form-control form-control-lg" placeholder="Enter country">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-map me-1 text-muted"></i>State of Origin
+                </label>
+                <select name="state_of_origin" class="form-select form-select-lg">
+                    <option value="">-- Select State --</option>
+                    {% for state in states %}
+                    <option value="{{ state.id }}" 
+                        {% if address and address.state_of_origin_id == state.id %}selected{% endif %}>
+                        {{ state.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
 
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold"><i
-                                            class="fas fa-map-pin me-1 text-muted"></i>LGA</label>
-                                    <input type="text" name="local_government_area"
-                                        value="{{ user.address.local_government_area }}" class="form-control form-control-lg"
-                                        placeholder="Enter LGA">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold"><i
-                                            class="fas fa-map-marked-alt me-1 text-muted"></i>Full Address</label>
-                                    <textarea name="address" rows="2" class="form-control form-control-lg" placeholder="Enter full address">{{ user.address.address }}</textarea>
-                                </div>
-                                
-                            </div>
-                        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-map-pin me-1 text-muted"></i>LGA
+                </label>
+                <input type="text" name="local_government_area"
+                    value="{% if address %}{{ address.local_government_area }}{% endif %}" 
+                    class="form-control form-control-lg" placeholder="Enter LGA">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-map-marked-alt me-1 text-muted"></i>Full Address
+                </label>
+                <textarea name="address" rows="2" class="form-control form-control-lg" 
+                    placeholder="Enter full address">{% if address %}{{ address.address }}{% endif %}</textarea>
+            </div>
+        </div>
+    </div>
 
-                        <!-- Next of Kin Section -->
-                        <div class="row mt-5">
-                            <div class="col-12">
-                                <h5 class="text-primary border-bottom pb-2 mb-4">
-                                    <i class="fas fa-user-friends me-2"></i>Next of Kin Information
-                                </h5>
-                            </div>
-                        </div>
+    <!-- Next of Kin Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h5 class="text-primary border-bottom pb-2 mb-4">
+                <i class="fas fa-user-friends me-2"></i>Next of Kin Information
+            </h5>
+        </div>
+    </div>
 
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold"><i
-                                            class="fas fa-user me-1 text-muted"></i>Full Name</label>
-                                    <input type="text" name="full_names" value="{{ user.kin.full_names }}"
-                                        class="form-control form-control-lg"
-                                        placeholder="Enter full name of next of kin">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold"><i
-                                            class="fas fa-envelope me-1 text-muted"></i>Email</label>
-                                    <input type="email" name="email" value="{{ user.kin.email }}"
-                                        class="form-control form-control-lg" placeholder="Enter email of next of kin">
-                                </div>
-                                <div class="mb-3">
-                                     <label class="form-label fw-semibold"><i
-                                            class="fas fa-file me-1 text-muted"></i>Profile Photo</label>
-                                    <input type="file" name="netofkin_passport" class="form-control form-control-lg" accept="image/*" id="netofkin_passport">
-                                       
-                                </div>
-                            </div>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-user me-1 text-muted"></i>Full Name
+                </label>
+                <input type="text" name="kin_full_names" 
+                    value="{% if next_of_kin %}{{ next_of_kin.full_names }}{% endif %}"
+                    class="form-control form-control-lg" placeholder="Enter full name of next of kin">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-envelope me-1 text-muted"></i>Email
+                </label>
+                <input type="email" name="kin_email" 
+                    value="{% if next_of_kin %}{{ next_of_kin.email }}{% endif %}"
+                    class="form-control form-control-lg" placeholder="Enter email of next of kin">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-file me-1 text-muted"></i>Profile Photo
+                </label>
+                <input type="file" name="netofkin_passport" class="form-control form-control-lg" 
+                    accept="image/*" id="netofkin_passport">
+            </div>
+        </div>
 
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold"><i
-                                            class="fas fa-phone me-1 text-muted"></i>Phone Number</label>
-                                    <input type="text" name="kin_phone_no" value="{{ user.kin.phone_no }}"
-                                        class="form-control form-control-lg"
-                                        placeholder="Enter phone number of next of kin">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold"><i
-                                            class="fas fa-map-marker-alt me-1 text-muted"></i>Address</label>
-                                    <textarea name="kin_address" rows="3" class="form-control form-control-lg"
-                                        placeholder="Enter address of next of kin">{{ user.kin.address }}</textarea>
-                                </div>
-                            </div>
-                            
-                        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-phone me-1 text-muted"></i>Phone Number
+                </label>
+                <input type="text" name="kin_phone_no" 
+                    value="{% if next_of_kin %}{{ next_of_kin.phone_no }}{% endif %}"
+                    class="form-control form-control-lg" placeholder="Enter phone number of next of kin">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="fas fa-map-marker-alt me-1 text-muted"></i>Address
+                </label>
+                <textarea name="kin_address" rows="3" class="form-control form-control-lg"
+                    placeholder="Enter address of next of kin">{% if next_of_kin %}{{ next_of_kin.address }}{% endif %}</textarea>
+            </div>
+        </div>
+    </div>
+    
+  
+</div>
                         <button type="submit" class="btn btn-primary btn-lg px-5">
                                 <i class="fas fa-save me-2"></i>Save Profile
                             </button>

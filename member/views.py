@@ -28,7 +28,7 @@ from projectfinance.models import *
 from .models import *
 
 
-@login_required
+@login_required(login_url='login')
 @group_required(['members'])
 def member_dashboard(request):
     try:

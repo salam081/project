@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
-
+import dj_database_url
+from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -9,13 +10,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-n==c%=_z2k7q3+)a(c69&f%pa+kb)!-yr=y3fv#$@iegxf!^qh'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', cast=bool)
+
+# ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(",")
+
+ALLOWED_HOSTS = ['project-mow2.onrender.com']
+
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='https://project-mow2.onrender.com,http://localhost,http://127.0.0.1'
+).split(',')
+
 
 # ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['tmcs.ng','127.0.0.1']
 
 
 # Application definition
@@ -32,6 +42,7 @@ INSTALLED_APPS = [
     
     'accounts', 
     'main', 
+   
     'consumable',
     'loan',
     'member',
@@ -76,6 +87,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+
+DATABASES = {
+    'default': dj_database_url.parse(config('DATABASE_URL'))
+}
+
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.sqlite3',
@@ -83,17 +99,16 @@ WSGI_APPLICATION = 'core.wsgi.application'
 #     }
 # }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': "tmcsDb",
-        'USER': "tmcsapp",
-        'PASSWORD': "Tmcs@234",
-        'HOST': "localhost",
-        'PORT': "3306",
-    }
-}
-
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': "tmcsDb",
+#         'USER': "root",
+#         'PASSWORD': "abdulamin1984.",
+#         'HOST': "localhost",
+#         'PORT': "3306",
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -129,21 +144,28 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
+# STATIC_URL = '/static/'
+# MEDIA_URL = '/images/'
+
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'static', 'assets', 'images')
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static', 'static_root')
+
+# STATIC_DIR = os.path.join(BASE_DIR, 'static')
+
+# STATICFILES_DIRS = (
+#     STATIC_DIR,
+# )
+
 STATIC_URL = '/static/'
-MEDIA_URL = '/images/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'static', 'assets', 'images')
-STATIC_ROOT = os.path.join(BASE_DIR, 'static', 'static_root')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
 
-STATIC_DIR = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')] 
 
-STATICFILES_DIRS = (
-    STATIC_DIR,
-)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-CORS_ALLOW_ALL_ORIGINS = True

@@ -1,3 +1,4 @@
+from django.contrib.messages import constants as messages
 from pathlib import Path
 import os
 
@@ -40,7 +41,21 @@ INSTALLED_APPS = [
     'report',
     'projectfinance',
 ]
+
+
 AUTH_USER_MODEL = 'accounts.User'
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 900  # 15 minutes
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Redirect unauthenticated users
+LOGIN_URL = '/login/'        # or the name of your login route
+LOGIN_REDIRECT_URL = '/dashboard/'  # where to go after login
+LOGOUT_REDIRECT_URL = '/login/'
+
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -144,3 +159,8 @@ STATICFILES_DIRS = (
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+MESSAGE_TAGS = {
+    messages.ERROR: 'danger',
+}
+

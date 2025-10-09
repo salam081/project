@@ -156,6 +156,30 @@ class Dividend(models.Model):
     unit_profit = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)  # Profit per share
     dividend_amount = models.DecimalField(max_digits=15, decimal_places=2)  # What this member got
     created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User,on_delete=models.SET_NULL, null=True,blank=True,related_name="created_dividends")
 
     def __str__(self):
         return f"Dividend {self.dividend_amount} (Unit Profit: {self.unit_profit}) for {self.member} on {self.created_at.date()}"
+
+
+class Popup(models.Model):
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    link_url = models.URLField(blank=True, null=True)
+    is_active = models.BooleanField(default=False)
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+    def is_visible(self):
+        now = timezone.now()
+        if not self.is_active:
+            return False
+        if self.start_date and now < self.start_date:
+            return False
+        if self.end_date and now > self.end_date:
+            return False
+        return True

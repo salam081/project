@@ -3,239 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-     <style>
-        :root {
-            --primary-color: #4f46e5;
-            --primary-dark: #4338ca;
-            --secondary-color: #f8fafc;
-            --accent-color: #06b6d4;
-            --text-dark: #1e293b;
-            --text-light: #64748b;
-            --border-color: #e2e8f0;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    <title>User Login</title>
+    <!-- Load Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Optional: Use Inter font, similar to the previous version -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+             background: -webkit-gradient(linear, left top, left bottom, from(#e6e5f2), to(#4599cd));
+             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-
-        /* Prevent scrolling on the entire page */
-        html, body {
-            overflow: hidden;
-        }
-
-        .login-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-            position: relative;
-             background: rgba(175, 230, 242, 0.95);
-            /* Make the container fill the entire screen */
+       
+       
+        .login-card-wrapper {
             min-height: 100vh;
-            height: 100vh;
-            /* overflow: hidden; Removed from here and added to html, body */
-        }
-
-        .floating-shapes, .shape {
-            display: none !important;
-        }
-
-        .login-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(15px);
-            
-            box-shadow: var(--shadow-md);
-            padding: 1.5rem;
-            width: 100%;
-            max-width: 300px;
-            position: relative;
-            z-index: 10;
-            transform: translateY(0);
-            transition: all 0.3s ease;
-            margin-bottom: 40px;
-        }
-
-        .login-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 15px;
-            padding: 1px;
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask-composite: exclude;
-            z-index: -1;
-        }
-
-        .login-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .logo-section {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 0.75rem;
-            box-shadow: var(--shadow-md);
-            animation: none;
-        }
-
-        .logo-icon i {
-            font-size: 1.5rem;
-            color: white;
-        }
-
-        .welcome-text {
-            color: var(--text-dark);
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-
-        .welcome-subtitle {
-            color: var(--text-light);
-            font-size: 0.85rem;
-            margin-bottom: 0;
-        }
-
-        .form-control {
-            height: 35px;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.85rem;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(5px);
-        }
-
-        .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.15rem rgba(79, 70, 229, 0.1);
-            background: rgba(255, 255, 255, 1);
-        }
-        
-        .form-check {
-            margin: 0.75rem 0;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .form-check-input {
-            width: 1rem;
-            height: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-login {
-            width: 100%;
-            height: 45px;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            border: none;
-            color: white;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow-sm);
-            margin-bottom: 1rem;
-        }
-
-        .btn-login:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .signup-link {
-            text-align: center;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border-color);
-            color: var(--text-light);
-            font-size: 0.8rem;
-        }
-
-        .signup-link a {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .invalid-feedback {
-            font-size: 0.75rem;
         }
     </style>
 </head>
-<body>
-    
-    <p class="text-center mt-0 d-lg-flex justify-content-center">
-        <a href="{% url 'guest_request_consumable' %}" class="btn btn-outline-primary">
-            Click To Request Consumables As None Member
-        </a>
-    </p>
-    <div class="login-container">
-        <div class="login-card shadow">
-            <div class="logo-section">
-                <div class="logo-icon">
-                    <i class="bi bi-shield-lock-fill"></i>
-                </div>
-                    {% if messages %}
-                        <div class="messages">
-                            {% for message in messages %}
-                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                <h1 class="welcome-text">Enter Your Login Details</h1>
+<body class="login-card-wrapper d-flex flex-column justify-content-center align-items-center">
 
+    <div class="container">
+        <div class="row justify-content-center">
+            <!-- Login Card Container -->
+            <div class="col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4">
+                <div class="card shadow-lg border-0 rounded-4 p-4 p-sm-5">
+
+                    <!-- Header -->
+                    <h1 class="h3 fw-bold text-center text-dark mb-2">
+                        Welcome Back
+                    </h1>
+                    <p class="text-center text-muted mb-4">
+                        Sign in to access the Dividend Reporting System.
+                    </p>
+
+                    <!-- Django Login Form -->
+                    <form method="post" class="login-form">
+                        {% csrf_token %}
+
+                        <!-- Placeholder for non-field errors (e.g., failed login attempts) -->
+                        {% if error_message %}
+                            <div class="alert alert-danger mb-3 rounded-3" role="alert">
+                                {{ error_message }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Username or Email Field (Static Input) -->
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label small fw-medium text-dark">
+                                Username or Email
+                            </label>
+                            <div class="django-form-field">
+                                <input type="text" 
+                                       name="username" 
+                                       id="id_username" 
+                                       class="form-control rounded-3" 
+                                       placeholder="Enter your username or email"
+                                       required 
+                                       autofocus>
+                            </div>
+                        </div>
+
+                        <!-- Password Field (Static Input) -->
+                        <div class="mb-3">
+                            <label for="id_password" class="form-label small fw-medium text-dark">
+                                Password
+                            </label>
+                            <div class="django-form-field">
+                                <input type="password" 
+                                       name="password" 
+                                       id="id_password" 
+                                       class="form-control rounded-3" 
+                                       placeholder="Enter your password"
+                                       required>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit"
+                                class="w-100 btn btn-primary btn-lg mt-3 rounded-3 shadow-sm fw-semibold">
+                            Log In
+                        </button>
+                    </form>
+
+                    <!-- Footer/Links -->
+                    <div class="mt-4 text-center small">
+                        <a href="#" class="text-decoration-none text-primary fw-medium">
+                            Forgot password?
+                        </a>
+                       
+                    </div>
+
+                </div>
             </div>
-             
-            <form method="POST">
-                {% csrf_token %}
-                <div class="col-md-12 mb-3">
-                    <label for="username">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
-                </div>
-                <div class="col-md-12 mb-3">
-                    <label for="username">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                    <label class="form-check-label" for="remember">
-                        Remember me
-                    </label>
-                </div> 
-                <button type="submit" class="btn btn-login" id="loginBtn">
-                    <i class="bi bi-box-arrow-in-right me-1"></i>Login
-                </button>
-            </form>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    
+    <!-- Load Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
 </html>
-   
-
-

@@ -18,14 +18,14 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #64a9c4ff 0%, #408fb4ff 100%);
             color: white;
             padding: 1rem 0;
             position: fixed;
             width: 100%;
             top: 0;
             z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
 
         .nav-container {
@@ -81,11 +81,12 @@
         }
 
         .hero {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #87ceeb 0%, #6db4d4 100%);
             color: white;
-            padding: 120px 2rem 80px;
+            padding: 120px 4rem 80px;
             text-align: center;
             margin-top: 60px;
+            height: 100vh;
         }
 
         .hero h1 {
@@ -167,21 +168,52 @@
             background: #f8f9fa;
         }
 
-        .about-content {
+        .mission-vision {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 3rem;
-            align-items: center;
+            margin-bottom: 3rem;
         }
 
-        .about-text h3 {
+        .mission-card, .vision-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .mission-card:hover, .vision-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102,126,234,0.15);
+        }
+
+        .mission-card h3, .vision-card h3 {
             color: #667eea;
             font-size: 1.8rem;
             margin-bottom: 1rem;
         }
 
-        .about-text p {
+        .mission-card p, .vision-card p {
             margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .values-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 3rem;
+        }
+
+        .values-section h3 {
+            color: #667eea;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .values-section p {
             color: #555;
         }
 
@@ -198,6 +230,12 @@
             padding: 2rem;
             border-radius: 10px;
             box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102,126,234,0.2);
         }
 
         .stat-number {
@@ -276,7 +314,7 @@
         .popup-link {
             display: inline-block;
             margin-top: 1.5rem;
-            background: #667eea;
+            background: #87ceeb;
             color: white;
             padding: 0.8rem 1.5rem;
             border-radius: 8px;
@@ -320,7 +358,7 @@
                 font-size: 1rem;
             }
 
-            .about-content {
+            .mission-vision {
                 grid-template-columns: 1fr;
             }
 
@@ -336,15 +374,16 @@
                 position: absolute;
                 top: 60px;
                 left: -100%;
-                width: 70%;
-                max-width: 300px;
-                background: #667eea;
+                width: 100%;
+                max-width: 500px;
+                background: #87ceeb;
                 flex-direction: column;
                 padding: 2rem;
                 gap: 1rem;
                 transition: left 0.3s;
                 box-shadow: 5px 5px 20px rgba(0,0,0,0.2);
                 border-radius: 0 0 15px 0;
+                margin-top: 15px;
             }
 
             .nav-links.active {
@@ -380,7 +419,7 @@
             <p>{{ popup.message }}</p>
 
             {% if popup.link_url %}
-                <a href="{{ popup.link_url }}" class="popup-link" target="_blank">👉 {{ popup.link_text|default:"click" }}</a>
+                <a href="{{ popup.link_url }}" class="popup-link">👉 {{ popup.link_text|default:"click" }}</a>
             {% endif %}
         </div>
     </div>
@@ -407,7 +446,7 @@
     <section class="hero" id="home">
         <h1>Welcome to Trust Cooperative</h1>
         <p>Building Stronger Communities Through Shared Success</p>
-        <button class="cta-button">Join Us Today</button>
+        {% comment %} <button class="cta-button">Join Us Today</button> {% endcomment %}
     </section>
 
     <section class="section" id="features">
@@ -448,31 +487,41 @@
 
     <section class="section about" id="about">
         <h2>About Trust Cooperative</h2>
-        <div class="about-content">
-            <div class="about-text">
+        
+        <div class="mission-vision">
+            <div class="mission-card">
                 <h3>Our Mission</h3>
                 <p>At Trust Cooperative, we believe in the power of community and mutual support. Our mission is to provide accessible financial services that empower our members to achieve their dreams and build a secure future.</p>
                 <p>Founded on principles of transparency, integrity, and shared prosperity, we've grown into a thriving community of individuals working together toward common goals.</p>
-                <h3>Our Values</h3>
-                <p>• Member-focused service<br>
-                • Financial inclusion<br>
-                • Transparency and accountability<br>
-                • Sustainable growth<br>
-                • Community empowerment</p>
             </div>
-            <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-number">5K+</div>
-                    <div class="stat-label">Active Members</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">₦500M+</div>
-                    <div class="stat-label">Total Savings</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">10+</div>
-                    <div class="stat-label">Years of Trust</div>
-                </div>
+            <div class="vision-card">
+                <h3>Our Vision</h3>
+                <p>To be the leading cooperative society that transforms lives through financial empowerment, creating a community where every member has the opportunity to thrive and achieve lasting prosperity.</p>
+                <p>We envision a future where financial security is accessible to all, built on trust, collaboration, and shared success.</p>
+            </div>
+        </div>
+        
+        <div class="values-section">
+            <h3>Our Values</h3>
+            <p>• Member-focused service<br>
+            • Financial inclusion<br>
+            • Transparency and accountability<br>
+            • Sustainable growth<br>
+            • Community empowerment</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">5K+</div>
+                <div class="stat-label">Active Members</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">₦500M+</div>
+                <div class="stat-label">Total Savings</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">10+</div>
+                <div class="stat-label">Years of Trust</div>
             </div>
         </div>
     </section>
@@ -518,7 +567,7 @@
             const popup = document.getElementById('popup');
             if (popup) {
                 popup.style.display = 'none';
-                setTimeout(() => popup.style.display = 'flex', 3000);
+                setTimeout(() => popup.style.display = 'flex');
             }
         });
 
@@ -526,7 +575,7 @@
         setTimeout(() => {
             const popup = document.getElementById('popup');
             if (popup) popup.style.display = 'none';
-        }, 10000);
+        }, 50000);
 
         // Close popup when clicking on overlay
         {% if popup %}

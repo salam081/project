@@ -154,7 +154,7 @@ class PurchasedItem(models.Model):
     def cost_per_unit(self):
         """Cost per unit including proportional expenditure allocation"""
         if self.quantity > 0:
-            total_cost = (self.unit_price * self.quantity) + (self.expenditure_amount or Decimal('0'))
+            total_cost = (self.unit_price * self.quantity) + (self.expenditure_amount or Decimal('0.00'))
             return total_cost / self.quantity
         return self.unit_price
 
@@ -223,6 +223,7 @@ class SellingPlan(models.Model):
 
     def __str__(self):
         return f"{self.purchased_item.item_name} | ₦{self.selling_price_per_unit} | Qty: {self.quantity}"
+
 
 
 class PurchasedItemAdjustment(models.Model):

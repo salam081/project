@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+    {% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Login</title>
     <!-- Load Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    {% comment %} <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous"> {% endcomment %}
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <!-- Optional: Use Inter font, similar to the previous version -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
              background: -webkit-gradient(linear, left top, left bottom, from(#e6e5f2), to(#4599cd));
-             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+             background: linear-gradient(135deg, #87ceeb 0%, #6db4d4 100%);
         }
        
        
@@ -25,7 +27,7 @@
     <div class="container">
         <div class="row justify-content-center">
             <!-- Login Card Container -->
-            <div class="col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4">
+            <div class="col-11 col-sm-6 col-md-6 col-lg-5 col-xl-4">
                 <div class="card shadow-lg border-0 rounded-4 p-4 p-sm-5">
 
                     <!-- Header -->
@@ -33,7 +35,7 @@
                         Welcome Back
                     </h1>
                     <p class="text-center text-muted mb-4">
-                        Sign in to access the Dividend Reporting System.
+                        Sign in to access your Account.
                     </p>
 
                     <!-- Django Login Form -->
@@ -41,23 +43,23 @@
                         {% csrf_token %}
 
                         <!-- Placeholder for non-field errors (e.g., failed login attempts) -->
-                        {% if error_message %}
-                            <div class="alert alert-danger mb-3 rounded-3" role="alert">
-                                {{ error_message }}
+                        {% for message in messages %}
+                            <div class="alert alert-info mb-3 rounded-3" role="alert">
+                                {{ message }}
                             </div>
-                        {% endif %}
+                         {% endfor %} 
 
                         <!-- Username or Email Field (Static Input) -->
                         <div class="mb-3">
                             <label for="id_username" class="form-label small fw-medium text-dark">
-                                Username or Email
+                                Username 
                             </label>
                             <div class="django-form-field">
                                 <input type="text" 
                                        name="username" 
                                        id="id_username" 
                                        class="form-control rounded-3" 
-                                       placeholder="Enter your username or email"
+                                       placeholder="Enter your username "
                                        required 
                                        autofocus>
                             </div>
@@ -87,8 +89,8 @@
 
                     <!-- Footer/Links -->
                     <div class="mt-4 text-center small">
-                        <a href="#" class="text-decoration-none text-primary fw-medium">
-                            Forgot password?
+                        <a href="{% url 'home' %}" class="text-decoration-none text-primary fw-medium">
+                         Go Back
                         </a>
                        
                     </div>
@@ -99,6 +101,7 @@
     </div>
     
     <!-- Load Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="{% static 'js/bootstrap.bundle.min.js'%}"></script>
+   
 </body>
 </html>

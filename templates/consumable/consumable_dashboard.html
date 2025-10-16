@@ -8,58 +8,54 @@
     <!-- Summary Cards -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card shadow-sm p-3 text-center rounded-3">
+            <div class="card shadow-lg p-3 text-center text-info">
                 <h6>Total Requests</h6>
-                <h4 class="fw-bold">{{ total_requests|intcomma }}</h4>
+                <p class="fw-bold">{{ total_requests|intcomma }}</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm p-3 text-center rounded-3">
+            <div class="card shadow-lg p-3 text-center text-warning ">
                 <h6>Pending</h6>
-                <h4 class="text-warning fw-bold">{{ pending_count|intcomma }}</h4>
+                <p class="text-warning fw-bold">{{ pending_count|intcomma }}</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm p-3 text-center rounded-3">
+            <div class="card shadow-lg p-3 text-center text-success">
                 <h6>Approved</h6>
-                <h4 class="text-success fw-bold">{{ approved_count|intcomma }}</h4>
+                <p class="text-success fw-bold">{{ approved_count|intcomma }}</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm p-3 text-center rounded-3">
-                <h6>Completed (Fully Paid)</h6>
-                <h4 class="text-primary fw-bold">{{ completed_count|intcomma }}</h4>
+            <div class="card shadow-lg p-3 text-center text-primary">
+                <h6>Fully Paid</h6>
+                <p class="text-primary fw-bold">{{ completed_count|intcomma }}</p>
             </div>
         </div>
     </div>
 
     <!-- Financial Overview -->
-    <div class="card shadow-sm mb-4 rounded-3">
+    <div class="card shadow-lg mb-4 rounded-3">
         <div class="card-header bg-light">
             <strong class="text-primary">Financial Overview</strong>
         </div>
       <div class="card-body d-flex flex-column gap-2">
         <div class="row">
                 <div class="col-md-4">
-                    <p class="mb-0"><strong>Total Requested:</strong> ₦{{ total_amount_requested|floatformat:2|intcomma }}</p>
+                    <p class="mb-0"><strong>Total Request Amount:</strong> ₦{{ total_amount_requested|floatformat:2|intcomma }}</p>
                 </div>
                 <div class="col-md-4">
-                    <p class="mb-0"><strong>Total Paid:</strong> ₦{{ total_amount_paid|floatformat:2|intcomma }}</p>
+                    <p class="mb-0"><strong>Total Paid Amount:</strong> ₦{{ total_amount_paid|floatformat:2|intcomma }}</p>
                 </div>
                    <div class="col-md-4">
                     <p class="mb-0"><strong>Outstanding Balance:</strong> ₦{{ outstanding_balance|floatformat:2|intcomma }}</p>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-12 text-center">
-                    <p class="mb-0"><strong>Stock Level:</strong> {{ stock_level|intcomma }}</p>
-                </div>
-            </div>
+           
       </div>
     </div>
 
     <!-- Form Fees -->
-    <div class="card shadow-sm mb-4 rounded-3">
+    <div class="card shadow-lg mb-4 rounded-3">
         <div class="card-header bg-light">
             <strong class="text-primary">Form Fees</strong>
         </div>
@@ -79,7 +75,7 @@
     </div>
 
     <!-- Breakdown by Type -->
-    <div class="card shadow-sm mb-4 rounded-3">
+    <div class="card shadow-lg mb-4 rounded-3">
         <div class="card-header bg-light">
             <strong class="text-primary">Breakdown by Consumable Type</strong>
         </div>
@@ -87,18 +83,18 @@
             <table class="table table-bordered table-striped table-sm align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Consumable Type</th>
-                        <th>Total Requests</th>
-                        <th>Total Requested (₦)</th>
-                        <th>Total Paid (₦)</th>
-                        <th>Balance (₦)</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Consumable Type</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Requests</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Requested (₦)</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Paid (₦)</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Balance (₦)</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for type in type_breakdown %}
                         <tr>
-                            <td>{{ type.name }}</td>
-                            <td>{{ type.total_requests|intcomma }}</td>
+                            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ type.name }}</td>
+                            <td class="text-center">{{ type.total_requests|intcomma }}</td>
                             <td>₦{{ type.total_requested|default:0|floatformat:2|intcomma }}</td>
                             <td>₦{{ type.total_paid|default:0|floatformat:2|intcomma }}</td>
                             <td>₦{{ type.balance|default:0|floatformat:2|intcomma }}</td>
@@ -112,7 +108,7 @@
     </div>
 
     <!-- Stock Levels -->
-    <div class="card shadow-sm mb-4 rounded-3">
+    <div class="card shadow-lg mb-4 rounded-3">
         <div class="card-header bg-light">
             <strong class="text-primary">Stock Levels (Selling Plans)</strong>
         </div>
@@ -120,10 +116,10 @@
             <table class="table table-bordered table-striped table-sm align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Purchased Item</th>
-                        <th>Selling Price (₦)</th>
-                        <th>Quantity in Stock</th>
-                        <th>Total Sale Value (₦)</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Purchased Item</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Selling Price (₦)</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Quantity in Stock</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Sale Value (₦)</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -136,9 +132,9 @@
                             <td>₦{{ plan.total_sale_value|floatformat:2|intcomma }}</td>
                             <td>
                                 {% if plan.available %}
-                                    <span class="badge bg-success">Available</span>
+                                    <span class="status-badge bg-success">Available</span>
                                 {% else %}
-                                    <span class="badge bg-danger">Unavailable</span>
+                                    <span class="status-badge bg-danger">Unavailable</span>
                                 {% endif %}
                             </td>
                         </tr>

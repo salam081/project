@@ -18,7 +18,7 @@ html[data-theme="light"],
 
     --header-color: #ffc;
     --header-branding-color: var(--accent);
-    --header-bg: var(--secondary);
+    --header-bg: var(--link-hover-color);
     --header-link-color: var(--primary-fg);
 
     --breadcrumbs-fg: #c4dce8;
@@ -177,7 +177,7 @@ h4 {
 }
 
 h5 {
-    font-size: 0.625rem;
+    /* font-size: 0.625rem; */
     margin: 1.5em 0 .5em 0;
     color: var(--body-quiet-color);
     text-transform: uppercase;
@@ -514,9 +514,9 @@ input[type=tel]:focus, textarea:focus, select:focus, .vTextField:focus {
     border-color: var(--body-quiet-color);
 }
 
-select {
-    height: 1.875rem;
-}
+/* select {
+    height: 2.875rem;
+} */
 
 select[multiple] {
     /* Allow HTML size attribute to override the height in the rule above. */

@@ -90,8 +90,7 @@ def consumable_dashboard(request):
         .annotate(balance=F('total_requested') - F('total_paid'))
         .order_by('name')
     )
-    stock_level = SellingPlan.objects.aggregate(Sum('quantity'))['quantity__sum'] or 0
-
+   
 
     context = {
         # Request stats
@@ -100,7 +99,7 @@ def consumable_dashboard(request):
         'approved_count': approved_count,
         'completed_count': completed_count,
         'declined_count': declined_count,
-         'stock_level': stock_level,
+         
 
         # Financials
         'total_amount_requested': total_amount_requested,
@@ -126,14 +125,7 @@ def consumable_dashboard(request):
 
     return render(request, 'consumable/consumable_dashboard.html', context)
 
-# def add_consumable_type(request):
-#     if request.method == 'POST':
-#         name = request.POST.get('name')
-#         description = request.POST.get('description')
-#         ConsumableType.objects.create(name=name, description=description, created_by=request.user)
-#         messages.success(request, 'Consumable type added successfully.')
-#         return redirect('consumable_dashboard')
-#     return render(request, 'consumable/add_consumable_type.html', )
+
 
 @login_required
 def add_consumable_type(request):
@@ -842,18 +834,18 @@ def upload_consumable_payment(request):
 
 @login_required
 def item_list_with_requests(request):
-    items = (
-        SellingPlan.objects.all()
-        .select_related("purchased_item")
-        .prefetch_related("details__request")  # preload related details for efficiency
+    items = ( SellingPlan.objects.all().select_related("purchased_item")
+        .prefetch_related("details__request") 
     )
-
+    # sel = SellingPlan.objects.annotate(totla_value=F('selling_price_per_unit') * F('quantity'))
+    # print('sel', sel)
     grand_total_amount = 0
     grand_total_profit = 0
 
     for item in items:
         # Total quantity requested for this selling item
         total_requested = item.details.aggregate(total=Sum("quantity"))["total"] or 0
+        print(total_requested)
         item.total_requested = total_requested
 
         # Total amount requested = selling price * requested quantity
@@ -863,8 +855,8 @@ def item_list_with_requests(request):
         item.total_profit_requested = sum(detail.profit for detail in item.details.all())
 
         # Remaining stock
-        item.remaining_stock = item.quantity - total_requested
-
+        # item.remaining_stock = item.quantity - total_requested
+        
         # Add to grand totals
         grand_total_amount += item.total_amount_requested
         grand_total_profit += item.total_profit_requested
@@ -873,6 +865,7 @@ def item_list_with_requests(request):
         "items": items,
         "grand_total_amount": grand_total_amount,
         "grand_total_profit": grand_total_profit,
+        # "sel":sel,
     }
     return render(request, "consumable/item_list.html", context)
 

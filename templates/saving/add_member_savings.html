@@ -1,0 +1,39 @@
+{% extends 'base/base.html' %}
+{% block content %}
+
+<div class="container shadow p-4 bg-white rounded">
+    <h2 class="mb-4">Add Member Savings</h2>
+     <div class="alert alert-info">
+    <h6><i class="fas fa-info-circle me-2"></i>Saving Instructions</h6>
+    <ul class="mb-0">
+        <li>Enter the: <strong>Member IPPIS</strong>, </li>
+        <li>Select the: <strong> Saving Month</strong></li>
+        <li>Enter the : <strong>Savings Amount With the Subscription Fee</strong></li>
+       
+    </ul>
+</div>
+   <form method="post" action="{% url 'add_member_savings' %}">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label>IPPIS Number</label>
+            <input type="text" name="ippis" class="form-control" placeholder="Enter Member Ippis" required>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label>Month</label>
+            <input type="date" name="month" class="form-control" required>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label>Saving Amount (₦)</label>
+            <input type="number" name="month_saving" step="0.01" class="form-control" placeholder="Enter Savings Amount/Subscription" required>
+        </div>
+    </div>
+
+    <div class="mt-3 text-end">
+        <button type="submit" class="btn btn-success px-4">Add Savings</button>
+    </div>
+</form>
+
+</div>
+
+{% endblock %}

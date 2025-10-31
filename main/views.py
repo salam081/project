@@ -34,12 +34,34 @@ from savings.models import *
 from main.models import Withdrawal
 from django.db.models.functions import ExtractMonth, ExtractYear
 from accounts.utils import get_cooperative_withdrawal_stats, get_members_eligible_for_withdrawal
+from accounts.views import *
+from .forms import *
+
 
 
 def home(request):
     now = timezone.now()
-    popup = Popup.objects.filter(is_active=True,start_date__lte=now, end_date__gte=now).first()
-    return render(request, 'main/home.html',{"popup": popup})
+    popup = (
+        Popup.objects.filter(is_active=True, start_date__lte=now, end_date__gte=now).first()
+        or Popup.objects.filter(is_active=True).order_by('-start_date').first()
+    )
+
+    return render(request, 'main/home.html', {"popup": popup})
+
+# def home(request):
+#     Popup.objects.filter(
+#         end_date__lt=timezone.now(),
+#         is_active=True
+#     ).update(is_active=False)
+
+#     now = timezone.now()
+#     popup = Popup.objects.filter(
+#         is_active=True,
+#         start_date__lte=now,
+#         end_date__gte=now
+#     ).order_by('-start_date').first()
+
+#     return render(request, 'main/home.html', {"popup": popup})
 
 
 @login_required(login_url='login')
@@ -47,10 +69,24 @@ def home(request):
 def admin_dashboard(request):
     # Get the current year
     # current_year = datetime.now().year
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
     current_year = datetime.datetime.now().year
     
+    daily_logins = UserActivity.objects.filter(
+        action__icontains="logged in",
+        timestamp__date=today
+    ).values('user').distinct().count()
+
+    # Count distinct users who logged in in the past 7 days
+    weekly_logins = UserActivity.objects.filter(
+        action__icontains="logged in",
+        timestamp__date__gte=week_ago
+    ).values('user').distinct().count()
+    
     # Data retrieval for the current year
-    total_members = Member.objects.count()
+    # total_members = Member.objects.count()
+    total_members = User.objects.filter(is_active=True).exclude(is_superuser=True).count()
     print('total_members', total_members)
     total_members_withdrawal = Withdrawal.objects.count()
     total_loans = LoanRequest.objects.filter(date_created__year=current_year).count()
@@ -135,6 +171,9 @@ def admin_dashboard(request):
         "total_investment": total_investment,
         "grand_total": grand_total,
         'investment_loanable': investment_loanable,
+        
+        'daily_logins': daily_logins,
+        'weekly_logins': weekly_logins,
     }
     return render(request, 'main/admin_dashboad.html', context)
 
@@ -168,6 +207,7 @@ def list_withdrawal_requests(request):
 
 @login_required(login_url='login')
 @group_required(['admin'])
+
 def approve_withdrawal_request(request, pk):
     withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
     member = withdrawal_request.member  
@@ -176,12 +216,13 @@ def approve_withdrawal_request(request, pk):
     ippis = member.ippis  
 
     # Active Loan Requests
-    active_loans = LoanRequest.objects.filter( member=member,status="Approved")
+    active_loans = LoanRequest.objects.filter(member=member, status="Approved")
 
+    # Active Consumable Requests
     active_consumables = ConsumableRequest.objects.filter(
-    guest_ippis=member.ippis,   # adjust field if it's named differently
-    status="Itempicked"
-)
+        guest_ippis=member.ippis,  # adjust field name if different
+        status="Itempicked"
+    )
 
     # Active Project Finance Requests
     active_project_finance = ProjectFinanceRequest.objects.filter(
@@ -190,20 +231,63 @@ def approve_withdrawal_request(request, pk):
     )
 
     if request.method == "POST":
-        # only allow approval if no active obligations
+        # Only allow approval if no active obligations
         if active_loans.exists() or active_consumables.exists() or active_project_finance.exists():
             messages.error(request, f"Withdrawal cannot be approved. {member} has active obligations.")
             return redirect("list_withdrawal_requests")
 
+        # Approve withdrawal
         withdrawal_request.approve(request.user)
-        messages.success(request, f"Request by {withdrawal_request.member} approved.")
+
+        # Deactivate member after approval
+        member.member.is_active = False  # deactivate the linked User account
+        member.member.save() 
+        messages.success(request, f"Request by {withdrawal_request.member} approved and member deactivated.")
         return redirect("list_withdrawal_requests")
 
     return render(request, "main/approve_withdrawal_request.html", {
         "withdrawal_request": withdrawal_request,
         "active_loans": active_loans,
         "active_consumables": active_consumables,
-        "active_project_finance": active_project_finance, })
+        "active_project_finance": active_project_finance,
+    })
+
+# def approve_withdrawal_request(request, pk):
+#     withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
+#     member = withdrawal_request.member  
+
+#     # Get member IPPIS
+#     ippis = member.ippis  
+
+#     # Active Loan Requests
+#     active_loans = LoanRequest.objects.filter( member=member,status="Approved")
+
+#     active_consumables = ConsumableRequest.objects.filter(
+#     guest_ippis=member.ippis,   # adjust field if it's named differently
+#     status="Itempicked"
+# )
+
+#     # Active Project Finance Requests
+#     active_project_finance = ProjectFinanceRequest.objects.filter(
+#         application__member=member,
+#         status="Approved"
+#     )
+
+#     if request.method == "POST":
+#         # only allow approval if no active obligations
+#         if active_loans.exists() or active_consumables.exists() or active_project_finance.exists():
+#             messages.error(request, f"Withdrawal cannot be approved. {member} has active obligations.")
+#             return redirect("list_withdrawal_requests")
+
+#         withdrawal_request.approve(request.user)
+#         messages.success(request, f"Request by {withdrawal_request.member} approved.")
+#         return redirect("list_withdrawal_requests")
+
+#     return render(request, "main/approve_withdrawal_request.html", {
+#         "withdrawal_request": withdrawal_request,
+#         "active_loans": active_loans,
+#         "active_consumables": active_consumables,
+#         "active_project_finance": active_project_finance, })
 
 
 @login_required(login_url='login')
@@ -258,6 +342,7 @@ def guest_request_consumable(request):
         consumable_type_id = request.POST.get("consumable_type")
         loan_term_months = request.POST.get("loan_term_months")
         payslip_file = request.FILES.get("file_payslpt")
+        passport = request.FILES.get("passport")
         selected_item_ids = request.POST.getlist("selected_items")
 
         # Validation
@@ -323,6 +408,7 @@ def guest_request_consumable(request):
                 consumable_request = ConsumableRequest.objects.create(
                     consumable_type=consumable_type_obj,
                     file_payslpt=payslip_file,
+                    passport=passport,
                     status="Pending",
                     guest_name=guest_name,
                     guest_phone=guest_phone,
@@ -373,7 +459,6 @@ def guest_request_consumable(request):
     )
 
 @login_required(login_url='login')
-@group_required(['admin'])
 def member_active_requests(request):
     ippis = request.GET.get("ippis", "").strip()
     member = None
@@ -762,6 +847,41 @@ def list_dividend_rounds(request):
 
 
 
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+
+def popup_message_form(request):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        link_url = request.POST.get('link_url')
+        is_active = request.POST.get('is_active') == 'on'
+
+        start_date = parse_datetime(request.POST.get('start_date')) or timezone.now()
+        end_date = parse_datetime(request.POST.get('end_date')) or (timezone.now() + timezone.timedelta(days=1))
+
+        # Make timezone-aware
+        if timezone.is_naive(start_date):
+            start_date = timezone.make_aware(start_date)
+        if timezone.is_naive(end_date):
+            end_date = timezone.make_aware(end_date)
+
+        Popup.objects.create(
+            title=title,
+            message=message,
+            link_url=link_url or None,
+            is_active=is_active,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        messages.success(request, 'Popup message created successfully!')
+        return redirect('popup_form')
+
+    return render(request, 'main/popup_message.html')
+
+
+
 
 # def landing_page(request):
 #     now = timezone.now()
@@ -771,3 +891,115 @@ def list_dividend_rounds(request):
 #         end_date__gte=now
 #     ).first()
 #     return render(request, "main/landing.html", {"popup": popup})
+
+
+
+
+@login_required
+@group_required(['admin'])
+def not_work_with_member_active_summary(request, pk):
+    """
+    Display all active obligations (loan, consumable, project finance, withdrawals)
+    with totals, amount paid, and balances for a specific member.
+    """
+    member = get_object_or_404(Member, pk=pk)
+
+    # 🟦 Active Loan Requests
+    active_loans = LoanRequest.objects.filter(member=member, status="Approved").annotate(
+        balance=ExpressionWrapper(F("amount") - F("amount_paid"), output_field=DecimalField(max_digits=12, decimal_places=2))
+    )
+    loan_total = active_loans.aggregate(total=Sum("amount"))["total"] or 0
+    loan_paid = active_loans.aggregate(paid=Sum("amount_paid"))["paid"] or 0
+    loan_balance = loan_total - loan_paid
+
+    # 🟩 Active Consumable Requests
+    active_consumables = ConsumableRequest.objects.filter(user=member.member, status="Itempicked").annotate(
+        balance=ExpressionWrapper(F("total_amount") - F("amount_paid"), output_field=DecimalField(max_digits=12, decimal_places=2))
+    )
+    consumable_total = active_consumables.aggregate(total=Sum("total_amount"))["total"] or 0
+    consumable_paid = active_consumables.aggregate(paid=Sum("amount_paid"))["paid"] or 0
+    consumable_balance = consumable_total - consumable_paid
+
+    # 🟨 Active Project Finance Requests
+    active_project_finances = ProjectFinanceRequest.objects.filter(application__member=member, status="Approved").annotate(
+        balance=ExpressionWrapper(F("amount") - F("amount_paid"), output_field=DecimalField(max_digits=12, decimal_places=2))
+    )
+    project_total = active_project_finances.aggregate(total=Sum("amount"))["total"] or 0
+    project_paid = active_project_finances.aggregate(paid=Sum("amount_paid"))["paid"] or 0
+    project_balance = project_total - project_paid
+
+    # 🟧 Withdrawals (Pending or Approved)
+    withdrawals = Withdrawal.objects.filter(member=member, status__in=["Pending", "Approved"])
+    withdrawal_total = withdrawals.aggregate(total=Sum("amount"))["total"] or 0
+
+    # 🧮 Overall totals
+    grand_total = loan_total + consumable_total + project_total
+    grand_paid = loan_paid + consumable_paid + project_paid
+    grand_balance = grand_total - grand_paid
+
+    has_active = (
+        active_loans.exists()
+        or active_consumables.exists()
+        or active_project_finances.exists()
+        or withdrawals.exists()
+    )
+
+    messages.info(request, f"Active obligations for {member.member.get_full_name()}.")
+
+    context = {
+        "member": member,
+        "active_loans": active_loans,
+        "active_consumables": active_consumables,
+        "active_project_finances": active_project_finances,
+        "withdrawals": withdrawals,
+
+        "loan_total": loan_total,
+        "loan_paid": loan_paid,
+        "loan_balance": loan_balance,
+
+        "consumable_total": consumable_total,
+        "consumable_paid": consumable_paid,
+        "consumable_balance": consumable_balance,
+
+        "project_total": project_total,
+        "project_paid": project_paid,
+        "project_balance": project_balance,
+
+        "withdrawal_total": withdrawal_total,
+
+        "grand_total": grand_total,
+        "grand_paid": grand_paid,
+        "grand_balance": grand_balance,
+
+        "has_active": has_active,
+    }
+    return render(request, "main/not_work_with_member_active_summary.html", context)
+
+
+
+from django.core.paginator import Paginator
+
+@login_required
+def user_activity_list(request):
+    if request.user.is_staff:
+        activities = UserActivity.objects.select_related('user').order_by('-timestamp')
+    else:
+        activities = UserActivity.objects.filter(user=request.user).order_by('-timestamp')
+
+    paginator = Paginator(activities, 50)  # 50 logs per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'main/user_activity_list.html', {'page_obj': page_obj})
+
+
+login_required
+def delete_user_activity(request, pk):
+    activity = get_object_or_404(UserActivity, pk=pk)
+
+    if request.method == "POST":
+        activity.delete()
+        messages.success(request, "User activity deleted successfully.")
+        return redirect("user_activity_list")
+
+    return render(request, "main/delete_user_activity.html", {"activity": activity})

@@ -34,16 +34,22 @@
         }
     </style>
 
-    <div class="content-card mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2><i class="fas fa-hand-holding-usd me-2"></i>My Loan Requests</h2>
-                <p class="text-muted mb-0">Track and manage your loan requests</p>
-            </div>
-            <a href="{% url 'loan_request' %}" class="btn btn-primary text-white">
-                <i class="fas fa-plus me-2"></i>New Loan Request
-            </a>
-        </div>
+    <div class="container mt-4 shadow">
+       <div class="container my-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <h2 class="mb-1">
+        <i class="fas fa-hand-holding-usd me-2"></i>My Loan Requests
+      </h2>
+      <p class="text-dark mb-0">Track and manage your loan requests</p>
+    </div>
+
+    <a href="{% url 'loan_request' %}" class="btn btn-primary d-flex align-items-center text-white">
+      <i class="fas fa-plus me-2"></i>New Loan Request
+    </a>
+  </div>
+</div>
+
 
 
         {% if loan_data %}
@@ -102,7 +108,7 @@
                                             <strong>₦{{ entry.balance|floatformat:2 }}</strong>
                                         </td>
                                         <td class="action-buttons">
-                                            <a href="{% url 'member_loan_request_detail' entry.loan.id %}" class="btn btn-primary btn-sm">
+                                            <a href="{% url 'member_loan_request_detail' entry.loan.id %}" class="btn btn-primary btn-sm text-white">
                                                 <i class="fas fa-eye me-1"></i>View
                                             </a>
                                             <!-- {% if loan.status == 'approved' %}
@@ -126,7 +132,7 @@
                 </div>
                 <h4 class="text-muted">No Loan Requests Yet</h4>
                 <p class="text-muted mb-4">You haven't made any loan requests yet.</p>
-                <a href="{% url 'loan_request' %}" class="btn btn-primary">
+                <a href="{% url 'loan_request' %}" class="btn btn-primary text-white">
                     <i class="fas fa-plus me-2"></i>Create Your First Loan Request
                 </a>
             </div>

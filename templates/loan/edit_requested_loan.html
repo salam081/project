@@ -26,9 +26,11 @@
                     <select class="form-select" id="loan_type" name="loan_type" required>
                         <option value="">Choose a loan type</option>
                         {% for loan_type in loan_types %}
-                            <option  value="{{ loan_type.id }}" {% if loan_type.id == member.loan_type.id %} selected {% endif %}>{{ loan_type.name }}  </option>
+                            <option value="{{ loan_type.id }}" 
+                                {% if loanobj.loan_type and loan_type.id == loanobj.loan_type.id %}selected{% endif %}>
+                                {{ loan_type.name }}
+                            </option>
                         {% endfor %}
-                       
                     </select>
                 </div>
                 <div class="mb-3">

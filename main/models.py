@@ -4,10 +4,13 @@ from decimal import Decimal
 from django.db import models, transaction
 from django.utils import timezone
 from decimal import Decimal
+from django.contrib.auth import get_user_model
 from accounts.models import *
 from savings.models import *
 from loan.models import *
 from consumable.models import *
+
+User = get_user_model()
 
 class FinancialSummary(models.Model):
     user = models.ForeignKey(User,on_delete=models.CASCADE,related_name="financial_summaries")
@@ -183,3 +186,18 @@ class Popup(models.Model):
         if self.end_date and now > self.end_date:
             return False
         return True
+    
+
+
+class UserActivity(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    action = models.CharField(max_length=255)
+    path = models.CharField(max_length=255, null=True, blank=True)
+    method = models.CharField(max_length=10, null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name} - {self.action} at {self.method} {self.timestamp}"
+    

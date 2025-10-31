@@ -7,24 +7,28 @@
 {% block content %}
 <div class="container mt-4">
     <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Selling Plan Details</h1>
-        <div>
-           <a href="{% url 'selling_plan_edit' pk=selling_plan.pk %}" class="btn btn-warning text-dark me-2">
-            <i class="fas fa-edit me-2"></i>Edit Plan
+   <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Selling Plan Details</h1>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'selling_plan_edit' pk=selling_plan.pk %}" 
+           class="btn btn-warning text-dark">
+            <i class="bi bi-pencil me-1"></i> Edit Plan
         </a>
-        <a href="{% url 'selling_plan_delete' pk=selling_plan.pk %}" class="btn btn-danger text-white">
-            <i class="fas fa-trash-alt me-2"></i>Delete Plan
+        <a href="{% url 'selling_plan_delete' pk=selling_plan.pk %}" 
+           class="btn btn-danger text-white">
+            <i class="bi bi-trash me-1"></i> Delete Plan
         </a>
-            <a href="{% url 'selling_plan_list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-list me-2"></i>Back to List
-            </a>
-        </div>
+        <a href="{% url 'selling_plan_list' %}" 
+           class="btn btn-outline-secondary">
+            <i class="bi bi-list me-1"></i> Back to List
+        </a>
     </div>
+</div>
+
 
     <!-- Plan Information Card -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header  text-dark">
             <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Plan Information</h5>
         </div>
         <div class="card-body">
@@ -78,7 +82,7 @@
     <!-- Associated Item Details Card -->
     {% if plan.purchased_item %}
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-info text-white">
+        <div class="card-header  text-dark">
             <h5 class="mb-0"><i class="fas fa-box me-2"></i>Associated Item Details</h5>
         </div>
         <div class="card-body">
@@ -128,7 +132,7 @@
     
     <!-- Financial Summary Card -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-success text-white">
+        <div class="card-header  text-dark">
             <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Financial Summary</h5>
         </div>
         <div class="card-body">
@@ -212,7 +216,7 @@
     <!-- Purchase Request Information -->
     {% if plan.purchased_item.consumable_purchased_request %}
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-warning text-dark">
+        <div class="card-header  text-dark">
             <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Original Purchase Request</h5>
         </div>
         <div class="card-body">
@@ -248,7 +252,7 @@
 
     <!-- Price Adjustments Card -->
     <div class="card shadow-sm">
-        <div class="card-header bg-secondary text-white">
+        <div class="card-header text-dark">
             <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Price Adjustments History</h5>
         </div>
         <div class="card-body">
@@ -260,7 +264,7 @@
                                 <th>Date</th>
                                 <th>Old Price</th>
                                 <th>New Price</th>
-                                <th>Change</th>
+                                {% comment %} <th>Change</th> {% endcomment %}
                                 <th>Reason</th>
                                 <th>Adjusted By</th>
                             </tr>
@@ -271,15 +275,15 @@
                                 <td>{{ adjustment.date_adjusted|date:"M d, Y H:i" }}</td>
                                 <td>₦{{ adjustment.old_price|floatformat:2|intcomma }}</td>
                                 <td>₦{{ adjustment.new_price|floatformat:2|intcomma }}</td>
-                                <td>
+                                {% comment %} <td>
                                     {% if adjustment.new_price > adjustment.old_price %}
-                                        {% comment %} <span class="text-success">+₦{{ adjustment.new_price|adjustment.old_price|floatformat:2|intcomma }}</span> {% endcomment %}
+                                       <span class="text-success">+₦{{ adjustment.new_price|adjustment.old_price|floatformat:2|intcomma }}</span> 
                                     {% elif adjustment.new_price < adjustment.old_price %}
-                                        {% comment %} <span class="text-danger">-₦{{ adjustment.old_price|adjustment.new_price|floatformat:2|intcomma }}</span> {% endcomment %}
+                                        <span class="text-danger">-₦{{ adjustment.old_price|adjustment.new_price|floatformat:2|intcomma }}</span> 
                                     {% else %}
                                         <span class="text-muted">No change</span>
                                     {% endif %}
-                                </td>
+                                </td> {% endcomment %}
                                 <td>{{ adjustment.reason|default:"No reason provided" }}</td>
                                 <td>{{ adjustment.adjusted_by.get_full_name|default:adjustment.adjusted_by.username|default:"Unknown" }}</td>
                             </tr>

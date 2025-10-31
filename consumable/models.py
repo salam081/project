@@ -51,6 +51,8 @@ class ConsumableRequest(models.Model):
    
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
     file_payslpt = models.ImageField(upload_to='file_payslpt', blank=True, null=True)
+    passport = models.ImageField(upload_to='passports/', blank=True, null=True)
+
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_consumables')
     date_created = models.DateTimeField(auto_now_add=True)
     

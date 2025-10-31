@@ -9,14 +9,14 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Purchased Item Details</h1>
         <div>
-            <a href="{% url 'purchased_item_list' %}" class="btn btn-outline-secondary me-2">
-                <i class="fas fa-list me-2"></i>Back to List
+            <a href="{% url 'purchased_item_list' %}" class="btn btn-secondary me-2 text-white">
+                <i class="bi bi-list me-2"></i>Back to List
             </a>
-            <a href="{% url 'edit_purchased_item' pk=item.pk %}" class="btn btn-warning text-dark me-2">
-                <i class="fas fa-edit me-2"></i>Edit Item
+            <a href="{% url 'edit_purchased_item' item.pk %}" class="btn btn-warning text-white me-2">
+                <i class="bi bi-pencil me-2"></i>Edit Item
             </a>
             <a href="" class="btn btn-info text-white">
-                <i class="fas fa-plus me-2"></i>Add Adjustment
+                <i class="bi bi-plus me-2"></i>Add Adjustment
             </a>
         </div>
     </div>
@@ -32,6 +32,7 @@
                     <p><strong>Quantity:</strong> {{ item.quantity|intcomma }}</p>
                     <p><strong>Unit Price:</strong> ₦{{ item.unit_price|intcomma }}</p>
                     <p><strong>Total Cost:</strong> ₦{{ item.total_price|intcomma }}</p>
+                    <p><strong>Created By:</strong> {{ item.created_by }}</p>
                     <p><strong>Purchased On:</strong> {{ item.date_added|date:"F d, Y" }}</p>
                 </div>
                 <div class="col-md-6">

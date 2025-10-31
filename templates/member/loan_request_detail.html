@@ -93,7 +93,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item">
-                        <a href="{% url 'my_loan_requests' %}" class="btn btn-outline-primary w-100 mb-2 action-button">
+                        <a href="{% url 'my_loan_requests' %}" class="btn btn-primary w-100 mb-2 action-button text-white">
                         <i class="fas fa-arrow-left me-2"></i>
                         Back to My Loans
                     </a>
@@ -235,15 +235,15 @@
             <!-- Financial Summary Card -->
             <div class="card financial-summary mb-4 shadow">
                 <div class="card-body text-center">
-                    <h5 class="mb-3">
+                    <h5 class="mb-3 text-white">
                         <i class="fas fa-calculator me-2"></i>
                          Summary
                     </h5>
                     <hr class="bg-white opacity-50">
                     
                     <div class="mb-4">
-                        <small class="text-success-70">Approved Amount</small>
-                        <h3 class="mb-0">₦{{ approved_amount|floatformat:2 }}</h3>
+                        <small class="text-white">Approved Amount</small>
+                        <h3 class="mb-0 text-white">₦{{ approved_amount|floatformat:2 }}</h3>
                     </div>
                     
                     <!-- Progress Bar -->
@@ -261,13 +261,13 @@
                     <div class="row text-start">
                         <div class="col-6 border-end border-white-50">
                             <div class="text-center">
-                                <h5 class="mb-0">₦{{ total_paid|floatformat:2 }}</h5>
+                                <h5 class="mb-0 text-white">₦{{ total_paid|floatformat:2 }}</h5>
                                 <small class="text-white-70">Amount Paid</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="text-center">
-                                <h5 class="mb-0">₦{{ balance|floatformat:2 }}</h5>
+                                <h5 class="mb-0 text-white">₦{{ balance|floatformat:2 }}</h5>
                                 <small class="text-danger-70">Balance</small>
                             </div>
                         </div>

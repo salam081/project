@@ -34,20 +34,20 @@
                     </div> -->
                     <div class="col-md-2">
                         <label class="form-label">&nbsp;</label>
-                        <div class="d-grid">
+                        <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-search me-1"></i>Filter
                             </button>
-                            <a href="{% url 'admin_loan_requests' %}">Clear Filter</a>
+                            <a href="{% url 'admin_loan_requests' %}" class="btn btn-outline-danger">clear</a>
                         </div>
                     </div>
                 </form>
                 
             </div>
         </div>
-        <div class="alert alert-info">
+        <div class=" p-3 text-dark">
 
-        <strong>All Approved Amount</strong> <b class="text-success fs-5">₦{{total_approved_amount}}</b>  
+        {% comment %} <strong>All Approved Amount</strong> <b class="text-success fs-5">₦{{total_approved_amount}}</b>   {% endcomment %}
         </div>
         <!-- Loan Requests Table -->
         <div class="card shadow">
@@ -122,27 +122,27 @@
                                             <i class="fas fa-book "></i>
                                         </a>   
                                             <a href="{% url 'add_payment' %}" class="btn btn-sm btn-outline-success" title="Add Repayment">
-                                                <i class="fas fa-money-bill "></i>
+                                                <i class="bi bi-money-bill "></i>
                                             </a>
                                             
                                               {% elif  request.status == 'pending' %} 
                                        
                                        
                                              <a href="{% url 'loan_request_detail' request.id %}" class="btn btn-sm btn-outline-info" title="View Details">
-                                            <i class="fas fa-book "></i>
+                                            <i class="bi bi-eye "></i>
                                             </a>  
-                                              <a href="{% url 'approve_loan_request' request.id %}" class="btn btn-sm btn-outline-primary" title="Approve Requests">
-                                                <i class="fas fa-check "></i>
+                                              <a href="{% url 'approve_loan_request' request.id %}" class="btn btn-sm btn-outline-primary text-dark" title="Approve Requests">
+                                                <i class="bi bi-check "></i>
                                              </a>
                                                 <a href="{% url 'edit_requested_loan' request.id %}" class="btn btn-sm btn-outline-warning" title="Edit Requests">
-                                                 <i class="fas fa-pen "></i>
+                                                 <i class="bi bi-pen "></i>
                                             </a>
-                                            <a href="{% url 'reject_loan_request' request.id %}" class="btn btn-sm btn-outline-danger" title="Rejecte Requests">
-                                                <i class="fas fa-times "></i>
+                                            <a href="{% url 'reject_loan_request' request.id %}" class="btn btn-sm btn-outline-danger text-dark" title="Rejecte Requests">
+                                                <i class="bi bi-x-lg"></i>
                                             </a>
                                            {% elif  request.status == 'Fullpaid' %} 
                                                 <a href="{% url 'loan_request_detail' request.id %}" class="btn btn-sm btn-outline-info" title="View Details">
-                                            <i class="fas fa-book "></i>
+                                            <i class="bi bi-book "></i>
                                             </a> 
 
                                         {% endif %}

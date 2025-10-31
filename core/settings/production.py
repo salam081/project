@@ -18,6 +18,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['tmcs.ng','127.0.0.1']
 
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     'projectfinance',
 ]
 AUTH_USER_MODEL = 'accounts.User'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -50,6 +52,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    'main.middleware.ActivityLogMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'

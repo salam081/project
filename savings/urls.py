@@ -3,6 +3,7 @@ from .import views
 
 urlpatterns = [
     path('upload-savings/',  views.upload_savings, name='upload_savings'),
+    path('add-member-savings/',  views.add_member_savings, name='add_member_savings'),
     path('subscription-fee/',  views.subscription_fee, name='subscription_fee'),
     path('edit_subscription_fee/<int:id>/',  views.edit_subscription_fee, name='edit_subscription_fee'),
     path("monthly-uploads/", views.monthly_savings_uploads, name="monthly_savings_uploads"),

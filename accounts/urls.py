@@ -23,6 +23,6 @@ urlpatterns = [
 
     path("reset_password_view/<int:identifier>/", views.reset_password_view, name="reset_password"),
 
-    
+   
 
 ]

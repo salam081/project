@@ -18,7 +18,7 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #64a9c4ff 0%, #408fb4ff 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 1rem 0;
             position: fixed;
@@ -81,7 +81,7 @@
         }
 
         .hero {
-            background: linear-gradient(135deg, #87ceeb 0%, #6db4d4 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 120px 4rem 80px;
             text-align: center;
@@ -279,9 +279,9 @@
             background: #fff;
             padding: 2rem;
             border-radius: 10px;
-            text-align: center;
+            text-align: left;
             box-shadow: 0 5px 25px rgba(0,0,0,0.3);
-            max-width: 400px;
+            max-width: 600px;
             width: 90%;
             position: relative;
             animation: fadeIn 0.25s ease;
@@ -376,7 +376,7 @@
                 left: -100%;
                 width: 100%;
                 max-width: 500px;
-                background: #87ceeb;
+                background: #7465c6ff;
                 flex-direction: column;
                 padding: 2rem;
                 gap: 1rem;
@@ -411,19 +411,22 @@
 </head>
 <body>
     <!-- Popup -->
-    {% if popup %}
-    <div id="popup" class="popup">
-        <div class="popup-content">
-            <span class="close-btn" onclick="closePopup()">&times;</span>
-            <h2>{{ popup.title }}</h2>
-            <p>{{ popup.message }}</p>
 
-            {% if popup.link_url %}
-                <a href="{{ popup.link_url }}" class="popup-link">👉 {{ popup.link_text|default:"click" }}</a>
-            {% endif %}
-        </div>
+{% if popup %}
+<div id="popup" class="popup" style="display:none;">
+    <div class="popup-content">
+        <span class="close-btn" onclick="closePopup()">&times;</span>
+        <h2 style="text-align: center;">{{ popup.title }}</h2>
+        <p>{{ popup.message }}</p>
+
+        {% if popup.link_url %}
+            <a href="{{ popup.link_url }}" class="popup-link">
+                👉 {{ popup.link_text|default:"Click here" }}
+            </a>
+        {% endif %}
     </div>
-    {% endif %}
+</div>
+{% endif %}
 
     <header class="header">
         <nav class="nav-container">
@@ -535,56 +538,91 @@
         </div>
     </footer>
 
-    <script>
-        function toggleMenu() {
-            const navLinks = document.getElementById('navLinks');
-            navLinks.classList.toggle('active');
-        }
+    {% comment %} <script>
+                    function toggleMenu() {
+                        const navLinks = document.getElementById('navLinks');
+                        navLinks.classList.toggle('active');
+                    }
 
-        // Close menu when clicking on a link
-        document.querySelectorAll('.nav-links a').forEach(link => {
-            link.addEventListener('click', () => {
-                document.getElementById('navLinks').classList.remove('active');
+                    // Close menu when clicking on a link
+                    document.querySelectorAll('.nav-links a').forEach(link => {
+                        link.addEventListener('click', () => {
+                            document.getElementById('navLinks').classList.remove('active');
+                        });
+                    });
+
+                    // Close menu when clicking outside
+                    document.addEventListener('click', (e) => {
+                        const navLinks = document.getElementById('navLinks');
+                        const menuToggle = document.querySelector('.menu-toggle');
+                        if (!navLinks.contains(e.target) && !menuToggle.contains(e.target)) {
+                            navLinks.classList.remove('active');
+                        }
+                    });
+
+                    function closePopup() {
+                const popup = document.getElementById('popup');
+                if (popup) popup.style.display = 'none';
+            }
+
+            window.addEventListener('load', () => {
+                const popup = document.getElementById('popup');
+                if (!popup) return;
+                setTimeout(() => popup.style.display = 'flex', 3000);  // show after 3s
+                setTimeout(() => popup.style.display = 'none', 13000); // hide after 10s
             });
-        });
+    </script> {% endcomment %}
 
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            const navLinks = document.getElementById('navLinks');
-            const menuToggle = document.querySelector('.menu-toggle');
-            if (!navLinks.contains(e.target) && !menuToggle.contains(e.target)) {
-                navLinks.classList.remove('active');
-            }
-        });
+    <script>
+function toggleMenu() {
+    const navLinks = document.getElementById('navLinks');
+    navLinks.classList.toggle('active');
+}
 
-        // Popup functionality
-        function closePopup() {
-            document.getElementById('popup').style.display = 'none';
-        }
+// Close menu when clicking on a link
+document.querySelectorAll('.nav-links a').forEach(link => {
+    link.addEventListener('click', () => {
+        document.getElementById('navLinks').classList.remove('active');
+    });
+});
 
-        // Show popup after 3 seconds (optional)
-        window.addEventListener('load', () => {
-            const popup = document.getElementById('popup');
-            if (popup) {
-                popup.style.display = 'none';
-                setTimeout(() => popup.style.display = 'flex');
-            }
-        });
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    const navLinks = document.getElementById('navLinks');
+    const menuToggle = document.querySelector('.menu-toggle');
+    if (!navLinks.contains(e.target) && !menuToggle.contains(e.target)) {
+        navLinks.classList.remove('active');
+    }
+});
 
-        // Auto-hide after 10 seconds
-        setTimeout(() => {
-            const popup = document.getElementById('popup');
-            if (popup) popup.style.display = 'none';
-        }, 50000);
+// --- ✅ Popup Logic ---
+{% if popup %}
+document.addEventListener('DOMContentLoaded', () => {
+    const popup = document.getElementById('popup');
+    if (!popup) return;
 
-        // Close popup when clicking on overlay
-        {% if popup %}
-        document.getElementById('popup').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closePopup();
-            }
-        });
-        {% endif %}
-    </script>
+    let hideTimer;
+
+    // Show after 2s
+    setTimeout(() => {
+        popup.style.display = 'flex';
+        // Auto-hide after 10s
+        hideTimer = setTimeout(() => closePopup(), 10000);
+    }, 2000);
+
+    // Close popup function
+    window.closePopup = function() {
+        popup.style.display = 'none';
+        clearTimeout(hideTimer);
+    };
+
+    // Close when clicking outside the popup content
+    popup.addEventListener('click', (e) => {
+        if (e.target === popup) closePopup();
+    });
+});
+{% endif %}
+</script>
+
 </body>
 </html>

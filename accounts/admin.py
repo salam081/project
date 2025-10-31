@@ -15,3 +15,11 @@ class UserAdmin(admin.ModelAdmin):
     
     search_fields = ('first_name','last_name')
 admin.site.register(User,UserAdmin)
+
+
+@admin.register(PagePermission)
+class PagePermissionAdmin(admin.ModelAdmin):
+    list_display = ('group', 'page', 'allowed')
+    list_filter = ('group', 'page')
+    
+

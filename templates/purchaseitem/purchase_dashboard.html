@@ -6,31 +6,31 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">Consumables Purchase Dashboard</h1>
-    <a href="{% url 'consumable_purchase_request_list' %}" class="btn btn-primary mb-3"> Request List</a>
-    <a href="{% url 'consumable_purchase_request_create' %}" class="btn btn-primary mb-3"> Create Request</a>
+    <h6 class="mb-4">Consumables Purchase Dashboard</h6>
+    <a href="{% url 'consumable_purchase_request_list' %}" class="btn btn-primary mb-3 text-white"> Request List</a>
+    <a href="{% url 'consumable_purchase_request_create' %}" class="btn btn-primary mb-3 text-white"> Create Request</a>
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="stat-card text-center shadow mb-3">
                 <div class="stat-content">
-                    <h5 >Total Requests</h5>
-                    <p class="card-text fs-6">{{ total_requests|intcomma }}</p>
+                    <h6 >Total Requests</h6>
+                    <p class="card-text fs-6 text-success">{{ total_requests|intcomma }}</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class=" stat-card text-center shadow mb-3">
                 <div class="stat-content">
-                    <h5 >Pending Requests</h5>
-                    <p class="card-text fs-6">{{ pending_requests|intcomma }}</p>
+                    <h6 >Pending Requests</h6>
+                    <p class="card-text fs-6 text-warning">{{ pending_requests|intcomma }}</p>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class=" stat-card text-center shadow mb-3">
                 <div class="stat-content">
-                    <h5>Approved Requests</h5>
-                    <p class="card-text fs-6">{{ approved_requests|intcomma }}</p>
+                    <h6>Approved Requests</h6>
+                    <p class="card-text fs-6 text-success">{{ approved_requests|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -41,7 +41,7 @@
             <div class=" stat-card text-center shadow mb-3">
                 <div class="stat-content">
                     <h6 >Total Spent On Items Purchased</h6>
-                    <p class="card-text fs-6">₦{{ total_spent|intcomma }}</p>
+                    <p class="card-text fs-6 text-warning">₦{{ total_spent|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -49,7 +49,7 @@
             <div class=" stat-card text-center shadow mb-3">
                 <div class="stat-content">
                     <h6>All Total Selling Items </h6>
-                    <p class="card-text fs-6">₦{{ total_planned_revenue|floatformat:2|intcomma }}</p>
+                    <p class="card-text fs-6 text-success">₦{{ total_planned_revenue|floatformat:2|intcomma }}</p>
                 </div>
             </div>
         </div>
@@ -57,7 +57,7 @@
             <div class=" stat-card text-center shadow mb-3">
                 <div class="stat-content">
                     <h6>Total Selling Items Profit</h6>
-                    <p class="card-text fs-6">₦{{ total_planned_profit|floatformat:2|intcomma }}</p>
+                    <p class="card-text fs-6 text-warning">₦{{ total_planned_profit|floatformat:2|intcomma }}</p>
                 </div>
             </div>
         </div>

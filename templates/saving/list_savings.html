@@ -97,7 +97,9 @@
                                 {% for saving in page_obj.object_list %}
                                 <tr>
                                     <td>
+                                        <a href="{% url 'member_active_requests' %}?ippis={{ saving.member.ippis }}">
                                         <strong>{{ saving.member.member.first_name }} {{ saving.member.member.last_name }}</strong>
+                                        </a>
                                     </td>
                                     <td>
                                         <span class="status-badge text-success fw-bold">{{ saving.member.ippis }}</span>

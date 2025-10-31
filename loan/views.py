@@ -100,10 +100,12 @@ def add_loan_type(request):
     context = {'loan_types': loan_types}
     return render(request, 'loan/add_loan_type.html', context)
 
-
+@login_required
 def loan_request_fee_payment(request):
     member_info = None
     loan_types = LoanType.objects.filter(available=True)
+
+    selected_loan_type_id = request.GET.get("loan_type")  # <-- new filter input
 
     if request.method == "POST":
         if "search_member" in request.POST:  # step 1: search
@@ -138,30 +140,109 @@ def loan_request_fee_payment(request):
                 messages.warning(request, f"{member} has already paid the request fee for {loan_type.name}.")
                 return redirect("loan_request_fee_payment")
 
-            #  Create the record
-            LoanRequestFee.objects.create( member=member,loan_type=loan_type, form_fee=loan_type.request_fee,
-                loan_amount=loan_amount, created_by=request.user)
+            # Create the record
+            LoanRequestFee.objects.create(
+                member=member,
+                loan_type=loan_type,
+                form_fee=loan_type.request_fee,
+                loan_amount=loan_amount,
+                created_by=request.user
+            )
             messages.success(request, f"Loan request fee of ₦{loan_type.request_fee} recorded for {member}.")
             return redirect("loan_request_fee_payment")
 
-    #  Aggregates always calculated (whether search, payment, or first load)
-    loan = LoanRequestFee.objects.aggregate(total=Sum('loan_amount'))['total'] or Decimal("0.00")
-    fee = LoanRequestFee.objects.aggregate(total=Sum('form_fee'))['total'] or Decimal("0.00")
-    loan_req_form = LoanRequestFee.objects.count()
+    # ==============================
+    # Filter LoanRequestFee records
+    # ==============================
+    members = LoanRequestFee.objects.select_related('member', 'loan_type')
 
-    # Fetch all loan request fees with member details
-    members = LoanRequestFee.objects.select_related('member')
+    if selected_loan_type_id:
+        members = members.filter(loan_type_id=selected_loan_type_id)
+
+    # Aggregates
+    loan = members.aggregate(total=Sum('loan_amount'))['total'] or Decimal("0.00")
+    fee = members.aggregate(total=Sum('form_fee'))['total'] or Decimal("0.00")
+    loan_req_form = members.count()
 
     # Pagination
     page_number = request.GET.get('page')
     paginator = Paginator(members, 100)
     page_obj = paginator.get_page(page_number)
 
-    context = {"fee": fee,"loan": loan,"loan_req_form": loan_req_form, "members": members,
-        "page_obj": page_obj,"loan_types": loan_types,
-        "member_info": member_info,  # keep this so search results still show
+    context = {
+        "fee": fee,
+        "loan": loan,
+        "loan_req_form": loan_req_form,
+        "members": members,
+        "page_obj": page_obj,
+        "loan_types": loan_types,
+        "selected_loan_type_id": selected_loan_type_id,
+        "member_info": member_info,  
     }
+
     return render(request, "loan/loan_request_fee.html", context)
+
+# def loan_request_fee_payment(request):
+#     member_info = None
+#     loan_types = LoanType.objects.filter(available=True)
+
+#     if request.method == "POST":
+#         if "search_member" in request.POST:  # step 1: search
+#             ippis = request.POST.get("ippis")
+#             try:
+#                 member = Member.objects.get(ippis=ippis)
+#             except Member.DoesNotExist:
+#                 messages.error(request, f"No member found with IPPIS {ippis}.")
+#                 member = None
+
+#             if member:
+#                 latest_loanable = Loanable.objects.filter(member=member).order_by('-month').first()
+#                 total_loanable = latest_loanable.total_amount if latest_loanable else Decimal("0.00")
+
+#                 member_info = {
+#                     "id": member.id,
+#                     "name": f"{member.member.first_name} {member.member.last_name}",
+#                     "ippis": member.ippis,
+#                     "total_loanable": total_loanable,
+#                 }
+
+#         elif "make_payment" in request.POST:  # step 2: make payment
+#             member_id = request.POST.get("member_id")
+#             loan_type_id = request.POST.get("loan_type")
+#             loan_amount = Decimal(request.POST.get("loan_amount") or "0.00")
+
+#             member = get_object_or_404(Member, id=member_id)
+#             loan_type = get_object_or_404(LoanType, id=loan_type_id)
+
+#             # Prevent duplicate fee payments
+#             if LoanRequestFee.objects.filter(member=member, loan_type=loan_type).exists():
+#                 messages.warning(request, f"{member} has already paid the request fee for {loan_type.name}.")
+#                 return redirect("loan_request_fee_payment")
+
+#             #  Create the record
+#             LoanRequestFee.objects.create( member=member,loan_type=loan_type, form_fee=loan_type.request_fee,
+#                 loan_amount=loan_amount, created_by=request.user)
+#             messages.success(request, f"Loan request fee of ₦{loan_type.request_fee} recorded for {member}.")
+#             return redirect("loan_request_fee_payment")
+
+#     #  Aggregates always calculated (whether search, payment, or first load)
+#     loan = LoanRequestFee.objects.aggregate(total=Sum('loan_amount'))['total'] or Decimal("0.00")
+#     fee = LoanRequestFee.objects.aggregate(total=Sum('form_fee'))['total'] or Decimal("0.00")
+#     loan_req_form = LoanRequestFee.objects.count()
+
+#     # Fetch all loan request fees with member details
+#     members = LoanRequestFee.objects.select_related('member')
+
+#     # Pagination
+#     page_number = request.GET.get('page')
+#     paginator = Paginator(members, 100)
+#     page_obj = paginator.get_page(page_number)
+
+#     context = {"fee": fee,"loan": loan,"loan_req_form": loan_req_form, "members": members,
+#         "page_obj": page_obj,"loan_types": loan_types,
+#         "member_info": member_info,  # keep this so search results still show
+#     }
+#     return render(request, "loan/loan_request_fee.html", context)
 
 
 # def loan_fee(request):
@@ -293,60 +374,7 @@ def loan_request_detail(request, id):
 def is_admin(user):
     return user.is_staff
 
-#=======admin approved loan============
 @login_required
-@user_passes_test(is_admin)
-# def approve_loan_request(request, id):
-#     loan_request = get_object_or_404(LoanRequest, id=id, status='pending')
-#     member = loan_request.member
-#     loanable = Loanable.objects.filter(member=member).aggregate(
-#         total=Sum('amount')
-#     )['total'] or Decimal("0.00")
-#     print(loanable)
-#     # Check if guarantor has accepted
-#     if not loan_request.guarantor_accepted:
-#         messages.error(request, "This loan cannot be approved because the guarantor has not accepted yet.")
-#         return redirect('admin_loan_requests') 
-
-#     if request.method == "POST":
-#         approved_amount = request.POST.get('approved_amount')
-
-#         if not approved_amount:
-#             messages.error(request, "Please enter the approved loan amount.")
-#             return redirect('approve_loan_request', id=id)
-
-#         try:
-#             approved_amount = float(approved_amount)
-#             if approved_amount <= 0:
-#                 messages.error(request, "Approved amount must be greater than zero.")
-#                 return redirect('approve_loan_request', id=id)
-
-#             if (
-#                 loan_request.loan_type 
-#                 and loan_request.loan_type.max_amount is not None 
-#                 and approved_amount > loan_request.loan_type.max_amount):
-#                     messages.error( request,f"Approved amount cannot exceed the maximum allowed: {loan_request.loan_type.max_amount}" )
-#                     return redirect('approve_loan_request', id=id)
-
-#             loan_request.approved_amount = approved_amount
-#             loan_request.approval_date = timezone.now().date()
-#             loan_request.status = 'approved'
-#             loan_request.approved_by = request.user
-#             loan_request.save()
-            
-
-#             messages.success(request,f"Loan request ID {loan_request.id} has been approved for ₦{loan_request.approved_amount}.")
-#             return redirect('admin_loan_requests')
-
-#         except ValueError:
-#             messages.error(request, "Invalid approved amount.")
-#             return redirect('approve_loan_request', id=id)
-
-#     context = {'loan_request': loan_request,'loanable':loanable}
-#     return render(request, 'loan/approve_loan.html', context)
-
-@login_required
-@user_passes_test(is_admin)
 def approve_loan_request(request, id):
     loan_request = get_object_or_404(LoanRequest, id=id, status='pending')
     member = loan_request.member

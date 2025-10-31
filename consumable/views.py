@@ -193,11 +193,13 @@ def process_item_pickup(request_id):
         print("Request not found.")
 
 
-
 @login_required
 def consumable_fee(request):
     member_info = None
     consumable_types = ConsumableType.objects.filter(available=True)
+
+    # Get selected filter value
+    selected_consumable_type_id = request.GET.get("consumable_type")
 
     if request.method == "POST":
         # Step 1: Search Member
@@ -269,11 +271,19 @@ def consumable_fee(request):
             )
             return redirect("consumable_fee")
 
-    # ✅ Always load aggregates & fees
-    total_fee = ConsumableFormFee.objects.aggregate(total=Sum("form_fee"))["total"] or Decimal("0.00")
-    fee_count = ConsumableFormFee.objects.count()
-
+    # ==============================
+    # Filter fees by consumable type
+    # ==============================
     fees = ConsumableFormFee.objects.select_related("member", "consumable_type").order_by("-created_at")
+
+    if selected_consumable_type_id:
+        fees = fees.filter(consumable_type_id=selected_consumable_type_id)
+
+    # Aggregates (based on filtered data)
+    total_fee = fees.aggregate(total=Sum("form_fee"))["total"] or Decimal("0.00")
+    fee_count = fees.count()
+
+    # Pagination
     paginator = Paginator(fees, 50)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -283,9 +293,104 @@ def consumable_fee(request):
         "fee_count": fee_count,
         "page_obj": page_obj,
         "consumable_types": consumable_types,
+        "selected_consumable_type_id": selected_consumable_type_id,
         "member_info": member_info,
     }
     return render(request, "consumable/consumable_fee.html", context)
+
+
+# @login_required
+# def consumable_fee(request):
+#     member_info = None
+#     consumable_types = ConsumableType.objects.filter(available=True)
+
+#     if request.method == "POST":
+#         # Step 1: Search Member
+#         if "search_member" in request.POST:
+#             ippis = request.POST.get("ippis")
+#             try:
+#                 member = Member.objects.get(ippis=ippis)
+#                 member_info = {
+#                     "id": member.id,
+#                     "name": f"{member.member.first_name} {member.member.last_name}",
+#                     "ippis": member.ippis,
+#                 }
+#             except Member.DoesNotExist:
+#                 messages.error(request, f"No member found with IPPIS {ippis}.")
+
+#         # Step 2: Member Payment
+#         elif "make_payment" in request.POST:
+#             member_id = request.POST.get("member_id")
+#             consumable_type_id = request.POST.get("consumable_type")
+
+#             member = get_object_or_404(Member, id=member_id)
+#             consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
+
+#             # prevent duplicate active payment
+#             if ConsumableFormFee.objects.filter(
+#                 member=member, consumable_type=consumable_type, status="paid"
+#             ).exists():
+#                 messages.warning(
+#                     request, f"{member} already has an active paid fee for {consumable_type.name}."
+#                 )
+#                 return redirect("consumable_fee")
+
+#             ConsumableFormFee.objects.create(
+#                 member=member,
+#                 consumable_type=consumable_type,
+#                 form_fee=consumable_type.request_fee,
+#                 status="paid",
+#                 created_by=request.user,
+#             )
+#             messages.success(
+#                 request,
+#                 f"Consumable form fee of ₦{consumable_type.request_fee} recorded for {member}.",
+#             )
+#             return redirect("consumable_fee")
+
+#         # Step 3: Guest Payment
+#         elif "make_guest_payment" in request.POST:
+#             guest_name = request.POST.get("guest_name")
+#             guest_ippis = request.POST.get("guest_ippis")
+#             consumable_type_id = request.POST.get("consumable_type")
+
+#             if not guest_name or not guest_ippis:
+#                 messages.error(request, "Guest Name and IPPIS are required.")
+#                 return redirect("consumable_fee")
+
+#             consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
+
+#             ConsumableFormFee.objects.create(
+#                 guest_name=guest_name,
+#                 guest_ippis=guest_ippis,
+#                 consumable_type=consumable_type,
+#                 form_fee=consumable_type.request_fee,
+#                 status="paid",
+#                 created_by=request.user,
+#             )
+#             messages.success(
+#                 request,
+#                 f"Consumable form fee of ₦{consumable_type.request_fee} recorded for Guest {guest_name}.",
+#             )
+#             return redirect("consumable_fee")
+
+#     # ✅ Always load aggregates & fees
+#     total_fee = ConsumableFormFee.objects.aggregate(total=Sum("form_fee"))["total"] or Decimal("0.00")
+#     fee_count = ConsumableFormFee.objects.count()
+
+#     fees = ConsumableFormFee.objects.select_related("member", "consumable_type").order_by("-created_at")
+#     paginator = Paginator(fees, 50)
+#     page_number = request.GET.get("page")
+#     page_obj = paginator.get_page(page_number)
+
+#     context = {
+#         "total_fee": total_fee,
+#         "fee_count": fee_count,
+#         "page_obj": page_obj,
+#         "consumable_types": consumable_types,
+#         "member_info": member_info,
+#     }
+#     return render(request, "consumable/consumable_fee.html", context)
 
 
 @login_required

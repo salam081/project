@@ -6,34 +6,19 @@
 {% block content %}
 <style>
   
-   .card1{
-     border-radius: 15px;
-     border-top: 5px solid blue;
-   }
-   .card2{
-      border-radius: 15px;
-      border-top: 5px solid yellow;
-   }
-   .card3{
-      border-radius: 15px;
-      border-top: 5px solid rgb(7, 124, 25);
-   }
-   .card4{
-      border-radius: 15px;
-      border-top: 5px solid red;
-   }
+  
     th,
     td {
         white-space: nowrap;
     }
 </style>
-<div class="content-card mt-4">
+<div class="container mt-4">
     <h3 class="mb-4 text-center">All Withdrawal Requests</h3>
 
     <!-- Summary Cards -->
     <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
     <div class="col">
-        <div class="card card1 border-primary text-dark shadow">
+        <div class="card card1  text-dark shadow">
             <div class="card-body text-center">
                 <b class="card-title">Total Requests</b>
                 <h5 class="text-primary">{{ stats.total_requests }}</h5>
@@ -41,7 +26,7 @@
         </div>
     </div>
     <div class="col">
-        <div class="card card2 border-warning shadow">
+        <div class="card card2  shadow">
             <div class="card-body text-center">
                 <b class="card-title">Pending</b>
                 <h5 class="text-warning">{{ stats.pending_requests }}</h5>
@@ -49,7 +34,7 @@
         </div>
     </div>
     <div class="col">
-        <div class="card card3 border-success shadow">
+        <div class="card card3  shadow">
             <div class="card-body text-center">
                 <b class="card-title">Approved</b>
                 <h5 class="text-success">{{ stats.approved_requests }}</h5>
@@ -57,7 +42,7 @@
         </div>
     </div>
     <div class="col">
-        <div class="card card4 border-danger shadow">
+        <div class="card card4  shadow">
             <div class="card-body text-center">
                 <b class="card-title">Declined</b>
                 <h5 class="text-danger">{{ stats.declined_requests }}</h5>

@@ -5,11 +5,11 @@
 
 {% block content %}
 <div class="col-md-12">
-    <div class="content-card shadow col-md-12">
+    <div class="container shadow col-md-12">
         {% if settings %}
         <h4 class="text-center  mb-4">Make Loan Request</h4>
 
-        <div class="alert alert-info text-center fw-bold">
+        <div class="alert-info text-center fw-bold">
             Your Current Loanable Balance: 
             <span class="text-success">₦{{ loanable|floatformat:2 }}</span>
         </div>

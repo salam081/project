@@ -7,10 +7,10 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Purchased Consumable Items</h1>
-        <a href="" class="btn btn-primary">
+        <h1 class="h3 mb-0">Purchased Items List</h1>
+        {% comment %} <a href="" class="btn btn-primary text-white">
             <i class="fas fa-plus-circle me-2"></i>Add Purchased Item
-        </a>
+        </a> {% endcomment %}
     </div>
 
     <div class="card p-3 mb-4">
@@ -18,7 +18,7 @@
             <div class="col-md-6">
                 <label for="id_search" class="form-label">Search</label>
                 <input type="text" name="search" id="id_search" class="form-control" 
-                       placeholder="Search by item name or description" 
+                       placeholder="Search by item name or" 
                        value="{{ search_query|default_if_none:'' }}">
             </div>
             <div class="col-md-3">
@@ -44,6 +44,7 @@
                     <th>Quantity</th>
                     <th>Unit Price</th>
                     <th>Total Cost</th>
+                    <th>Created By</th>
                     <th>Purchase Date</th>
                     <th>Actions</th>
                 </tr>
@@ -60,19 +61,20 @@
                     <td>{{ item.quantity|intcomma }}</td>
                     <td>₦{{ item.unit_price|intcomma }}</td>
                     <td>₦{{ item.total_price|intcomma }}</td>
+                    <td>{{ item.created_by}}</td>
                     <td>{{ item.date_added|date:"M d, Y" }}</td>
                     <td>
                         <a href="{% url 'purchased_item_detail' pk=item.pk %}" class="btn btn-sm btn-info text-white" title="View Details">
-                            <i class="fas fa-eye"></i>
+                            <i class="bi bi-eye"></i>
                         </a>
-                        <a href="{% url 'edit_purchased_item' pk=item.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
-                            <i class="fas fa-edit"></i>
+                        <a href="{% url 'edit_purchased_item' pk=item.pk %}" class="btn btn-sm btn-outline-warning" title="Edit">
+                            <i class="bi bi-pencil"></i>
                         </a>
                         <a href="{% url 'selling_plan_create' item_pk=item.pk %}" class="btn btn-sm btn-outline-primary" title="Create Selling Plan">
-                            <i class="fas fa-plus-circle"></i>
+                            <i class="bi bi-plus-circle"></i>
                         </a>
                         <a href="{% url 'delete_purchased_item' pk=item.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
-                            <i class="fas fa-trash-alt"></i>
+                            <i class="bi bi-trash"></i>
                         </a>
                     </td>
                 </tr>

@@ -4,16 +4,16 @@
 {% block title %}Request Withdrawal{% endblock %}
 
 {% block content %}
-<div class="content-card  shadow mt-4 col-md-12">
+<div class="container shadow mt-4 col-md-12">
     <h3>Submit Withdrawal Request</h3>
 
     <form method="POST" class="mt-3">
         {% csrf_token %}
         <div class="form-group col-md-12 mb-4">
             <label for="reason">Reason</label>
-            <textarea name="reason" id="reason" class="form-control" rows="3" placeholder="Why do you want to withdraw?"></textarea>
+            <textarea name="reason" id="reason" class="form-control" rows="3" placeholder="State Why do you want to withdraw?"></textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Submit Request</button>
+        <button type="submit" class="btn btn-primary mb-4">Submit Request</button>
     </form>
 </div>
 {% endblock %}

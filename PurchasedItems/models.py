@@ -21,12 +21,12 @@ from django.utils import timezone
 
 class ConsumablePurchasedRequest(models.Model):
     """Model for tracking consumable purchase requests"""
-    
     STATUS_PENDING = 'pending'
+    STATUS_REVIEWED = 'reviewed'
     STATUS_APPROVED = 'approved'
     STATUS_ACCOUNTED = 'accounted'
     
-    STATUS_CHOICES = [(STATUS_PENDING, 'Pending'),(STATUS_APPROVED, 'Approved'),(STATUS_ACCOUNTED, 'Fully Accounted'),]
+    STATUS_CHOICES = [(STATUS_PENDING, 'Pending'),(STATUS_REVIEWED, 'Reviewed'),(STATUS_APPROVED, 'Approved'),(STATUS_ACCOUNTED, 'Fully Accounted'),]
 
     requested_by = models.ForeignKey( User, on_delete=models.CASCADE,related_name='consumable_requests')
     item = models.CharField(max_length=255)
@@ -38,12 +38,24 @@ class ConsumablePurchasedRequest(models.Model):
     date_requested = models.DateField(auto_now_add=True)
     date_approved = models.DateField(null=True, blank=True)
     remarks = models.TextField(blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
 
     class Meta:
         ordering = ['-date_requested']
         verbose_name = "Consumable Purchase Request"
         verbose_name_plural = "Consumable Purchase Requests"
-
+    
+    def review(self, reviewed_by, comment=None):
+        """Mark request as reviewed before approval"""
+        if self.status != self.STATUS_PENDING:
+            raise ValidationError("Only pending requests can be reviewed.")
+        
+        self.status = self.STATUS_REVIEWED
+        self.approved_by = reviewed_by
+        self.comment = comment or ""
+        self.date_approved = timezone.now().date()
+        self.save()
+        
     def clean(self):
         """Validate model data"""
         if self.amount_requested and self.amount_requested <= 0:
@@ -96,11 +108,14 @@ class ConsumablePurchasedRequest(models.Model):
     def can_be_modified(self):
         """Check if request can be modified"""
         return self.status == self.STATUS_PENDING
-
+    
     def approve(self, approved_amount, approved_by):
-        """Approve the request"""
-        if self.status != self.STATUS_PENDING:
-            raise ValidationError("Only pending requests can be approved")
+        """Approve the request after review"""
+        if self.status != self.STATUS_REVIEWED:
+            raise ValidationError("Only reviewed requests can be approved.")
+        
+        if approved_amount <= 0:
+            raise ValidationError("Approved amount must be greater than zero.")
         
         self.approved_amount = approved_amount
         self.approved_by = approved_by
@@ -118,7 +133,7 @@ class ConsumablePurchasedRequest(models.Model):
         self.status = self.STATUS_ACCOUNTED
         self.remarks = (self.remarks or '') + f"\n\nAccounted on {timezone.now().date()}"
         self.save()
-
+    
     def __str__(self):
         return f"{self.requested_by} | ₦{self.amount_requested} | {self.get_status_display()}"
 
@@ -133,7 +148,9 @@ class PurchasedItem(models.Model):
     receipt = models.FileField(upload_to='receipts/%Y/%m/', blank=True, null=True, help_text="Upload receipt image")
     expenditure_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'),help_text="Additional expenditure (transport, etc.)")
     date_added = models.DateField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
+   
     class Meta:
         ordering = ['-date_added']
         verbose_name = "Purchased Item"
@@ -178,7 +195,7 @@ class SellingPlan(models.Model):
     profit = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True,help_text="Calculated profit")
     available = models.BooleanField(default=True)
     include_expenditure = models.BooleanField(default=True,help_text="Include purchased item expenditure in cost calculation")
-
+   
     class Meta:
         ordering = ['-date_created']
         verbose_name = "Selling Plan"

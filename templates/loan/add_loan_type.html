@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4">Manage Loan Types</h2>
+    <h5 class="">Manage Loan Types</h5>
 
 
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header  text-dark">
             <h5 class="mb-0">Add New Loan Type</h5>
         </div>
         <div class="card-body">
@@ -16,7 +16,7 @@
                 {% csrf_token %}
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="id_name" class="form-label">Name</label>
+                        <label for="id_name" class="form-label">Loan Type Name</label>
                         <input type="text" class="form-control" id="id_name" name="name" required>
                     </div>
                     <div class="col-md-6">
@@ -24,15 +24,15 @@
                         <input type="number" class="form-control" id="id_max_amount" name="max_amount" step="0.01">
                     </div>
                     <div class="col-md-6">
-                        <label for="id_request_fee" class="form-label">Request Fee</label>
+                        <label for="id_request_fee" class="form-label">Loan Request Fee</label>
                         <input type="number" class="form-control" id="id_request_fee" name="request_fee" step="0.01">
                     </div>
                     <div class="col-6">
-                        <label for="id_description" class="form-label">Description</label>
+                        <label for="id_description" class="form-label">Description (optional)</label>
                         <textarea class="form-control" id="id_description" name="description" rows="3"></textarea>
                     </div>
                     <div class="col-md-6">
-                        <label for="id_max_loan_term_months" class="form-label">Max Loan Term (Months)</label>
+                        <label for="id_max_loan_term_months" class="form-label">Max Loan Duration (Months)</label>
                         <input type="number" class="form-control" id="id_max_loan_term_months" name="max_loan_term_months">
                     </div>
                     <div class="col-12 text-end">
@@ -44,8 +44,8 @@
     </div>
 
     <div class="card col-12">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="mb-0">Existing Loan Types</h5>
+        <div class="card-header  text-dark">
+            <h5 class="">Existing Loan Types</h5>
         </div>
         <div class="card-body">
             {% if loan_types %}
@@ -57,7 +57,7 @@
                             <th scope="col">Description</th>
                             <th class="text-nowrap" style="min-width: 120px;">Max Amount</th>
                             <th class="text-nowrap" style="min-width: 120px;">Request Fee</th>
-                            <th class="text-nowrap" style="min-width: 120px;">Max Term</th>
+                            <th class="text-nowrap" style="min-width: 120px;">Max Duration</th>
                             <th scope="col">Status</th>
                             <th scope="col">Actions</th>
                         </tr>

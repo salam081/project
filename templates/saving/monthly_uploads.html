@@ -15,6 +15,7 @@
                     <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Subscription</th>
                     <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Loanable</th>
                     <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Investment</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,8 +29,8 @@
                     <td>₦{{ upload.total_loanable|floatformat:2|default:0|intcomma }}</td>
                     <td>₦{{ upload.total_investment|floatformat:2|default:0|intcomma }}</td>
                     <td>
-                    <a href="{% url 'view_monthly_savings' upload.month_only|date:'Y-m' %}"class="btn btn-sm btn-primary">
-                        <i class="fas fa-eye"></i> </a>
+                    <a href="{% url 'view_monthly_savings' upload.month_only|date:'Y-m' %}"class="btn btn-sm btn-primary text-white" title="View Details">
+                        <i class="bi bi-eye"></i> </a>
                     </td>
                 </tr>
                 {% endfor %}

@@ -134,5 +134,16 @@ class NextOfKin(models.Model):
     netofkin_passport = models.ImageField(upload_to='netofkin_passport', blank=True, null=True)
 
     def __str__(self):
-        return f"{self.full_names} ({self.phone_no})"              
+        return f"{self.full_names} ({self.phone_no})"    
+    
+    
+
+class PagePermission(models.Model):
+    group = models.ForeignKey(UserGroup, on_delete=models.CASCADE)
+    page = models.CharField(max_length=100)
+    allowed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.group.title} - {self.page}"
+              
 

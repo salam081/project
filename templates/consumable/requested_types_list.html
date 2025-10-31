@@ -3,66 +3,33 @@
 {% block title %}Requested Consumable Types{% endblock %}
 
 {% block content %}
-<style>
-    /* Custom styles for the requested types list */
-    .requested-types-list .list-group-item {
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        border: 1px solid #8d8f91ff;
-        margin-bottom: 10px;
-        border-radius: 8px;
-        padding: 10px;
-    }
 
-    .requested-types-list .list-group-item:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        background-color: #f8f9fa;
-    }
-    
-    .requested-types-list .list-group-item a {
-        font-weight: 800;
-        color: #333;
-        text-decoration: none;
-    }
-    
-    .requested-types-list .list-group-item a:hover {
-        color: #007bff;
-       
-    }
-
-    /* Style for the badge */
-    .requested-types-list .badge {
-        font-size: 1.1rem;
-        padding: 0.5em 1em;
-        min-width: 50px;
-        text-align: center;
-    }
-
-</style>
-
-<div class="container mt-4  d-flex justify-content-center align-items-center">
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header">
-                    <h4 class="mb-0"><i class="fas fa-box-open me-2"></i>Consumable Types with Requests</h4>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">  <!-- Wider card on desktop -->
+            <div class="card shadow-lg border-0 rounded-3">
+                <div class="card-header bg-info text-white d-flex align-items-center">
+                    <h6 class="mb-0">
+                        <i class="bi bi-box-open me-2"></i>Consumable Types with Requests
+                    </h6>
                 </div>
+
                 <div class="card-body">
                     {% if requested_types %}
-                        <ul class="list-group requested-types-list">
+                        <ul class="list-group list-group-flush">
                             {% for consumable_type in requested_types %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <a href="{% url 'members_by_consumable_type' consumable_type.id %}">
+                                <a href="{% url 'members_by_consumable_type' consumable_type.id %}" class="text-decoration-none fw-semibold">
                                     {{ consumable_type.name }}
                                 </a>
-                                <b class="badge  rounded-pill fs-3">
-                                    {{ consumable_type.consumables_type.count }} 
-                                </b>
+                                <span class="badge bg-info text-dark rounded-pill fs-6">
+                                    {{ consumable_type.consumables_type.count }}
+                                </span>
                             </li>
                             {% endfor %}
                         </ul>
                     {% else %}
-                        <div class="alert alert-info" role="alert">
+                        <div class="alert alert-info m-0 text-center">
                             <i class="fas fa-info-circle me-2"></i>No consumable types have been requested yet.
                         </div>
                     {% endif %}
@@ -71,4 +38,5 @@
         </div>
     </div>
 </div>
+
 {% endblock %}

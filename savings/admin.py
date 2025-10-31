@@ -9,6 +9,7 @@ admin.site.register(InterestAmount)
 
 
 
+@admin.register(Savings)
 class SavingsAdmin(admin.ModelAdmin):
     
     search_fields = (
@@ -18,6 +19,6 @@ class SavingsAdmin(admin.ModelAdmin):
     'member__member__member_number',
     'member__ippis',
 )
-admin.site.register(Savings,SavingsAdmin)
+    list_display = ('member__member__first_name', 'member__member__last_name', 'member__ippis', 'month', 'month_saving', 'original_amount', 'date_created')
 
 # admin.site.register(Savings)

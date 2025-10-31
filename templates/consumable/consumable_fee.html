@@ -121,6 +121,18 @@
             </div>
           </div>
         </div>
+           <form method="get" class="mb-3 d-flex align-items-center">
+            <label for="consumable_type" class="me-2 fw-bold">Filter by Consumable Type:</label>
+            <select name="consumable_type" id="consumable_type" class="form-select w-auto me-2">
+                <option value="">-- All --</option>
+                {% for ctype in consumable_types %}
+                    <option value="{{ ctype.id }}" {% if ctype.id|stringformat:"s" == selected_consumable_type_id %}selected{% endif %}>
+                        {{ ctype.name }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </form>
 
         <!-- Payments List -->
         <h4 class="card-title mt-3 fs-5">All Payments</h4>

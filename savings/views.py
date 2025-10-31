@@ -79,6 +79,114 @@ def filter_requests(datefrom, dateto):
     return filtered_requests
 
 
+@login_required
+def add_member_savings(request):
+    if request.method == "POST":
+        ippis = request.POST.get("ippis")
+        month_str = request.POST.get("month")
+        month_saving_str = request.POST.get("month_saving")
+
+        # Validate IPPIS and inputs
+        if not ippis:
+            messages.error(request, "⚠️ Please provide the member IPPIS.")
+            return redirect("add_member_savings")
+
+        if not month_str or not month_saving_str:
+            messages.error(request, "⚠️ Please provide both the month and the saving amount.")
+            return redirect("add_member_savings")
+
+        try:
+            # Find member by IPPIS
+            member = Member.objects.get(ippis=ippis)
+        except Member.DoesNotExist:
+            messages.error(request, f"No member found with IPPIS {ippis}.")
+            return redirect("add_member_savings")
+
+        try:
+            # Parse date and amount
+            month = timezone.datetime.strptime(month_str, "%Y-%m-%d").date()
+            month_saving = Decimal(month_saving_str)
+
+            # Prevent duplicate entries
+            if Savings.objects.filter(member=member, month__year=month.year, month__month=month.month).exists():
+                messages.warning(
+                    request,
+                    f"Savings for **{member.member}** in {month.strftime('%B %Y')} already exist."
+                )
+                return redirect("add_member_savings")
+
+            # Get global subscription fee
+            try:
+                global_interest = InterestAmount.objects.latest("date_created").amount
+            except InterestAmount.DoesNotExist:
+                messages.error(request, "No Subscription amount has been set. Please set one first.")
+                return redirect("add_member_savings")
+
+            # Check validity
+            if month_saving <= global_interest:
+                messages.error(
+                    request,
+                    f"Savings must be greater than the subscription amount (₦{global_interest:,.2f})."
+                )
+                return redirect("add_member_savings")
+
+            # Deduct subscription
+            amount_after_interest = month_saving - global_interest
+            half_amount = amount_after_interest / 2
+
+            # Create savings record
+            Savings.objects.create(
+                member=member,
+                month=month,
+                month_saving=amount_after_interest,
+                original_amount=month_saving
+            )
+
+            # Deduct subscription once
+            Interest.objects.create(member=member, month=month, amount_deducted=global_interest)
+
+            # Update Loanable
+            if not Loanable.objects.filter(member=member, month=month).exists():
+                current_loanable_total = Loanable.objects.filter(member=member).aggregate(
+                    total=Sum("amount")
+                )["total"] or Decimal("0.00")
+                Loanable.objects.create(
+                    member=member,
+                    month=month,
+                    amount=half_amount,
+                    total_amount=current_loanable_total + half_amount
+                )
+
+            # Update Investment
+            if not Investment.objects.filter(member=member, month=month).exists():
+                current_investment_total = Investment.objects.filter(member=member).aggregate(
+                    total=Sum("amount")
+                )["total"] or Decimal("0.00")
+                Investment.objects.create(
+                    member=member,
+                    month=month,
+                    amount=half_amount,
+                    total_amount=current_investment_total + half_amount
+                )
+
+            # Success message
+            messages.success(
+                request,
+                f"Savings of ₦{month_saving:,.2f} added for **{member.member}** "
+                f"({month.strftime('%B %Y')}). Subscription deducted: ₦{global_interest:,.2f}. "
+                f"Loanable: ₦{half_amount:,.2f}, Investment: ₦{half_amount:,.2f}."
+            )
+
+            return redirect("add_member_savings")
+
+        except (ValueError, DecimalException):
+            messages.error(request, "Invalid date format or saving amount.")
+        except Exception as e:
+            messages.error(request, f"Unexpected error: {e}")
+
+    return render(request, "saving/add_member_savings.html")
+
+
 
 
 @login_required
@@ -242,6 +350,15 @@ def upload_savings(request):
                         "IPPIS": ippis,
                         "Member Name": "N/A",
                         "Reason": "IPPIS not found"
+                    })
+                    continue
+                
+                # ✅ Skip if linked user is missing or deactivated
+                if not member.member or not member.member.is_active:
+                    skipped_members_report.append({
+                        "IPPIS": ippis,
+                        "Member Name": str(member.member) if member.member else "No linked user",
+                        "Reason": "User account is deactivated"
                     })
                     continue
 

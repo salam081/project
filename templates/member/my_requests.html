@@ -2,13 +2,24 @@
 {% load static %}
 {% block content %}
 
-<div class="container my-1 shadow">
-    <div class="d-flex justify-content-between align-items-center mb-1">
-        <h5 class="page-title">My Consumable Requests 🧺</h5>
-        <a href="{% url 'request_consumable' %}" class="btn btn-create-request shadow-sm">
-            <i class="fas fa-plus-circle me-2"></i> Make New Request
-        </a>
-    </div>
+<div class="container  shadow">
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+            <h2 class="mb-1">
+                <i class="fas fa-hand-holding-usd me-2"></i>My Consumable Requests🧺
+            </h2>
+            <p class="text-dark mb-0">Track and manage your Consumable requests</p>
+            </div>
+
+            <a href="{% url 'request_consumable' %}" class="btn btn-primary d-flex align-items-center text-white">
+            <i class="fas fa-plus me-2"></i>Make New Request
+            </a>
+        </div>
+       
+
+
+  
 
     {% if consumable_data %}
     
@@ -53,8 +64,17 @@
         </div>
     
     {% else %}
-    <div class="alert alert-info text-center shadow-sm py-4">
-        <i class="fas fa-box-open me-2"></i> You have no consumable requests yet.
+   
+      <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-clipboard-list fa-5x text-muted"></i>
+                </div>
+                <h4 class="text-muted">No Consumable Requests Yet</h4>
+                <p class="text-muted mb-4">You haven't made any Consumable requests yet.</p>
+                <a href="{% url 'request_consumable' %}" class="btn btn-primary text-white">
+                    <i class="fas fa-plus me-2"></i>Create Your First Consumable Request
+                </a>
+            </div>
     </div>
     {% endif %}
 </div>

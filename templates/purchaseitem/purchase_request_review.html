@@ -1,0 +1,27 @@
+{% extends 'base/base.html' %}
+{% block content %}
+<div class="content-card col-12">
+    <div class="card-header">
+        <h3 class="card-title mb-0">Review Consumable Purchase Request</h3>
+    </div>
+
+    <div class="card-body">
+        <p><strong>Item:</strong> {{ consumable_request.item }}</p>
+        <p><strong>Purpose:</strong> {{ consumable_request.purpose }}</p>
+        <p><strong>Requested Amount:</strong> ₦{{ consumable_request.amount_requested }}</p>
+        <p><strong>Status:</strong> {{ consumable_request.get_status_display }}</p>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="comment" class="form-label">Review Comment</label>
+                <textarea name="comment" id="comment" rows="4" class="form-control"
+                    placeholder="Enter your review notes or comment..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-warning">Mark as Reviewed</button>
+            <a href="{% url 'consumable_purchase_request_list' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

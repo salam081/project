@@ -110,10 +110,34 @@
 </style>
 
 <div id="dashboard" class="content-section active">
-    <div class="content-card shadow">
-        <h4>Financial Dashboard</h4>
-        <p>Complete Overview of Your Financial Portfolio</p>
+   <div class="content-card shadow p-2 rounded bg-gradient text-dark mb-4">
+    <div class="row align-items-center g-2">
+        <!-- Dashboard Title Section -->
+        <div class="col-lg-7 col-md-6">
+            <h4 class="mb-2 fw-bold">
+                <i class="fas fa-chart-line me-2"></i>Financial Dashboard
+            </h4>
+            <p class="mb-0 opacity-75">Complete Overview of Your Financial Portfolio</p>
+        </div>
+
+        <!-- Active Users Stats Section -->
+        <div class="col-lg-5 col-md-6">
+            <div class="bg-white bg-opacity-10 rounded p-3 border border-white border-opacity-25">
+                <h6 class="mb-3 fw-semibold">
+                    <i class="fas fa-users me-2"></i>Active Users
+                </h6>
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-white border-opacity-25">
+                    <span class="">Today</span>
+                    <span class="fs-5 fw-bold text-success">{{ daily_logins|default:"0" }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="">This Week</span>
+                    <span class="fs-5 fw-bold text-info">{{ weekly_logins|default:"0" }}</span>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
 
     <div class="stats-grid">
         <div class="stat-card shadow">

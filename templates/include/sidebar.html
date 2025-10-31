@@ -31,13 +31,13 @@
                     <i class="bi bi-person"></i>
                     <span class="nav-text">Upload Members</span>
                 </a>
-                <a href="{% url 'all_members' %}" class="nav-link" >
-                    <i class="bi bi-person"></i>
-                    <span class="nav-text">All Members</span>
-                </a>
                 <a href="{% url 'register'  %}" class="nav-link" >
                     <i class="bi bi-person-plus"></i>
                     <span class="nav-text">Add Member</span>
+                </a>
+                <a href="{% url 'all_members' %}" class="nav-link" >
+                    <i class="bi bi-person"></i>
+                    <span class="nav-text">All Members</span>
                 </a>
                 <a href="{% url 'non_staff_members_list'  %}" class="nav-link" >
                     <i class="bi bi-person-plus"></i>
@@ -61,21 +61,25 @@
                     <i class="bi bi-upload"></i>
                     <span class="nav-text">Upload Savings</span>
                 </a>
+                <a href="{% url 'add_member_savings' %}" class="nav-link" >
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">Add Member Savings</span>
+                </a>
               
                 <a href="{% url 'monthly_savings_uploads'  %}" class="nav-link" >
-                    <i class="bi bi-plus"></i>
+                    <i class="bi bi-eye"></i>
                     <span class="nav-text">View Savings</span>
                 </a>
                 <a href="{% url 'list_savings'  %}" class="nav-link" >
-                    <i class="bi bi-plus"></i>
+                    <i class="bi bi-eye"></i>
                     <span class="nav-text">Members Savings</span>
                 </a>
                 <a href="{% url 'delete_monthly_savings'  %}" class="nav-link" >
-                    <i class="bi bi-plus"></i>
+                    <i class="bi bi-trash"></i>
                     <span class="nav-text">Delete Savings</span>
                 </a>
                 <a href="{% url 'saving_report'  %}" class="nav-link" >
-                    <i class="bi bi-eye"></i>
+                    <i class="bi bi-wallet-fill"></i>
                     <span class="nav-text">Saving Report</span>
                 </a> 
                
@@ -206,6 +210,10 @@
                    <i class="bi bi-speedometer2"></i>
                     <span class="nav-text">Purchase Dashboard</span>
                 </a>
+                <a href="{% url 'purchased_item_list' %}" class="nav-link" >
+                   <i class="bi bi-speedometer2"></i>
+                    <span class="nav-text">Purchased Items List</span>
+                </a> 
                 {% comment %} <a href="{% url 'adjustment_list' %}" class="nav-link" >
                    <i class="bi bi-speedometer2"></i>
                     <span class="nav-text">Adjustment List</span>
@@ -257,17 +265,17 @@
         </div> 
           <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#DividendSubmenu" aria-expanded="false" aria-controls="casesSubmenu">
-                <i class="bi bi-folder"></i>
+                <i class="bi bi-wallet-fill"></i>
                 <span class="nav-text">Dividends</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="DividendSubmenu">
                 <a href="{% url 'distribute_dividends'  %}" class="nav-link" >
-                    <i class="bi bi-folder2-open"></i>
+                    <i class="bi bi-wallet-fill"></i>
                     <span class="nav-text">Distribute Dividends</span>
                 </a>
                 <a href="{% url 'dividend_list'  %}" class="nav-link" >
-                    <i class="bi bi-folder2-open"></i>
+                    <i class="bi bi-list"></i>
                     <span class="nav-text">Dividends List</span>
                 </a>
                 {% comment %} <a href="{% url 'upload_project_finance_payment' %}" class="nav-link" >
@@ -285,7 +293,7 @@
           <!-- reportSubmenu Dropdown -->
         <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#reportSubmenu" aria-expanded="false" aria-controls="reportSubmenu">
-                <i class="bi bi-folder"></i>
+                <i class="bi bi-house"></i>
                 <span class="nav-text">Reports</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
@@ -336,11 +344,72 @@
                 <i class="bi bi-people"></i>
                 <span class="nav-text">Withdrawal Requests List</span>
             </a>
+            {% if request.user.is_superuser %}
+            <a href="{% url 'user_activity_list' %}" class="nav-link" >
+                <i class="bi bi-people"></i>
+                <span class="nav-text"> Activity Logs</span>
+            </a>
+            {% endif %}
             <a href="{% url 'member_active_requests' %}" class="nav-link" >
                 <i class="bi bi-sliders"></i>
                 <span class="nav-text">Member Active Requests</span>
             </a>
         </div> 
+           <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#itemSubmenu" aria-expanded="false" aria-controls="itemSubmenu">
+                <i class="bi bi-house"></i>  
+                <span class="nav-text">My Info</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="itemSubmenu">
+                
+                <a href="{% url 'member_savings' %}" class="nav-link" >
+                   <i class="bi bi-wallet"></i>
+                    <span class="nav-text">My Savings</span>
+                </a>
+                {% comment %} <a href="{% url 'adjustment_list' %}" class="nav-link" >
+                   <i class="bi bi-speedometer2"></i>
+                    <span class="nav-text">Adjustment List</span>
+                </a> {% endcomment %}
+              
+               
+                <a href="{% url 'my_loan_requests' %}" class="nav-link" >
+                   <i class="bi bi-plus-circle"></i> 
+                    <span class="nav-text">My Loan </span>
+                </a>
+              
+                <a href="{% url 'my_consumablerequests' %}" class="nav-link" >
+                    <i class="bi bi-cart4"></i>
+                    <span class="nav-text">My Consumables</span>
+                </a>
+                 <a href="{% url 'project_finance_application_list' %}" class="nav-link" >
+                    <i class="bi bi-person-plus"></i>
+                    <span class="nav-text">My Project Finance</span>
+                </a> 
+            </div>
+        </div>
+        
+        
+         {% comment %} <div class="nav-item">
+            <a href="{% url 'member_savings' %}" class="nav-link">
+               
+                <i class="bi bi-wallet"></i>
+                <span class="nav-text">My Savings</span>
+            </a>
+        </div>
+         <div class="nav-item">
+            <a href="{% url 'my_loan_requests' %}" class="nav-link">
+                 <i class="bi bi-bank2"></i>
+                <span class="nav-text">Loan</span>
+            </a>
+        </div>
+         <div class="nav-item">
+            <a href="{% url 'my_consumablerequests' %}" class="nav-link">
+                <i class="bi bi-cart4"></i>
+                <span class="nav-text">Consumable</span>
+            </a>
+        </div> {% endcomment %}
+        
         <!-- Users -->
         {% comment %} <div class="nav-item">
             <a href="#users" class="nav-link" data-section="users">

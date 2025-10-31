@@ -23,8 +23,15 @@ urlpatterns = [
 
     path("distribute_dividends/", views.dividend_report, name="distribute_dividends"),
     path("dividendlist/", views.list_dividend_rounds, name="dividend_list"),
-     path('dividend/delete-round/<str:profit_amount>/', views.delete_dividend_round_bulk, name='delete_dividend_round'),
+    path('dividend/delete-round/<str:profit_amount>/', views.delete_dividend_round_bulk, name='delete_dividend_round'),
 
     # path("landing_page/", views.landing_page, name="landing_page"),
    
+   path("popup_form", views.popup_message_form, name="popup_form"),
+   path("active-summary/<int:pk>/", views.not_work_with_member_active_summary, name="not_work_with_member_active_summary"),
+   
+   
+    path('user_activity/', views.user_activity_list, name='user_activity_list'),
+    path('user_activity/delete/<int:pk>/', views.delete_user_activity, name='delete_user_activity'),
+
 ]

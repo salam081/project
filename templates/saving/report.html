@@ -3,11 +3,11 @@
 
 {% block content %}
 
-<div class="container py-4">
+<div class="container ">
     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4">
         <h4 class="text-center text-dark mb-3 mb-md-0">Loan Report</h4>
         <a href="?format=excel{% if start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}"
-           class="btn btn-success flex-shrink-0">
+           class="btn btn-success flex-shrink-0 text-white">
             Download as Excel
         </a>
     </div>
@@ -24,7 +24,7 @@
         <button type="submit" class="btn btn-primary mt-3 mt-md-0 w-100 w-md-auto">
             Apply Filter
         </button>
-        <a href="{% url 'saving_report' %}" class="btn btn-secondary mt-3 mt-md-0 w-100 w-md-auto">Reset Filter</a>
+        <a href="{% url 'saving_report' %}" class="btn btn-secondary mt-3 mt-md-0 w-100 w-md-auto text-white">Reset Filter</a>
     </form>
 
     <div class="text-center text-secondary mb-4">

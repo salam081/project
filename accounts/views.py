@@ -12,7 +12,12 @@ from django.db.models import QuerySet,Q
 from django.db import models
 from django.contrib.auth.models import User
 from .models import *
+from main.models import *
 from django.contrib.auth import get_user_model
+
+from .models import PagePermission
+from accounts.models import UserGroup
+from .constants import AVAILABLE_PAGES
 # Create your views here.
 
 
@@ -377,7 +382,15 @@ def login_view(request):
         if user is not None:
             login(request, user)
             messages.success(request, f'Welcome back {user.username}')
-
+            
+            # ✅ Log user activity after successful login
+            UserActivity.objects.create(
+                user=user,
+                action="User logged in",
+                ip_address=request.META.get("REMOTE_ADDR"),
+                user_agent=request.META.get("HTTP_USER_AGENT", "")
+            )
+            
             if user.group and user.group.title.lower() == 'admin':
                 return redirect('admin_dashboard')
 
@@ -401,7 +414,7 @@ def login_view(request):
         else:
             messages.error(request, 'Invalid username or password')
             return redirect('login')
-
+        
     return render(request, 'accounts/login.html')
 
 
@@ -582,3 +595,7 @@ def add_user_to_group(request, id):
 
     context = {"user": user, "groups": groups}
     return render(request, 'main/search_member.html', context)
+
+
+
+

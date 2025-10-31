@@ -59,7 +59,7 @@
 
                     <div class="col-md-12 col-lg-3 d-flex justify-content-end">
                         <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
-                        <a href="{% url 'admin_consumables_list' %}" class="btn btn-secondary">Clear</a>
+                        <a href="{% url 'admin_consumables_list' %}" class="btn btn-secondary text-white">Clear</a>
                     </div>
                 </form>
             </div>
@@ -151,7 +151,7 @@
                                                     data-request-id="{{ request_obj.id }}"
                                                     data-url="{% url 'admin_request_reject' request_obj.id %}"
                                                     title="Decline">
-                                                <i class="fas fa-times"></i>
+                                                <i class="bi bi-x"></i>
                                             </button>
 
                                         {% elif request_obj.status == 'Approved' %}
@@ -173,7 +173,7 @@
                                                     data-request-id="{{ request_obj.id }}"
                                                     data-balance="{{ request_obj.balance|floatformat:2 }}"
                                                     data-url="{% url 'add_payment' request_obj.id %}">
-                                                <i class="bi bi-currency-dollar"></i>
+                                               <i class="bi bi-bank"></i>
                                             </button>
                                         {% endif %}
                                     </div>

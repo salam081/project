@@ -157,13 +157,16 @@ def member_dashboard(request):
 
     return render(request, 'member/member_dashboard.html', context)
 
+
 @login_required
-@group_required(['members','non staff member'])
 def member_savings(request):
     try:
         member = Member.objects.get(member=request.user)
     except Member.DoesNotExist:
-        return redirect('login')
+        return HttpResponse("Access Denied: You don't have a member profile.")
+
+    # Allow everyone who has a Member record — regardless of group
+    # (Users without Member record are denied above)
 
     # Fetch all savings for this member
     savings = Savings.objects.filter(member=member)
@@ -182,12 +185,45 @@ def member_savings(request):
     total_loanable = net_savings / 2
 
     context = {
+        'member': member,
         'savings': savings,
         'total_savings': total_savings,
         'total_investment': total_investment,
         'total_loanable': total_loanable,
     }
     return render(request, 'member/member_savings.html', context)
+
+# @login_required
+# @group_required(['members','non staff member'])
+# def member_savings(request):
+#     try:
+#         member = Member.objects.get(member=request.user)
+#     except Member.DoesNotExist:
+#         return redirect('login')
+
+#     # Fetch all savings for this member
+#     savings = Savings.objects.filter(member=member)
+
+#     # Total savings BEFORE deductions
+#     total_savings = savings.aggregate(total=Sum('month_saving'))['total'] or 0
+
+#     # Get subscription fee from Interest table if available
+#     subscription_fee = member.interest.amount if hasattr(member, 'interest') and member.interest else 0
+
+#     # Deduct subscription fee only once per month
+#     net_savings = total_savings - subscription_fee
+
+#     # Correctly calculate Investment and Loanable from net savings
+#     total_investment = net_savings / 2
+#     total_loanable = net_savings / 2
+
+#     context = {
+#         'savings': savings,
+#         'total_savings': total_savings,
+#         'total_investment': total_investment,
+#         'total_loanable': total_loanable,
+#     }
+#     return render(request, 'member/member_savings.html', context)
 
 
 def ajax_load_bank_code(request):
@@ -210,7 +246,6 @@ def ajax_load_bank_code(request):
         print(f"Error in ajax_load_bank_code: {e}")  
         return JsonResponse({'code': '', 'id': '', 'error': str(e)})
 
-
 @login_required
 def loan_request_view(request):
     settings = LoanSettings.objects.first()
@@ -220,114 +255,135 @@ def loan_request_view(request):
             "bank_names": BankName.objects.all(),
         })
 
-    member = getattr(request.user, 'member', None)
-    if not member:
-        messages.error(request, "You must be a registered member to request a loan.")
-        return redirect("dashboard")
+    # ✅ Try to get Member profile (optional)
+    member = getattr(request.user, "member", None)
 
     loan_types = LoanType.objects.filter(available=True)
     bank_names = BankName.objects.all()
 
-    loanable_amount = Loanable.objects.filter(member=member).aggregate(
-        total=Sum('amount')
-    )['total'] or Decimal("0.00")
+    # ✅ Handle loanable amount logic
+    if member:
+        loanable_amount = Loanable.objects.filter(member=member).aggregate(
+            total=Sum("amount")
+        )["total"] or Decimal("0.00")
+    else:
+        # Non-members (admin/staff/others) can still make requests
+        loanable_amount = Decimal("0.00")
 
-    if loanable_amount <= 0:
-        messages.error(request, "You don't have any loanable amount yet. Contact admin.")
-        return redirect("member_dashboard")
-
-    # Pre-compute eligible amounts
+    # ✅ Pre-compute eligible amounts for all loan types
     eligible_amounts = {}
     for loan_type in loan_types:
         name_lower = loan_type.name.lower()
-        if 'short term' in name_lower:
-            eligible = loanable_amount / 2
-        elif 'long term' in name_lower:
-            eligible = loanable_amount * 2
+        if member:
+            if "short term" in name_lower:
+                eligible = loanable_amount / 2
+            elif "long term" in name_lower:
+                eligible = loanable_amount * 2
+            else:
+                eligible = loanable_amount
         else:
-            eligible = loanable_amount
+            # Give staff/admins a default cap (you can adjust)
+            eligible = loan_type.max_amount or Decimal("500000.00")
 
         if loan_type.max_amount and eligible > loan_type.max_amount:
             eligible = loan_type.max_amount
 
         eligible_amounts[loan_type.id] = eligible
 
+    #  Handle POST request
     if request.method == "POST":
-        loan_type_id = request.POST.get('loan_type')
-        amount = request.POST.get('amount')
-        loan_term_months = request.POST.get('loan_term_months')
-        file_one = request.FILES.get('file_one')
-        bank_name_id = request.POST.get('bank_name')
-        bank_code_id = request.POST.get('bank_code')
-        account_number = request.POST.get('account_number')
-        guarantor_ippis = request.POST.get('guarantor_ippis')
+        loan_type_id = request.POST.get("loan_type")
+        amount = request.POST.get("amount")
+        loan_term_months = request.POST.get("loan_term_months")
+        file_one = request.FILES.get("file_one")
+        bank_name_id = request.POST.get("bank_name")
+        bank_code_id = request.POST.get("bank_code")
+        account_number = request.POST.get("account_number")
+        guarantor_ippis = request.POST.get("guarantor_ippis")
 
+        # Convert amount
         try:
             amount = Decimal(amount)
         except:
             messages.error(request, "Invalid amount entered.")
-            return redirect('loan_request')
+            return redirect("loan_request")
 
+        # Validate loan type
         try:
             selected_loan_type = LoanType.objects.get(id=loan_type_id)
         except LoanType.DoesNotExist:
             messages.error(request, "Invalid loan type selected.")
-            return redirect('loan_request')
+            return redirect("loan_request")
 
         selected_type_name = selected_loan_type.name.lower()
 
-        # ✅ Active loan restrictions
-        active_loans = LoanRequest.objects.filter(
-            member=member,
-            status__in=['pending', 'approved']
-        ).select_related('loan_type')
+        #  Only apply these restrictions to real members
+        if member:
+            active_loans = LoanRequest.objects.filter(
+                member=member, status__in=["pending", "approved"]
+            ).select_related("loan_type")
 
-        has_active_short = any('short term' in loan.loan_type.name.lower() for loan in active_loans)
-        has_active_long = any('long term' in loan.loan_type.name.lower() for loan in active_loans)
+            has_active_short = any("short term" in l.loan_type.name.lower() for l in active_loans)
+            has_active_long = any("long term" in l.loan_type.name.lower() for l in active_loans)
 
-        if 'short term' in selected_type_name and (has_active_short or has_active_long):
-            messages.error(request, "You cannot request a SHORT TERM loan while you have an active Short or Long Term loan.")
-            return redirect('loan_request')
+            if "short term" in selected_type_name and (has_active_short or has_active_long):
+                messages.error(
+                    request,
+                    "You cannot request a SHORT TERM loan while you have an active Short or Long Term loan."
+                )
+                return redirect("loan_request")
 
-        if 'long term' in selected_type_name and has_active_long:
-            messages.error(request, "You cannot request a LONG TERM loan while you have an active Long Term loan.")
-            return redirect('loan_request')
+            if "long term" in selected_type_name and has_active_long:
+                messages.error(
+                    request,
+                    "You cannot request a LONG TERM loan while you have an active Long Term loan."
+                )
+                return redirect("loan_request")
 
-        # Check loan request fee
-        try:
-            fee = LoanRequestFee.objects.get(
-                member=member,
-                loan_type=selected_loan_type,
-                status="paid"
-            )
-        except LoanRequestFee.DoesNotExist:
-            messages.error(request, f"You must pay the request fee for {selected_loan_type.name} before requesting this loan.")
-            return redirect('loan_request')
-
-        # ✅ Guarantor validation (skip for short term loans)
-        guarantor_member = None
-        if "short term" not in selected_type_name:
+            # Check loan request fee
             try:
-                guarantor_member = Member.objects.get(ippis=guarantor_ippis)
-            except Member.DoesNotExist:
-                messages.error(request, "Guarantor IPPIS is not registered.")
-                return redirect('loan_request')
+                fee = LoanRequestFee.objects.get(
+                    member=member,
+                    loan_type=selected_loan_type,
+                    status="paid",
+                )
+            except LoanRequestFee.DoesNotExist:
+                messages.error(
+                    request,
+                    f"You must pay the request fee for {selected_loan_type.name} before requesting this loan.",
+                )
+                return redirect("loan_request")
 
-            if guarantor_member == member:
-                messages.error(request, "You cannot be your own guarantor.")
-                return redirect('loan_request')
+            #  Guarantor validation (skip for short term)
+            guarantor_member = None
+            if "short term" not in selected_type_name:
+                try:
+                    guarantor_member = Member.objects.get(ippis=guarantor_ippis)
+                except Member.DoesNotExist:
+                    messages.error(request, "Guarantor IPPIS is not registered.")
+                    return redirect("loan_request")
 
-        # Eligible amount check
+                if guarantor_member == member:
+                    messages.error(request, "You cannot be your own guarantor.")
+                    return redirect("loan_request")
+
+        else:
+            # For staff/admins — skip member-only checks
+            fee = None
+            guarantor_member = None
+
+        #  Eligible amount validation
         eligible_amount = eligible_amounts.get(selected_loan_type.id, loanable_amount)
         if amount > eligible_amount:
-            messages.error(request,
-                f"You cannot request more than ₦{eligible_amount:,.2f} for this loan type. "
-                f"Your current total loanable balance is ₦{loanable_amount:,.2f}.")
-            return redirect('loan_request')
+            messages.error(
+                request,
+                f"You cannot request more than ₦{eligible_amount:,.2f} for this loan type.",
+            )
+            return redirect("loan_request")
 
-        # Create the loan request
+        #  Create the loan request
         LoanRequest.objects.create(
-            member=member,
+            member=member,  # May be None for staff/admins
             loan_type=selected_loan_type,
             amount=amount,
             loan_term_months=loan_term_months,
@@ -336,16 +392,18 @@ def loan_request_view(request):
             bank_name_id=bank_name_id,
             bank_code_id=bank_code_id,
             account_number=account_number,
-            guarantor=guarantor_member,  # 👈 None for short term loans
+            guarantor=guarantor_member,
             created_by=request.user,
         )
 
-        fee.status = "used"
-        fee.save()
+        if fee:
+            fee.status = "used"
+            fee.save()
 
         messages.success(request, "Loan request submitted successfully!")
-        return redirect('my_loan_requests')
+        return redirect("my_loan_requests")
 
+    #  Render page
     context = {
         "loan_types": loan_types,
         "bank_names": bank_names,
@@ -355,9 +413,7 @@ def loan_request_view(request):
     }
     return render(request, "member/loan_request.html", context)
 
-
 # @login_required
-# @group_required(['members','non staff member'])
 # def loan_request_view(request):
 #     settings = LoanSettings.objects.first()
 #     if not settings or not settings.allow_loan_requests:
@@ -423,7 +479,10 @@ def loan_request_view(request):
 #         selected_type_name = selected_loan_type.name.lower()
 
 #         # ✅ Active loan restrictions
-#         active_loans = LoanRequest.objects.filter(member=member,status__in=['pending', 'approved']).select_related('loan_type')
+#         active_loans = LoanRequest.objects.filter(
+#             member=member,
+#             status__in=['pending', 'approved']
+#         ).select_related('loan_type')
 
 #         has_active_short = any('short term' in loan.loan_type.name.lower() for loan in active_loans)
 #         has_active_long = any('long term' in loan.loan_type.name.lower() for loan in active_loans)
@@ -436,7 +495,7 @@ def loan_request_view(request):
 #             messages.error(request, "You cannot request a LONG TERM loan while you have an active Long Term loan.")
 #             return redirect('loan_request')
 
-#         # Check loan request fee (must be PAID for this loan type and not used yet)
+#         # Check loan request fee
 #         try:
 #             fee = LoanRequestFee.objects.get(
 #                 member=member,
@@ -444,19 +503,21 @@ def loan_request_view(request):
 #                 status="paid"
 #             )
 #         except LoanRequestFee.DoesNotExist:
-#             messages.error(request, f"You must pay the request  fee for {selected_loan_type.name} before requesting this loan.")
+#             messages.error(request, f"You must pay the request fee for {selected_loan_type.name} before requesting this loan.")
 #             return redirect('loan_request')
 
-#         # Guarantor validation
-#         try:
-#             guarantor_member = Member.objects.get(ippis=guarantor_ippis)
-#         except Member.DoesNotExist:
-#             messages.error(request, "Guarantor IPPIS is not registered.")
-#             return redirect('loan_request')
+#         # ✅ Guarantor validation (skip for short term loans)
+#         guarantor_member = None
+#         if "short term" not in selected_type_name:
+#             try:
+#                 guarantor_member = Member.objects.get(ippis=guarantor_ippis)
+#             except Member.DoesNotExist:
+#                 messages.error(request, "Guarantor IPPIS is not registered.")
+#                 return redirect('loan_request')
 
-#         if guarantor_member == member:
-#             messages.error(request, "You cannot be your own guarantor.")
-#             return redirect('loan_request')
+#             if guarantor_member == member:
+#                 messages.error(request, "You cannot be your own guarantor.")
+#                 return redirect('loan_request')
 
 #         # Eligible amount check
 #         eligible_amount = eligible_amounts.get(selected_loan_type.id, loanable_amount)
@@ -468,11 +529,16 @@ def loan_request_view(request):
 
 #         # Create the loan request
 #         LoanRequest.objects.create(
-#             member=member,loan_type=selected_loan_type,
-#             amount=amount,loan_term_months=loan_term_months,
-#             approved_amount=None,file_one=file_one,
-#             bank_name_id=bank_name_id,bank_code_id=bank_code_id,
-#             account_number=account_number,guarantor=guarantor_member,
+#             member=member,
+#             loan_type=selected_loan_type,
+#             amount=amount,
+#             loan_term_months=loan_term_months,
+#             approved_amount=None,
+#             file_one=file_one,
+#             bank_name_id=bank_name_id,
+#             bank_code_id=bank_code_id,
+#             account_number=account_number,
+#             guarantor=guarantor_member,  # 👈 None for short term loans
 #             created_by=request.user,
 #         )
 
@@ -481,10 +547,17 @@ def loan_request_view(request):
 
 #         messages.success(request, "Loan request submitted successfully!")
 #         return redirect('my_loan_requests')
+
 #     context = {
-#         "loan_types": loan_types,"bank_names": bank_names,"settings": settings,
-#         "loanable": loanable_amount,"eligible_amounts": eligible_amounts,}
-#     return render(request, "member/loan_request.html",context )
+#         "loan_types": loan_types,
+#         "bank_names": bank_names,
+#         "settings": settings,
+#         "loanable": loanable_amount,
+#         "eligible_amounts": eligible_amounts,
+#     }
+#     return render(request, "member/loan_request.html", context)
+
+
 
 
 @login_required
@@ -531,10 +604,9 @@ def confirm_guarantor_approval(request, pk):
 
 
 @login_required
-@group_required(['members','non staff member'])
 def my_loan_requests(request):
     member = request.user.member  
-    loan_requests = LoanRequest.objects.filter(member=member).exclude(status='Rejected').order_by('-date_created')
+    loan_requests = LoanRequest.objects.filter(member=member).order_by('-date_created')
 
     loan_data = []
     for loan in loan_requests:
@@ -569,17 +641,24 @@ def member_loan_request_detail(request, request_id):
 
 # ============ consumable =================
 @login_required
-@group_required(['members','non staff member'])
 def request_consumable(request):
     now = timezone.now()
+
+    # ✅ Try to detect member profile (optional)
+    member = getattr(request.user, "member", None)
 
     if request.method == "POST":
         consumable_type_id = request.POST.get("consumable_type")
         loan_term_months = request.POST.get("loan_term_months")
         payslip_file = request.FILES.get("file_payslpt")
+        passport = request.FILES.get("passport")
         selected_item_ids = request.POST.getlist("selected_items")
+        
+        if ConsumableRequest.objects.filter(user=request.user, status="Pending").exists():
+            messages.warning(request, "You already have a pending consumable request.")
+            return redirect("my_consumablerequests")
 
-        # Validation
+        # ✅ Basic validations
         if not loan_term_months or not loan_term_months.isdigit() or int(loan_term_months) <= 0:
             messages.error(request, "A valid loan term (in months) must be provided.")
             return redirect("request_consumable")
@@ -588,7 +667,7 @@ def request_consumable(request):
             messages.error(request, "You must select at least one item.")
             return redirect("request_consumable")
 
-        # Collect quantities
+        # ✅ Collect item quantities
         item_details = {}
         for item_id in selected_item_ids:
             try:
@@ -606,17 +685,19 @@ def request_consumable(request):
                 consumable_type_obj = get_object_or_404(ConsumableType, id=consumable_type_id)
                 loan_term_months = int(loan_term_months)
 
-                # Create request
+                # ✅ Create the consumable request object
                 consumable_request = ConsumableRequest(
                     consumable_type=consumable_type_obj,
                     file_payslpt=payslip_file,
+                    passport=passport,
                     status="Pending",
                 )
 
-                if request.user.is_authenticated:
-                    # Member flow: enforce form fee check
+                # ✅ If the user has a Member profile (member logic)
+                if member:
+                    # Check if form fee has been paid for this month/type
                     has_paid = ConsumableFormFee.objects.filter(
-                        member=request.user.member,
+                        member=member,
                         consumable_type=consumable_type_obj,
                         created_at__year=now.year,
                         created_at__month=now.month,
@@ -624,38 +705,39 @@ def request_consumable(request):
                     ).first()
 
                     if not has_paid:
-                        messages.error(request, f"Please pay the form fee for {consumable_type_obj.name} before applying.")
+                        messages.error(
+                            request,
+                            f"Please pay the form fee for {consumable_type_obj.name} before applying."
+                        )
                         return redirect("member_dashboard")
 
                     consumable_request.user = request.user
+                    consumable_request.member = member
 
-                    # mark fee used
+                    # Mark fee as used
                     has_paid.status = "used"
                     has_paid.save()
 
                 else:
-                    # Guest flow: collect guest fields
-                    guest_name = request.POST.get("guest_name")
-                    guest_phone = request.POST.get("guest_phone")
-                    guest_ippis = request.POST.get("guest_ippis")
-
-                    if not guest_name or not guest_phone or not guest_ippis:
-                        messages.error(request, "Guest details (name, phone, IPPIS) are required.")
-                        return redirect("request_consumable")
-
-                    consumable_request.guest_name = guest_name
-                    consumable_request.guest_phone = guest_phone
-                    consumable_request.guest_ippis = guest_ippis
+                    # ✅ Staff/Admin/Other user (non-member)
+                    consumable_request.user = request.user
+                    # Optional: auto-approve their requests
+                    # consumable_request.status = "Approved"
 
                 consumable_request.save()
 
-                # Process items
+                # ✅ Process requested items
                 for item_id, details in item_details.items():
-                    selling_item = get_object_or_404(SellingPlan.objects.select_related("purchased_item"), id=item_id)
+                    selling_item = get_object_or_404(
+                        SellingPlan.objects.select_related("purchased_item"), id=item_id
+                    )
                     quantity = details["quantity"]
 
                     if quantity > selling_item.quantity:
-                        messages.error(request, f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}.")
+                        messages.error(
+                            request,
+                            f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}."
+                        )
                         raise ValueError("Insufficient stock.")
 
                     ConsumableRequestDetail.objects.create(
@@ -666,28 +748,145 @@ def request_consumable(request):
                         loan_term_months=loan_term_months,
                     )
 
-                    # reduce stock
+                    # Reduce stock
                     selling_item.quantity -= quantity
                     selling_item.save(update_fields=["quantity"])
 
                 messages.success(request, "Your consumable request has been submitted successfully!")
-                return redirect("my_consumablerequests" if request.user.is_authenticated else "request_consumable")
+                return redirect("my_consumablerequests" if member else "request_consumable")
 
             except Exception as e:
                 messages.error(request, f"An unexpected error occurred: {e}")
                 return redirect("request_consumable")
 
-    # GET
+    #  GET request
     selling_plans = SellingPlan.objects.filter(quantity__gt=0)
     consumable_types = ConsumableType.objects.filter(available=True)
 
-    return render(request, "member/request_consumable.html", { "consumable_types": consumable_types, "selling_plans": selling_plans,})
+    context = {
+        "consumable_types": consumable_types,
+        "selling_plans": selling_plans,
+    }
+    return render(request, "member/request_consumable.html", context)
+
+# @login_required
+# def request_consumable(request):
+#     now = timezone.now()
+
+#     if request.method == "POST":
+#         consumable_type_id = request.POST.get("consumable_type")
+#         loan_term_months = request.POST.get("loan_term_months")
+#         payslip_file = request.FILES.get("file_payslpt")
+#         selected_item_ids = request.POST.getlist("selected_items")
+
+#         # Validation
+#         if not loan_term_months or not loan_term_months.isdigit() or int(loan_term_months) <= 0:
+#             messages.error(request, "A valid loan term (in months) must be provided.")
+#             return redirect("request_consumable")
+
+#         if not selected_item_ids:
+#             messages.error(request, "You must select at least one item.")
+#             return redirect("request_consumable")
+
+#         # Collect quantities
+#         item_details = {}
+#         for item_id in selected_item_ids:
+#             try:
+#                 quantity = int(request.POST.get(f"quantity_{item_id}", 0))
+#                 if quantity <= 0:
+#                     raise ValueError("Quantity must be positive.")
+#                 item_details[item_id] = {"quantity": quantity}
+#             except (ValueError, TypeError):
+#                 messages.error(request, f"Invalid quantity for item ID {item_id}.")
+#                 return redirect("request_consumable")
+
+#         with transaction.atomic():
+#             try:
+#                 # Get consumable type
+#                 consumable_type_obj = get_object_or_404(ConsumableType, id=consumable_type_id)
+#                 loan_term_months = int(loan_term_months)
+
+#                 # Create request
+#                 consumable_request = ConsumableRequest(
+#                     consumable_type=consumable_type_obj,
+#                     file_payslpt=payslip_file,
+#                     status="Pending",
+#                 )
+
+#                 if request.user.is_authenticated:
+#                     # Member flow: enforce form fee check
+#                     has_paid = ConsumableFormFee.objects.filter(
+#                         member=request.user.member,
+#                         consumable_type=consumable_type_obj,
+#                         created_at__year=now.year,
+#                         created_at__month=now.month,
+#                         status="paid",
+#                     ).first()
+
+#                     if not has_paid:
+#                         messages.error(request, f"Please pay the form fee for {consumable_type_obj.name} before applying.")
+#                         return redirect("member_dashboard")
+
+#                     consumable_request.user = request.user
+
+#                     # mark fee used
+#                     has_paid.status = "used"
+#                     has_paid.save()
+
+#                 else:
+#                     # Guest flow: collect guest fields
+#                     guest_name = request.POST.get("guest_name")
+#                     guest_phone = request.POST.get("guest_phone")
+#                     guest_ippis = request.POST.get("guest_ippis")
+
+#                     if not guest_name or not guest_phone or not guest_ippis:
+#                         messages.error(request, "Guest details (name, phone, IPPIS) are required.")
+#                         return redirect("request_consumable")
+
+#                     consumable_request.guest_name = guest_name
+#                     consumable_request.guest_phone = guest_phone
+#                     consumable_request.guest_ippis = guest_ippis
+
+#                 consumable_request.save()
+
+#                 # Process items
+#                 for item_id, details in item_details.items():
+#                     selling_item = get_object_or_404(SellingPlan.objects.select_related("purchased_item"), id=item_id)
+#                     quantity = details["quantity"]
+
+#                     if quantity > selling_item.quantity:
+#                         messages.error(request, f"Only {selling_item.quantity} units available for {selling_item.purchased_item.item_name}.")
+#                         raise ValueError("Insufficient stock.")
+
+#                     ConsumableRequestDetail.objects.create(
+#                         request=consumable_request,
+#                         selling_item=selling_item,
+#                         quantity=quantity,
+#                         item_price=selling_item.selling_price_per_unit,
+#                         loan_term_months=loan_term_months,
+#                     )
+
+#                     # reduce stock
+#                     selling_item.quantity -= quantity
+#                     selling_item.save(update_fields=["quantity"])
+
+#                 messages.success(request, "Your consumable request has been submitted successfully!")
+#                 return redirect("my_consumablerequests" if request.user.is_authenticated else "request_consumable")
+
+#             except Exception as e:
+#                 messages.error(request, f"An unexpected error occurred: {e}")
+#                 return redirect("request_consumable")
+
+#     # GET
+#     selling_plans = SellingPlan.objects.filter(quantity__gt=0)
+#     consumable_types = ConsumableType.objects.filter(available=True)
+
+#     return render(request, "member/request_consumable.html", { "consumable_types": consumable_types, "selling_plans": selling_plans,})
 
 
 
 
 @login_required
-@group_required(['members','non staff member'])
 def my_consumable_requests(request):
     user = request.user
 
@@ -810,7 +1009,6 @@ def member_withdrawal_request(request):
 #==============project_finance_application===================
 
 @login_required
-@group_required(['members','non staff member'])
 def project_finance_application(request):
     if request.method == "POST":
        application_letter = request.POST.get("application_letter")
@@ -829,7 +1027,6 @@ def project_finance_application(request):
     return render(request, 'member/project_finance_application_form.html',)
 
 @login_required
-@group_required(['members','non staff member'])
 def project_finance_application_list(request):
     member = request.user.member  
     applications = ProjectFinanceApplication.objects.filter(member=member).prefetch_related('requests').order_by("-created_at")
@@ -854,7 +1051,6 @@ def project_finance_application_list(request):
 
 
 @login_required
-@group_required(['members','non staff member'])
 def update_project_finance_application(request,id):
     application = ProjectFinanceApplication.objects.get(id=id, member=request.user.member)
     if request.method == 'POST':
@@ -871,7 +1067,6 @@ def update_project_finance_application(request,id):
 
 
 @login_required
-@group_required(['members','non staff member'])
 def create_project_finance_request(request, id):
     application = get_object_or_404(ProjectFinanceApplication, pk=id, member=request.user.member)
 
@@ -908,7 +1103,6 @@ def create_project_finance_request(request, id):
     return render(request, 'member/create_project_finance_request.html', context)
 
 @login_required
-@group_required(['members','non staff member'])
 def approve_guarantor_request(request, id):
     if request.method == 'POST':
         project_request = get_object_or_404( ProjectFinanceRequest,  pk=id, guarantor=request.user.member,guarantor_status='Pending')

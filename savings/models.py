@@ -70,3 +70,17 @@ class InterestAmount(models.Model):
 
     def __str__(self):
         return f"{self.amount}"
+    
+class DeleteLog(models.Model):
+    ACTION_CHOICES = [('monthly_savings_delete', 'Monthly Savings Delete'),]
+
+    user = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=100, choices=ACTION_CHOICES)
+    month = models.DateField()
+    records_deleted = models.PositiveIntegerField(default=0)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    remarks = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        user_name = f"{self.user.first_name} {self.user.last_name}" if self.user else "Unknown User"
+        return f"{user_name} deleted {self.records_deleted} records for {self.month.strftime('%B %Y')}"

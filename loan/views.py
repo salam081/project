@@ -655,6 +655,8 @@ def add_payment(request):
         month = request.POST.get("repayment_date")
         request_id = request.POST.get("loan_request")
         comment = request.POST.get("comment")
+        loan_receipt = request.FILES.get("loan_receipt")
+
 
         # Validate required fields
         if not (ippis and amount_paid and month and request_id):
@@ -702,7 +704,7 @@ def add_payment(request):
         with transaction.atomic():
             LoanRepayback.objects.create(
                 loan_request=loan_request,amount_paid=amount_paid,
-                repayment_date=month_date,comment=comment,
+                repayment_date=month_date,comment=comment,loan_receipt=loan_receipt,
                 balance_remaining=remaining_balance - amount_paid,
                 created_by=request.user)
 

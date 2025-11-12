@@ -1,0 +1,55 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card border-danger">
+          <div class="card-header bg-danger text-white">
+            <h6><i class="bi bi-x-circle"></i> Decline Withdrawal Request</h6>
+          </div>
+          <div class="card-body">
+            <h6>Withdrawal Details:</h6>
+            <table class="table table-bordered">
+              <tr>
+                <th>Member:</th>
+                <td>
+                  <strong>{{ withdrawal.member }}</strong>
+                </td>
+              </tr>
+              <tr>
+                <th>Amount:</th>
+                <td>
+                  <strong>₦{{ withdrawal.amount_requested|floatformat:2 }}</strong>
+                </td>
+              </tr>
+              <tr>
+                <th>Date Requested:</th>
+                <td>{{ withdrawal.date_requested|date:'M d, Y h:i A' }}</td>
+              </tr>
+              <tr>
+                <th>Reason:</th>
+                <td>{{ withdrawal.reason|default:'No reason provided' }}</td>
+              </tr>
+            </table>
+
+            <form method="post">
+              {% csrf_token %}
+
+              <div class="mb-3">
+                <label for="reason" class="form-label">Reason for Declining <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Explain why this request is being declined..." required></textarea>
+                <small class="text-muted">This reason will be shown to the member.</small>
+              </div>
+
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-danger btn-lg"><i class="bi bi-x-circle"></i> Confirm Decline</button>
+                <a href="{% url 'partial_withdrawals_list' %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Cancel</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

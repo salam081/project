@@ -290,6 +290,7 @@
                                     <i class="bi bi-circle me-2"></i>{{ loan_request.get_status_display }}
                                 </span>
                             </div>
+                            {% if user.is_authenticated and user.group.title == 'admin' %}
                             <div class="col-md-3 mb-3 text-end">
                                 <div class="dropdown">
                                     <button class="btn btn-outline-primary dropdown-toggle btn-action" type="button" data-bs-toggle="dropdown">
@@ -315,6 +316,7 @@
                                     </ul>
                                 </div>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

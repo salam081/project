@@ -5,6 +5,7 @@ from .models import *
 # Register your models here.
 admin.site.register(FinancialSummary)
 admin.site.register(Withdrawal)
+admin.site.register(PartialWithdrawal)
 admin.site.register(Dividend)
 
 

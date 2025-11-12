@@ -1,7 +1,11 @@
 import calendar
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum,Min, Max, Count, Q, Avg , F, Case, When ,ExpressionWrapper, DecimalField
+from django.utils.dateparse import parse_date
+from django.contrib.auth import get_user_model
+from openpyxl.utils import get_column_letter
+
+from django.db.models import Sum,Min, Max, Count, Count, Q, Avg , Min, Max, F, Case, When ,ExpressionWrapper, DecimalField, ExpressionWrapper
 from django.db.models.functions import Coalesce
 from django.db.models.functions import TruncMonth, TruncYear,TruncWeek
 from django.http import JsonResponse, HttpResponse
@@ -16,18 +20,29 @@ from django.contrib import messages
 import json
 from django.utils import timezone
 from datetime import datetime, time
-from django.utils.dateparse import parse_date
 import logging
 from consumable.models import *
 from accounts.models import User
 import csv
+from openpyxl import Workbook
+from django.http import HttpResponse
 from loan.models import *
 from savings.models import *
 from main.models import *
 from PurchasedItems.models import *
 from member.models import *
 from projectfinance.models import *
-from django.contrib.auth import get_user_model
+from django.db.models.functions import Coalesce, ExtractYear
+from django.core.paginator import Paginator
+import logging
+from datetime import datetime
+from django.db.models import Q, Sum, F, DecimalField, ExpressionWrapper
+from django.db.models.functions import Coalesce
+import logging
+from openpyxl import Workbook
+from datetime import datetime, timedelta
+from django.db.models.functions import TruncMonth, TruncWeek
+
 
 User = get_user_model()
 # from accounts.decorator import group_required
@@ -226,6 +241,9 @@ def admin_loan_reports(request):
     }
     return render(request, 'reports/reports.html', context)
 
+
+
+@login_required
 def loan_request_report(request):
     # Initialize query set with all loan requests
     loan_requests = LoanRequest.objects.all().order_by('-date_created')
@@ -236,7 +254,7 @@ def loan_request_report(request):
         'date_from': request.GET.get('date_from'),
         'date_to': request.GET.get('date_to'),
         'month': request.GET.get('month'),
-        'loan_type': request.GET.get('loan_type'), 
+        'loan_type': request.GET.get('loan_type'),
     }
 
     # Apply filters
@@ -257,13 +275,12 @@ def loan_request_report(request):
                 application_date__month=month
             )
         except ValueError:
-            # Handle invalid month format if necessary
             pass
 
-    # Apply loan_type filter
-    if filters['loan_type']: # If a loan type is selected
+    if filters['loan_type']:
         loan_requests = loan_requests.filter(loan_type__name=filters['loan_type'])
 
+    # Add computed fields
     loan_requests = loan_requests.annotate(
         total_paid=Coalesce(Sum('repaybacks__amount_paid'), 0, output_field=DecimalField()),
         balance_value=ExpressionWrapper(
@@ -273,10 +290,8 @@ def loan_request_report(request):
         total_price=Coalesce(F('approved_amount'), F('amount'), output_field=DecimalField())
     )
 
-    # Compute summary with fresh queries
+    # Compute summary
     base_qs = LoanRequest.objects.all()
-
-    # Apply same filters as above before summary
     if filters['status'] and filters['status'] != 'all':
         base_qs = base_qs.filter(status=filters['status'])
     if filters['date_from']:
@@ -292,7 +307,6 @@ def loan_request_report(request):
     if filters['loan_type']:
         base_qs = base_qs.filter(loan_type__name=filters['loan_type'])
 
-        # Compute totals
     total_value = base_qs.aggregate(
         total=Coalesce(Sum('approved_amount'), 0, output_field=DecimalField())
     )['total']
@@ -307,38 +321,73 @@ def loan_request_report(request):
         'total_requests': base_qs.count(),
         'total_value': total_value,
         'total_paid': total_paid,
-        'total_balance': total_value - total_paid,   # ✅ compute balance safely
+        'total_balance': total_value - total_paid,
         'pending_count': base_qs.filter(status='pending').count(),
         'approved_count': base_qs.filter(status='approved').count(),
         'paid_count': base_qs.filter(status='Fullpaid').count(),
         'declined_count': base_qs.filter(status='rejected').count(),
     }
 
-    # Determine status choices for the filter dropdown
-    status_choices = [('all', 'All Statuses')] + list(LoanRequest.status.field.choices)
+    # ✅ Excel export logic
+    if request.GET.get('download') == 'excel':
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Loan Requests Report"
 
-    # Get unique months from existing loan requests for the "Filter by Month" dropdown
-    distinct_application_dates = LoanRequest.objects.dates('application_date', 'month', order='DESC')
-    months = [d for d in distinct_application_dates]
+        # Header row
+        headers = [
+            "ID", "Member", "Loan Type", "Status", "Application Date",
+            "Approved Amount", "Total Paid", "Balance", "Created By"
+        ]
+        ws.append(headers)
 
-    loan_types_qs = LoanType.objects.all().order_by("name")
+        # Data rows
+        for loan in loan_requests:
+            ws.append([
+                loan.id,
+                f"{loan.member.member.first_name} {loan.member.member.last_name}" if loan.member and loan.member.member else "",
+                loan.loan_type.name if loan.loan_type else "",
+                loan.status,
+                loan.application_date.strftime("%Y-%m-%d") if loan.application_date else "",
+                float(loan.approved_amount or 0),
+                float(loan.total_paid or 0),
+                float(loan.balance_value or 0),
+                loan.created_by.username if loan.created_by else "",
+            ])
 
-    # Pagination
+        # Auto-adjust column width
+        for i, col in enumerate(ws.columns, start=1):
+            max_length = max(len(str(cell.value)) if cell.value else 0 for cell in col)
+            ws.column_dimensions[get_column_letter(i)].width = max(15, max_length + 2)
+
+        # Prepare response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = "loan_request_report.xlsx"
+        response['Content-Disposition'] = f'attachment; filename={filename}'
+        wb.save(response)
+        return response
+
+    # Pagination (for normal page view)
     page_number = request.GET.get('page')
-    paginator = Paginator(loan_requests, 100) 
+    paginator = Paginator(loan_requests, 100)
     page_obj = paginator.get_page(page_number)
 
+    status_choices = [('all', 'All Statuses')] + list(LoanRequest.status.field.choices)
+    months = [d for d in LoanRequest.objects.dates('application_date', 'month', order='DESC')]
+    loan_types_qs = LoanType.objects.all().order_by("name")
+
     context = {
-        # 'requests': requests,
         'requests': page_obj,
         'summary': summary,
         'filters': filters,
         'status_choices': status_choices,
         'months': months,
-        'loan_types': loan_types_qs, 
+        'loan_types': loan_types_qs,
     }
-    return render(request, 'reports/loan_request_report.html', context)
 
+    return render(request, 'reports/loan_request_report.html', context)
 
 @login_required
 def filtered_loan_repayments(request):
@@ -433,88 +482,9 @@ def filtered_loan_repayments(request):
     
     return render(request, "reports/filtered_loan_repayments.html", context)
 
-# @login_required
-# def filtered_loan_repayments(request):
-#     # ---- Filter options ----
-#     years = (
-#         LoanRequest.objects.annotate(year=ExtractYear("application_date"))
-#         .values_list("year", flat=True)
-#         .distinct()
-#         .order_by("-year")
-#     )
-
-#     loan_types = (
-#         LoanRequest.objects.values_list("loan_type__name", flat=True)
-#         .distinct()
-#         .order_by("loan_type__name")
-#     )
-
-#     selected_year = request.GET.get("year")
-#     selected_type = request.GET.get("loan_type")
-
-#     filters = Q()
-#     if selected_year:
-#         filters &= Q(loan_request__application_date__year=selected_year)
-#     if selected_type:
-#         filters &= Q(loan_request__loan_type__name=selected_type)
-
-#     # ---- Repayments queryset ----
-#     repayments = (
-#         LoanRepayback.objects.filter(filters)
-#         .select_related("loan_request__member", "loan_request__loan_type")
-#         .order_by("loan_request_id", "repayment_date")
-#     )
-
-#     # ---- Totals ----
-#     total_sum_paid = repayments.aggregate(
-#         total=Coalesce(Sum("amount_paid"), Decimal("0.00"), output_field=DecimalField())
-#     )["total"]
-
-#     # ---- Enriched repayments with running totals ----
-#     enriched_repayments = []
-#     loan_running_totals = {}  # per-loan cumulative tracker
-#     total_sum_remaining = Decimal("0.00")
-
-    
-#     for repay in repayments:
-#         loan_id = repay.loan_request
-
-#         # Running total for this loan
-#         prev_total = loan_running_totals.get(loan_id, Decimal("0.00"))
-#         running_total = prev_total + (repay.amount_paid or Decimal("0.00"))
-#         loan_running_totals[loan_id] = running_total
-
-#         # Use the stored balance_remaining from the model
-#         balance = repay.balance_remaining or Decimal("0.00")
-#         total_sum_remaining += balance
-
-#         enriched_repayments.append({
-#             "repayment": repay,
-#             "amount_paid": repay.amount_paid,
-#             "total_paid": running_total,
-#             "balance_remaining": balance,
-#         })
-
-#     # ---- Pagination ----
-#     paginator = Paginator(enriched_repayments, 100)
-#     page_number = request.GET.get("page")
-#     page_obj = paginator.get_page(page_number)
-
-#     # ---- Context ----
-#     context = {
-#         "page_obj": page_obj,
-#         "years": years,
-#         "loan_types": loan_types,
-#         "selected_year": selected_year,
-#         "selected_type": selected_type,
-#         "total_sum_paid": total_sum_paid,
-#         "total_sum_remaining": total_sum_remaining,
-#     }
-#     return render(request, "reports/filtered_loan_repayments.html", context)
 
 
-
-
+from openpyxl.utils import get_column_letter
 @login_required
 def request_status_report(request):
     # --- 1. Get filters ---
@@ -524,9 +494,10 @@ def request_status_report(request):
     user_filter = request.GET.get('user')
     consumable_type_filter = request.GET.get('consumable_type')
 
-    # --- 2. Base queryset with optimized prefetch ---
+    # --- 2. Base queryset ---
     queryset = ConsumableRequest.objects.select_related(
-        'user', 'approved_by', 'consumable_type').prefetch_related('details__selling_item', 'repayments')
+        'user', 'approved_by', 'consumable_type'
+    ).prefetch_related('details__selling_item', 'repayments')
 
     # --- 3. Apply filters ---
     if status_filter != 'all':
@@ -560,15 +531,14 @@ def request_status_report(request):
         except (ValueError, TypeError):
             pass
 
-    # --- 4. Order queryset ---
     queryset = queryset.order_by('-date_created')
 
-    # --- 5. Build list with calculations ---
+    # --- 4. Build list with calculations ---
     requests_with_calculations = []
     for req in queryset:
         total_price = Decimal(req.calculate_total_price() or 0)
-        total_paid = Decimal(req.total_paid() or 0)
-        balance = Decimal(req.balance() or 0)
+        total_paid = Decimal(req.total_paid or 0)
+        balance = Decimal(req.balance or 0)
         items_count = req.details.count()
 
         requests_with_calculations.append({
@@ -584,16 +554,16 @@ def request_status_report(request):
             'consumable_type': req.consumable_type,
         })
 
-    # --- 6. Summary statistics ---
+    # --- 5. Summary statistics ---
     total_requests = len(requests_with_calculations)
-    pending_count = sum(1 for req in requests_with_calculations if req['status'] == 'Pending')
-    approved_count = sum(1 for req in requests_with_calculations if req['status'] == 'Approved')
-    itempicked_count = sum(1 for req in requests_with_calculations if req['status'] == 'Itempicked')
-    paid_count = sum(1 for req in requests_with_calculations if req['status'] == 'FullyPaid')
-    declined_count = sum(1 for req in requests_with_calculations if req['status'] == 'Declined')
+    pending_count = sum(1 for r in requests_with_calculations if r['status'] == 'Pending')
+    approved_count = sum(1 for r in requests_with_calculations if r['status'] == 'Approved')
+    itempicked_count = sum(1 for r in requests_with_calculations if r['status'] == 'Itempicked')
+    paid_count = sum(1 for r in requests_with_calculations if r['status'] == 'FullyPaid')
+    declined_count = sum(1 for r in requests_with_calculations if r['status'] == 'Declined')
 
-    total_value = sum(req['total_price'] for req in requests_with_calculations)
-    total_paid_sum = sum(req['total_paid'] for req in requests_with_calculations)
+    total_value = sum(r['total_price'] for r in requests_with_calculations)
+    total_paid_sum = sum(r['total_paid'] for r in requests_with_calculations)
     total_balance = total_value - total_paid_sum
 
     summary = {
@@ -608,17 +578,67 @@ def request_status_report(request):
         'total_balance': total_balance,
     }
 
+    # --- ✅ Excel Export ---
+    if request.GET.get("download") == "excel":
+        wb = Workbook()
+
+        # Sheet 1: Consumable Requests
+        ws1 = wb.active
+        ws1.title = "Consumable Requests"
+        ws1.append([
+            "ID", "User", "Date Created", "Status", "Consumable Type",
+            "Total Price", "Total Paid", "Balance", "Items Count", "Approved By"
+        ])
+
+        for item in requests_with_calculations:
+            ws1.append([
+                item['id'],
+                item['user'].get_full_name() if item['user'] else "N/A",
+                item['date_created'].strftime("%Y-%m-%d %H:%M"),
+                item['status'],
+                item['consumable_type'].name if item['consumable_type'] else "N/A",
+                float(item['total_price']),
+                float(item['total_paid']),
+                float(item['balance']),
+                item['items_count'],
+                item['approved_by'].get_full_name() if item['approved_by'] else "N/A",
+            ])
+
+        for col in ws1.columns:
+            max_length = max(len(str(c.value)) for c in col if c.value)
+            ws1.column_dimensions[get_column_letter(col[0].column)].width = max_length + 2
+
+        # Sheet 2: Summary
+        ws2 = wb.create_sheet(title="Summary Report")
+        ws2.append(["Metric", "Value"])
+        ws2.append(["Total Requests", total_requests])
+        ws2.append(["Pending", pending_count])
+        ws2.append(["Approved", approved_count])
+        ws2.append(["Item Picked", itempicked_count])
+        ws2.append(["Fully Paid", paid_count])
+        ws2.append(["Declined", declined_count])
+        ws2.append(["Total Value", float(total_value)])
+        ws2.append(["Total Paid", float(total_paid_sum)])
+        ws2.append(["Total Balance", float(total_balance)])
+
+        for col in ws2.columns:
+            max_length = max(len(str(c.value)) for c in col if c.value)
+            ws2.column_dimensions[get_column_letter(col[0].column)].width = max_length + 4
+
+        # Send file
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="request_status_report.xlsx"'
+        wb.save(response)
+        return response
+
+    # --- 6. Paginate and render ---
     consumable_types = ConsumableType.objects.filter(available=True).order_by('name')
-    users_with_requests = User.objects.filter(
-        consumablerequest__isnull=False
-    ).distinct().order_by('username')
-
-    # --- 8. Paginate ---
+    users_with_requests = User.objects.filter(consumablerequest__isnull=False).distinct().order_by('username')
     paginator = Paginator(requests_with_calculations, 25)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = paginator.get_page(request.GET.get('page'))
 
-    # --- 9. Context ---
     context = {
         'requests': page_obj,
         'summary': summary,
@@ -646,7 +666,6 @@ def request_status_report(request):
 
 
 
-
 @login_required
 def payment_analysis_report(request):
     """Detailed payment analysis and trends with enhanced filtering and performance"""
@@ -656,6 +675,7 @@ def payment_analysis_report(request):
     date_to = request.GET.get('date_to')
     user_id = request.GET.get('user_id')
     status_filter = request.GET.get('status', 'all')
+    download = request.GET.get('download')
 
     parsed_date_from = None
     parsed_date_to = None
@@ -705,7 +725,7 @@ def payment_analysis_report(request):
         avg_payment=Avg('amount_paid')
     ).order_by('month')
 
-    # 5. --- WEEKLY PAYMENTS (last 90 days) ---
+    # 5. --- WEEKLY PAYMENTS ---
     three_months_ago = timezone.now().date() - timedelta(days=90)
     weekly_payments = queryset.filter(
         repayment_date__gte=three_months_ago
@@ -721,7 +741,6 @@ def payment_analysis_report(request):
     if status_filter != 'all':
         outstanding_filter &= Q(status=status_filter)
 
-    # Use updated selling_item pricing instead of item_price
     outstanding_data = ConsumableRequest.objects.filter(outstanding_filter).annotate(
         total_price=Sum(F('details__quantity') * F('details__selling_item')),
         total_paid=Sum('repayments__amount_paid'),
@@ -733,11 +752,9 @@ def payment_analysis_report(request):
 
     total_outstanding = outstanding_data.aggregate(total=Sum('balance'))['total'] or 0
 
-    # 7. --- CALCULATE URGENCY + PERCENTAGES ---
     outstanding_data_with_urgency = []
     for req in outstanding_data:
         days_outstanding = (timezone.now().date() - req.date_created.date()).days
-
         if days_outstanding > 90:
             urgency = 'critical'
         elif days_outstanding > 60:
@@ -748,7 +765,6 @@ def payment_analysis_report(request):
             urgency = 'low'
 
         payment_percentage = (req.total_paid / req.total_price * 100) if req.total_price else 0
-
         outstanding_data_with_urgency.append({
             'request': req,
             'total_price': req.total_price or Decimal(0),
@@ -759,7 +775,6 @@ def payment_analysis_report(request):
             'payment_percentage': round(payment_percentage, 2),
         })
 
-    # 8. --- OUTSTANDING SUMMARY ---
     outstanding_summary = {
         'critical': sum(1 for x in outstanding_data_with_urgency if x['urgency'] == 'critical'),
         'high': sum(1 for x in outstanding_data_with_urgency if x['urgency'] == 'high'),
@@ -767,7 +782,6 @@ def payment_analysis_report(request):
         'low': sum(1 for x in outstanding_data_with_urgency if x['urgency'] == 'low'),
     }
 
-    # 9. --- TOP PAYING USERS ---
     top_users = queryset.values(
         'consumable_request__user__username',
         'consumable_request__user__first_name',
@@ -777,18 +791,99 @@ def payment_analysis_report(request):
         payment_count=Count('id')
     ).order_by('-total_paid')[:10]
 
-    # 10. --- RECENT PAYMENTS (last 30 days) ---
     recent_payments = queryset.filter(
         repayment_date__gte=timezone.now().date() - timedelta(days=30)
     ).select_related('consumable_request__user').order_by('-repayment_date')[:10]
 
-    # 11. --- FILTERS FOR FRONTEND ---
     month_list = ConsumableRequest.objects.dates('date_created', 'month', order='DESC')
     users_list = ConsumableRequest.objects.select_related('user').values(
         'user__id', 'user__username', 'user__first_name', 'user__last_name'
     ).distinct().order_by('user__username')
 
-    # 12. --- CONTEXT ---
+    # ✅ --- 13. HANDLE EXCEL DOWNLOAD ---
+    if request.GET.get("download") == "excel":
+        from openpyxl import Workbook
+        from openpyxl.utils import get_column_letter
+        from django.http import HttpResponse
+
+        wb = Workbook()
+
+        # ======== Sheet 1: Monthly Trends ========
+        ws1 = wb.active
+        ws1.title = "Monthly Trends"
+
+        ws1.append(["Month", "Total Paid", "Payments Count"])
+        for item in monthly_payments:
+            ws1.append([
+                item["month"].strftime("%B %Y"),
+                float(item["total_paid"]),
+                item["payment_count"],
+            ])
+
+        # Auto-adjust column widths
+        for column_cells in ws1.columns:
+            length = max(len(str(cell.value)) if cell.value else 0 for cell in column_cells)
+            ws1.column_dimensions[get_column_letter(column_cells[0].column)].width = length + 2
+
+        # ======== Sheet 2: Outstanding Payments ========
+        ws2 = wb.create_sheet(title="Outstanding Payments")
+
+        ws2.append(["ID", "Member", "Date Created", "Total Price", "Total Paid", "Balance"])
+
+        for item in outstanding_data:
+            member_name = (
+                item.request.user.get_full_name()
+                if getattr(item.request, "user", None)
+                else f"{item.guest_name} ({item.guest_ippiss})"
+            )
+            ws2.append([
+                f"#{item.request.id}",
+                member_name,
+                item.request.date_created.strftime("%Y-%m-%d"),
+                float(item.total_price),
+                float(item.total_paid),
+                float(item.balance),
+            ])
+
+        # Auto-adjust column widths
+        for column_cells in ws2.columns:
+            length = max(len(str(cell.value)) if cell.value else 0 for cell in column_cells)
+            ws2.column_dimensions[get_column_letter(column_cells[0].column)].width = length + 2
+
+        # ======== Send Excel file ========
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="payment_analysis.xlsx"'
+        wb.save(response)
+        return response
+
+
+
+        # Data Rows
+        for item in outstanding_data_with_urgency:
+            ws.append([
+                item['request'].id,
+                item['request'].user.get_full_name() if item['request'].user else "N/A",
+                item['request'].date_created.strftime("%Y-%m-%d"),
+                float(item['total_price']),
+                float(item['total_paid']),
+                float(item['balance']),
+                item['urgency'].capitalize(),
+                item['days_outstanding']
+            ])
+
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = max(len(str(cell.value or "")) for cell in column)
+            ws.column_dimensions[column[0].column_letter].width = max_length + 3
+
+        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response['Content-Disposition'] = 'attachment; filename="payment_analysis_report.xlsx"'
+        wb.save(response)
+        return response
+
+    # --- CONTEXT ---
     context = {
         'payment_stats': payment_stats,
         'monthly_payments': list(monthly_payments),
@@ -912,9 +1007,6 @@ def item_popularity_report(request):
     }
     
     return render(request, 'reports/item_popularity_report.html', context)
-
-
-
 
 
 @login_required
@@ -1105,28 +1197,9 @@ def report_api_data(request):
 
 
 # views.py - Fixed version (no model changes)
-import logging
-from datetime import datetime
-from decimal import Decimal
-from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Sum, F, DecimalField, ExpressionWrapper
-from django.db.models.functions import Coalesce
-from django.shortcuts import render
-
-
-import logging
-from decimal import Decimal
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Sum, F
-from datetime import datetime
-from django.utils.dateparse import parse_date
-
 
 
 logger = logging.getLogger(__name__)
-
-
 
 @login_required
 def consolidated_report(request):
@@ -1416,16 +1489,9 @@ def calculate_total_income(filters):
 #======================= Loan part ====================
 
 
-from django.db.models import Sum, Count, Q, DecimalField
-from django.db.models.functions import Coalesce, ExtractYear
-from django.core.paginator import Paginator
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from decimal import Decimal
 
 @login_required
 def loan_payment_tracking(request):
-    # Base queryset: only approved or fully paid loans with approved amounts
     all_loans = LoanRequest.objects.filter(
         status__in=['approved', 'Fullpaid'],
         approved_amount__isnull=False
@@ -1512,6 +1578,49 @@ def loan_payment_tracking(request):
             'last_payment': last_payment,
         })
 
+    # ✅ Excel Export Logic
+    if request.GET.get("download") == "excel":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Outstanding Payments"
+
+        # Header row
+        headers = ["ID", "Member", "Loan Type", "Date Created", "Approved Amount", "Total Paid", "Balance"]
+        ws.append(headers)
+
+        # Data rows
+        for item in processed_loans:
+            loan = item['loan']
+            ws.append([
+                loan.id,
+                f"{loan.member.member.first_name} {loan.member.member.last_name}",
+                loan.loan_type.name if loan.loan_type else "",
+                loan.application_date.strftime("%Y-%m-%d") if loan.application_date else "",
+                float(item['approved_amount']),
+                float(item['total_paid']),
+                float(item['balance_remaining']),
+            ])
+
+        # Adjust column widths
+        for i, col in enumerate(ws.columns, start=1):
+            max_length = 0
+            column = get_column_letter(i)
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            ws.column_dimensions[column].width = max_length + 3
+
+        # Return Excel response
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="loan_outstanding_report.xlsx"'
+        wb.save(response)
+        return response
+
     # Recent payments
     recent_payments = LoanRepayback.objects.select_related(
         'loan_request__member__member', 'loan_request__loan_type'
@@ -1534,20 +1643,9 @@ def loan_payment_tracking(request):
         'selected_member': selected_member,
         'summary_stats': summary_stats,
         'recent_payments': recent_payments,
-        'debug_info': {
-            'total_before_filter': all_loans.count(),
-            'total_after_filter': base_queryset.count(),
-            'filters_applied': {
-                'year': selected_year,
-                'type': selected_type,
-                'status': selected_status,
-                'member': selected_member,
-            }
-        }
     }
 
     return render(request, "reports/loan_payment_tracking.html", context)
-
 
 @login_required
 def loan_payment_detail(request, loan_id):

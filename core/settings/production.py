@@ -44,6 +44,17 @@ INSTALLED_APPS = [
 ]
 AUTH_USER_MODEL = 'accounts.User'
 
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 1000  # 1000 seconds
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Redirect unauthenticated users
+LOGIN_URL = '/login/'        # or the name of your login route
+LOGIN_REDIRECT_URL = '/dashboard/'  # where to go after login
+LOGOUT_REDIRECT_URL = '/login/'  # where to go after logout
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

@@ -54,7 +54,7 @@
                         </div>
 
                         <!-- Payment Form -->
-                        <form method="post">
+                        <form method="POST" enctype="multipart/form-data">
                             {% csrf_token %}
                             <div class="card">
                                 <div class="card-header bg-light">
@@ -104,7 +104,7 @@
                                                        required>
                                             </div>
                                         </div>
-                                        <div class="col-12">
+                                        <div class="col-6">
                                             <label for="comment" class="form-label fw-semibold">
                                                 <i class="fas fa-comment me-1"></i>Comment
                                             </label>
@@ -113,6 +113,12 @@
                                                       class="form-control" 
                                                       rows="3" 
                                                       placeholder="Optional comment or notes..."></textarea>
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="payment-receipt" class="form-label fw-semibold">
+                                                <i class="fas fa-file-upload me-1"></i>Payment Receipt
+                                            </label>
+                                            <input type="file" name="loan_receipt" id="payment-receipt"class="form-control" >
                                         </div>
                                     </div>
                                 </div>

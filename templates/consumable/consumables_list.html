@@ -8,16 +8,16 @@
 {% block content %}
     <div class="container-fluid py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="text-primary fw-bold mb-0">
+            <h6 class="text-primary fw-bold mb-0">
                 <i class="bi bi-clipboard-check me-3"></i>Consumable Requests List
-            </h5>
+            </h6>
             {# Optional: Add a button for creating new requests if applicable #}
             {# <a href="{% url 'request_consumable' %}" class="btn btn-primary">New Request</a> #}
         </div>
 
         <div class="card shadow mb-4">
             <div class="card-body">
-                <h5 class="card-title text-dark mb-3">Filter Requests</h5>
+                <h6 class="card-title text-dark mb-3">Filter Requests</h6>
                 <form method="GET" action="{% url 'admin_consumables_list' %}" class="row g-3 align-items-end">
                     <div class="col-md-4 col-lg-3">
                         <label for="status-filter" class="form-label fw-bold">Status:</label>
@@ -67,7 +67,7 @@
 
         <div class="card shadow mb-4">
             <div class="card-body">
-                <h5 class="card-title text-dark mb-3">All Consumable Requests</h5>
+                <h6 class="card-title text-dark mb-3">All Consumable Requests</h6>
                 {% if consumables_list %}
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
@@ -133,7 +133,7 @@
                                         class="btn btn-sm btn-outline-primary p-1 me-1" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
-
+                                        {% if user.is_authenticated and user.group.title == 'admin' %}
                                         {% if request_obj.status == 'Pending' %}
                                             <!-- Approve -->
                                             {% comment %} <a href="" class="btn btn-sm btn-success p-1 me-1" title="Approve">
@@ -176,6 +176,7 @@
                                                <i class="bi bi-bank"></i>
                                             </button>
                                         {% endif %}
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -201,7 +202,7 @@
                     <h5 class="modal-title" id="addPaymentModalLabel">Add New Payment</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form method="post" id="addPaymentForm">
+                <form method="post" id="addPaymentForm" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="modal-body">
                         <p class="text-muted">For Request ID: <strong id="modalRequestId"></strong></p>
@@ -214,6 +215,10 @@
                         <div class="mb-3">
                             <label for="repayment_date" class="form-label fw-bold">Repayment Date</label>
                             <input type="date" class="form-control" id="repayment_date" name="repayment_date" required>
+                        </div>
+                         <div class="col-md-4">
+                            <label for="payment_receipt" class="form-label">Payment Receipt</label>
+                            <input type="file" class="form-control" id="payment_receipt" name="payment_receipt" required>
                         </div>
                     </div>
                     <div class="modal-footer">

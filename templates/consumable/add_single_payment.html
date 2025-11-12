@@ -59,7 +59,7 @@
                             <h5 class="mb-0">Add Payment</h5>
                         </div>
                         <div class="card-body">
-                            <form method="post">
+                            <form method="post" enctype="multipart/form-data">
                                 {% csrf_token %}
                                 <input type="hidden" name="ippis" value="{{ request.GET.ippis }}">
                                 <div class="row g-3">
@@ -84,6 +84,10 @@
                                     <div class="col-md-4">
                                         <label for="month" class="form-label">Payment Month</label>
                                         <input type="month" class="form-control" id="month" name="month" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="payment_receipt" class="form-label">Payment Receipt</label>
+                                        <input type="file" class="form-control" id="payment_receipt" name="payment_receipt" required>
                                     </div>
                                 </div>
                                 <div class="mt-3">

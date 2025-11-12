@@ -128,10 +128,13 @@
                 </h6>
                 <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-white border-opacity-25">
                     <span class="">Today</span>
+                    <a href="{% url 'user_activity_list' %}">
                     <span class="fs-5 fw-bold text-success">{{ daily_logins|default:"0" }}</span>
+                    </a>
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="">This Week</span>
+                    
                     <span class="fs-5 fw-bold text-info">{{ weekly_logins|default:"0" }}</span>
                 </div>
             </div>

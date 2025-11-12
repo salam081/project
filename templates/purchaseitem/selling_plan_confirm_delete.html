@@ -1,0 +1,39 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5 col-lg-8">
+    <div class="card shadow border-0">
+        <div class="card-header bg-danger text-white">
+            <h6 class="mb-0">Confirm Delete</h6>
+        </div>
+
+        <div class="card-body">
+            <p class="mb-3">
+                Are you sure you want to <strong>delete</strong> the selling plan 
+                for <strong>{{ plan.purchased_item.item_name }}</strong>?
+            </p>
+
+            <p class="text-muted">
+                <strong>Notes:</strong> {{ plan.notes|default:"No additional notes" }}
+            </p>
+
+            <p class="text-danger">
+                This action cannot be undone.
+            </p>
+
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'selling_plan_list' %}" class="btn btn-secondary text-white">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        Delete Plan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

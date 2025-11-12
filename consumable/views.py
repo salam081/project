@@ -487,8 +487,8 @@ def admin_consumable_detail(request, request_id):
         id=request_id
     )
 
-    total_paid = consumable_request.total_paid()
-    balance = consumable_request.balance()
+    total_paid = consumable_request.total_paid
+    balance = consumable_request.balance
 
     context = {
         'consumable_request': consumable_request,
@@ -636,6 +636,7 @@ def add_payment(request, request_id):
     if request.method == 'POST':
         amount_paid = request.POST.get('amount_paid')
         repayment_date = request.POST.get('repayment_date')
+        payment_receipt = request.FILES.get("payment_receipt")
 
         # Validate amount
         try:
@@ -654,7 +655,7 @@ def add_payment(request, request_id):
             return redirect('admin_consumable_detail', request_id=request_id)
 
         # Check balance
-        current_balance = consumable_request.balance()
+        current_balance = consumable_request.balance
         if amount_paid > current_balance:
             messages.error(
                 request,
@@ -667,13 +668,14 @@ def add_payment(request, request_id):
             consumable_request=consumable_request,
             amount_paid=amount_paid,
             repayment_date=repayment_date,
+            payment_receipt=payment_receipt,
             created_by=request.user
         )
 
         messages.success(request, f'Payment of ₦{amount_paid:,.2f} added successfully')
 
         # Update request status if fully paid
-        if consumable_request.balance() <= 0:
+        if consumable_request.balance <= 0:
             consumable_request.status = 'FullyPaid'
             consumable_request.save(update_fields=['status'])
             messages.info(request, 'Request marked as Fully Paid')
@@ -742,6 +744,7 @@ def add_single_consumable_payment(request):
     if request.method == "POST":
         amount_paid = request.POST.get("amount_paid")
         month = request.POST.get("month")
+        payment_receipt = request.FILES.get("payment_receipt")
         request_id = request.POST.get("consumable_request")
 
         # Validate required fields
@@ -767,7 +770,7 @@ def add_single_consumable_payment(request):
             messages.error(request, "Selected consumable request not found.")
             return redirect(f"{request.path}?ippis={ippis}")
 
-        total_paid = consumable_request.total_paid()
+        total_paid = consumable_request.total_paid
         remaining_balance = consumable_request.calculate_total_price() - total_paid
 
         if amount_paid > remaining_balance:
@@ -789,10 +792,11 @@ def add_single_consumable_payment(request):
                 consumable_request=consumable_request,
                 amount_paid=amount_paid,
                 repayment_date=month_date,
+                payment_receipt=payment_receipt,
                 created_by=request.user
             )
             # Update status if fully paid
-            if consumable_request.total_paid() >= consumable_request.calculate_total_price():
+            if consumable_request.total_paid >= consumable_request.calculate_total_price():
                 consumable_request.status = 'FullyPaid'
                 consumable_request.save(update_fields=['status'])
 
@@ -818,7 +822,7 @@ def upload_consumable_payment(request):
 
     grouped_by_type = defaultdict(list)
     for req in available_requests:
-        if req.balance() > 0:  # uses model method
+        if req.balance > 0:  # uses model method
             grouped_by_type[req.consumable_type].append(req)
 
     grouped_list = sorted(grouped_by_type.items(), key=lambda x: x[0].name)
@@ -936,6 +940,7 @@ def upload_consumable_payment(request):
 
     context = {"grouped_list": grouped_list}
     return render(request, "consumable/upload_consumable_payment.html", context)
+
 
 @login_required
 def item_list_with_requests(request):

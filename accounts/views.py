@@ -11,6 +11,8 @@ from django.core.exceptions import ValidationError
 from django.db.models import QuerySet,Q
 from django.db import models
 from django.contrib.auth.models import User
+
+from .decorators import group_required
 from .models import *
 from main.models import *
 from django.contrib.auth import get_user_model
@@ -23,11 +25,11 @@ from .constants import AVAILABLE_PAGES
 
 
 
-def all_cases(request):
-    return render(request, 'all_cases.html')
+
 
 
 @login_required
+@group_required(['admin'])
 def upload_users(request):
     if request.method == 'POST' and request.FILES.get('excel_file'):
         excel_file = request.FILES['excel_file']
@@ -107,7 +109,8 @@ def upload_users(request):
 
     return render(request, "accounts/upload_users.html")
 
-
+@login_required
+@group_required(['admin', 'staff'])
 def user_registration(request):
     if request.method == "POST":
         first_name = request.POST.get("first_name")
@@ -381,7 +384,8 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            messages.success(request, f'Welcome back {user.username}')
+            # messages.success(request, f'Welcome back {user.username}')
+            messages.success(request, f'Welcome back {user.first_name or user.username}')
             
             # ✅ Log user activity after successful login
             UserActivity.objects.create(
@@ -407,7 +411,7 @@ def login_view(request):
                 return redirect("non_staff_dashboard")
 
             elif user.group and user.group.title.lower() == 'staff':
-                return redirect('admin_dashboard')
+                return redirect('staff_dashboard')
 
             else:
                 return redirect('login')
@@ -421,8 +425,10 @@ def login_view(request):
 def logout_view(request):
     logout(request) 
     messages.success(request, "logged out successfully")
-    return redirect('login')
+    return redirect('home')
 
+@login_required
+@group_required(['admin', 'staff'])
 def all_members(request):
     search_name = request.GET.get("name", "").strip()
     
@@ -432,16 +438,17 @@ def all_members(request):
         members_list = members_list.filter(
             Q(first_name__icontains=search_name) |
             Q(last_name__icontains=search_name)|
+            Q(member__ippis__icontains=search_name) |
             Q(phone1__icontains=search_name)
         )
-    paginator = Paginator(members_list, 150)  # Show 10 members per page
+    paginator = Paginator(members_list, 150)  # Show 150 members per page
     page_number = request.GET.get("page")
     members = paginator.get_page(page_number)
 
     return render(request, "accounts/all_members.html", {"members": members})
 
-
-
+@login_required
+@group_required(['admin'])
 def delete_member(request, id):
     member = get_object_or_404(User, id=id)
     
@@ -457,6 +464,7 @@ def delete_member(request, id):
 
 
 @login_required
+@group_required(['admin', 'staff'])
 def admin_member_detail(request, id):
    
     member_obj = get_object_or_404(Member, id=id)
@@ -495,6 +503,7 @@ def member_detail(request, id):
 
 
 @login_required
+@group_required(['admin', 'staff'])
 def deactivate_users(request):
     if request.method == 'POST':
         user_ids = request.POST.getlist('user_ids')
@@ -508,6 +517,7 @@ def deactivate_users(request):
     return redirect('all_members')
 
 @login_required
+@group_required(['admin', 'staff'])
 def activate_users(request):
     if request.method == 'POST':
         user_ids = request.POST.getlist('user_ids')
@@ -530,6 +540,8 @@ def activate_users(request):
 
     return redirect('all_members')
 
+@login_required
+@group_required(['admin', 'staff', 'members', 'non staff member'])
 def changePassword(request):
     if request.method == 'POST':
         old_password = request.POST.get('old_password')
@@ -552,7 +564,8 @@ def changePassword(request):
 
 
 User = get_user_model()
-
+@login_required
+@group_required(['admin', 'staff'])
 def reset_password_view(request, identifier):
     try:
         # Try User.id first
@@ -581,6 +594,7 @@ def reset_password_view(request, identifier):
 
 
 @login_required
+@group_required(['admin'])
 def add_user_to_group(request, id):
     # Get the User (not Member)
     user = get_object_or_404(User, id=id)

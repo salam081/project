@@ -5,7 +5,16 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <h4 class="text-dark mb-4">📊 Consumable Payments Analysis Report</h4>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="text-dark mb-0">📊 Consumable Payments Analysis Report</h4>
+
+        <!-- ✅ Download Excel Button -->
+       <div class="col-md-2">
+       <a href="?download=excel{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}"  class="btn btn-success w-100 text-white"><i class="fas fa-file-excel"></i> Download Excel </a>
+
+        </div>
+
+    </div>
 
     <!-- Filter Form -->
     <form method="get" class="row g-3 align-items-end mb-4">
@@ -18,17 +27,21 @@
             <input type="date" id="date_to" name="date_to" class="form-control" value="{{ filters.date_to }}">
         </div>
         <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">🔍 Filter</button>
+            <button type="submit" class="btn btn-primary w-100">
+                🔍 Filter
+            </button>
         </div>
         <div class="col-md-2">
-            <a href="{% url 'payment_analysis_report' %}" class="btn btn-outline-danger"><i class="fas fa-times"></i>Clear Filters</a>
+            <a href="{% url 'payment_analysis_report' %}" class="btn btn-outline-danger w-100">
+                <i class="fas fa-times"></i> Clear Filters
+            </a>
         </div>
     </form>
 
     <!-- Summary Statistics -->
     <div class="row mb-4">
         <div class="col-md-3 mt-2">
-             <div class="card  shadow" style="border-top: 2px solid #22c214;">
+            <div class="card shadow" style="border-top: 2px solid #22c214;">
                 <div class="card-body">
                     <p>Total Payments Received</p>
                     <h6 class="text-center">₦{{ payment_stats.total_payments|default:0|floatformat:2|intcomma }}</h6>
@@ -36,7 +49,7 @@
             </div>
         </div>
         <div class="col-md-3 mt-2">
-             <div class="card  shadow" style="border-top: 2px solid #ffc107;">
+            <div class="card shadow" style="border-top: 2px solid #ffc107;">
                 <div class="card-body">
                     <p>Average Payment</p>
                     <h6 class="text-center">₦{{ payment_stats.avg_payment|default:0|floatformat:2|intcomma }}</h6>
@@ -44,7 +57,7 @@
             </div>
         </div>
         <div class="col-md-3 mt-2">
-             <div class="card  shadow" style="border-top: 2px solid #d44127;">
+            <div class="card shadow" style="border-top: 2px solid #d44127;">
                 <div class="card-body">
                     <p>Number of Payments</p>
                     <h6 class="text-center">{{ payment_stats.payment_count }}</h6>
@@ -52,7 +65,7 @@
             </div>
         </div>
         <div class="col-md-3 text-danger mt-2">
-             <div class="card  shadow" style="border-top: 2px solid #ffc107;">
+            <div class="card shadow" style="border-top: 2px solid #ffc107;">
                 <div class="card-body">
                     <h6>Total Outstanding</h6>
                     <h6 class="text-center">₦{{ total_outstanding|floatformat:2|intcomma }}</h6>
@@ -64,18 +77,18 @@
     <!-- Monthly Trend -->
     <div class="table-responsive mb-5">
         <h5 class="mb-3">📅 Monthly Payment Trends</h5>
-        <table class="table  table-hover align-middle">
-        <thead class="table-info" style="border-left: 5px solid #029c23ff; ">
+        <table class="table table-hover align-middle">
+            <thead class="table-info" style="border-left: 5px solid #029c23ff;">
                 <tr>
                     <th>Month</th>
                     <th>Total Paid</th>
-                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Payments Count</th>
+                    <th>Payments Count</th>
                 </tr>
             </thead>
             <tbody>
                 {% for month in monthly_payments %}
                 <tr>
-                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ month.month|date:"F Y" }}</td>
+                    <td>{{ month.month|date:"F Y" }}</td>
                     <td>₦{{ month.total_paid|floatformat:2|intcomma }}</td>
                     <td>{{ month.payment_count }}</td>
                 </tr>
@@ -96,31 +109,29 @@
                 <tr>
                     <th>ID</th>
                     <th>Member</th>
-                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Date Created</th>
-                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Price</th>
-                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Paid</th>
+                    <th>Date Created</th>
+                    <th>Total Price</th>
+                    <th>Total Paid</th>
                     <th>Balance</th>
-                    <!-- <th>Days Outstanding</th> -->
                 </tr>
             </thead>
             <tbody>
                 {% for item in outstanding_data %}
                 <tr>
                     <td>#{{ item.request.id }}</td>
-                    {% if item.user  %}
-                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ item.request.user.get_full_name|default:item.request.user.username }}</td>
-                      {% else %}
-                        {{ item.guest_name }} ({{ req.guest_ippiss }})
+                    {% if item.request.user %}
+                        <td>{{ item.request.user.get_full_name|default:item.request.user.username }}</td>
+                    {% else %}
+                        <td>{{ item.guest_name }} ({{ item.guest_ippiss }})</td>
                     {% endif %}
-                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ item.request.date_created|date:"Y-m-d" }}</td>
+                    <td>{{ item.request.date_created|date:"Y-m-d" }}</td>
                     <td>₦{{ item.total_price|floatformat:2|intcomma }}</td>
                     <td>₦{{ item.total_paid|floatformat:2|intcomma }}</td>
                     <td>₦{{ item.balance|floatformat:2|intcomma }}</td>
-                    <!-- <td>{{ item.days_outstanding }}</td> -->
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center text-muted">No outstanding balances found.</td>
+                    <td colspan="6" class="text-center text-muted">No outstanding balances found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

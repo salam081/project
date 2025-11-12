@@ -1,0 +1,512 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block content %}
+
+<style>
+    :root {
+        --primary-color: #667eea;
+        --primary-dark-color: #5563d1;
+        --secondary-color: #764ba2;
+        --background-light: #f4f6f9;
+        --border-color: #e1e5e9;
+        --text-color: #333;
+        --label-color: #6c757d;
+    }
+
+    body {
+        background-color: var(--background-light);
+    }
+
+    .content-card {
+        background: white;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+    }
+
+    .form-header {
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-left: 10px;
+    }
+
+    .status-pending {
+        background-color: #ffc107;
+        color: #856404;
+    }
+
+    .status-approved {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .form-group {
+        margin-bottom: 24px;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--label-color);
+        font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group input[type="file"] {
+        padding: 6px 10px;
+        background: var(--background-light);
+        border-style: dashed;
+    }
+
+    .current-file {
+        font-size: 0.85rem;
+        color: #28a745;
+        margin-top: 5px;
+    }
+
+    .current-file a {
+        color: #007bff;
+        text-decoration: none;
+    }
+
+    .current-file a:hover {
+        text-decoration: underline;
+    }
+
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #333;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 2px;
+        margin-top: 30px;
+        margin-bottom: 15px;
+    }
+
+    .section-subtitle {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #555;
+        margin-top: 25px;
+        margin-bottom: 12px;
+        padding-left: 10px;
+        border-left: 4px solid #667eea;
+    }
+
+    /* === Compact item cards === */
+    .item-selection-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .item-card {
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 10px;
+        background: #fff;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .item-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    }
+
+    .item-card.selected {
+        border-color: #28a745;
+        background-color: #f0fff4;
+    }
+
+    .item-header {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .item-header label {
+        font-weight: 600;
+        margin-left: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .item-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .price {
+        font-weight: 600;
+        color: #28a745;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .stock-info {
+        font-size: 0.75rem;
+        color: var(--label-color);
+        white-space: nowrap;
+    }
+
+    .quantity-control input[type="number"] {
+        width: 60px;
+        padding: 4px 8px;
+        border: 2px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+
+    .total-summary {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #333;
+        margin-top: 15px;
+        text-align: right;
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        border: none;
+        padding: 13px 22px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+        margin: 30px 10px 0 0;
+        min-width: 180px;
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .cancel-btn {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 13px 22px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+        margin: 30px 0 0 0;
+        min-width: 180px;
+        text-decoration: none;
+        text-align: center;
+    }
+
+    .cancel-btn:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+
+    .button-group {
+        text-align: center;
+    }
+
+    .alert {
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+
+    .alert-error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+
+    .alert-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+    }
+
+    .no-items {
+        padding: 20px;
+        text-align: center;
+        color: #6c757d;
+        font-style: italic;
+    }
+</style>
+
+<div class="content-card">
+    <div class="form-header">
+        <h3>Edit Consumable Request #{{ consumable_request.id }}
+            <span class="status-badge status-{{ consumable_request.status|lower }}">
+                {{ consumable_request.status }}
+            </span>
+        </h3>
+        <small style="color: #6c757d;">Created: {{ consumable_request.date_created|date:"M d, Y" }}</small>
+    </div>
+
+    <!-- Display Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="form-content">
+        <form method="post" enctype="multipart/form-data" id="editConsumableForm">
+            {% csrf_token %}
+            <div class="row">
+                <div class=" col-md-4 ">
+                    <label for="id_consumable_type">Consumable Type</label>
+                    <select name="consumable_type" id="id_consumable_type" class="form-select" required>
+                        <option value="">Select a consumable type...</option>
+                        {% for type in consumable_types %}
+                            <option value="{{ type.id }}" {% if type.id == consumable_request.consumable_type.id %}selected{% endif %}>
+                                {{ type.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label for="id_loan_term_months">Duration (in Months)</label>
+                    <input type="number" name="loan_term_months" id="id_loan_term_months" placeholder="e.g., 1–6" min="1" max="6" value="{{ existing_details.first.loan_term_months }}"required>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label for="id_file_payslpt">Payslip (Image)</label>
+                    {% if consumable_request.file_payslpt %}
+                        <div class="current-file">
+                            ✓ Current: <a href="{{ consumable_request.file_payslpt.url }}" target="_blank">View Payslip</a>
+                        </div>
+                    {% endif %}
+                    <input type="file" name="file_payslpt" id="id_file_payslpt" accept="image/*">
+                    <small style="color: #6c757d;">Leave empty to keep current file</small>
+                </div>
+
+                <div class="form-group col-md-4">
+                    <label for="passport">Upload Passport</label>
+                    {% if consumable_request.passport %}
+                        <div class="current-file">
+                            ✓ Current: <a href="{{ consumable_request.passport.url }}" target="_blank">View Passport</a>
+                        </div>
+                    {% endif %}
+                    <input type="file" name="passport" id="passport" accept="image/*">
+                    <small style="color: #6c757d;">Leave empty to keep current file</small>
+                </div>
+            </div>
+            
+            <h3 class="section-title">Manage Items</h3>
+
+            <!-- Previously Selected Items -->
+            <h4 class="section-subtitle">Currently Selected Items ({{ selected_items|length }})</h4>
+            <div class="item-selection-container">
+                {% for item in selected_items %}
+                    <div class="item-card selected">
+                        <div class="item-header">
+                            <input type="checkbox" 
+                                   id="item_{{ item.plan.id }}"
+                                   name="selected_items"
+                                   value="{{ item.plan.id }}"
+                                   class="item-checkbox"
+                                   data-price="{{ item.plan.selling_price_per_unit }}"
+                                   data-stock="{{ item.plan.quantity }}"
+                                   checked>
+                            <label for="item_{{ item.plan.id }}">
+                                {{ item.plan.purchased_item.item_name }}
+                            </label>
+                        </div>
+                        <div class="item-details">
+                            <div class="price">₦{{ item.plan.selling_price_per_unit|floatformat:0 }}</div>
+                            <div class="stock-info">Stock: {{ item.plan.quantity }}</div>
+                            <div class="quantity-control">
+                                <input type="number"
+                                       name="quantity_{{ item.plan.id }}"
+                                       class="quantity-input"
+                                       placeholder="Qty"
+                                       min="1"
+                                       max="{{ item.plan.quantity }}"
+                                       value="{{ item.quantity }}">
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="no-items">No items currently selected.</p>
+                {% endfor %}
+            </div>
+
+            <!-- Available Items to Add -->
+            {% if available_items %}
+                <h4 class="section-subtitle">Available Items to Add ({{ available_items|length }})</h4>
+                <div class="item-selection-container">
+                    {% for item in available_items %}
+                        <div class="item-card">
+                            <div class="item-header">
+                                <input type="checkbox" 
+                                       id="item_{{ item.plan.id }}"
+                                       name="selected_items"
+                                       value="{{ item.plan.id }}"
+                                       class="item-checkbox"
+                                       data-price="{{ item.plan.selling_price_per_unit }}"
+                                       data-stock="{{ item.plan.quantity }}">
+                                <label for="item_{{ item.plan.id }}">
+                                    {{ item.plan.purchased_item.item_name }}
+                                </label>
+                            </div>
+                            <div class="item-details">
+                                <div class="price">₦{{ item.plan.selling_price_per_unit|floatformat:0 }}</div>
+                                <div class="stock-info">Stock: {{ item.plan.quantity }}</div>
+                                <div class="quantity-control">
+                                    <input type="number"
+                                           name="quantity_{{ item.plan.id }}"
+                                           class="quantity-input"
+                                           placeholder="Qty"
+                                           min="1"
+                                           max="{{ item.plan.quantity }}"
+                                           value="1"
+                                           disabled>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="total-summary">
+                Total: ₦<span id="totalAmount">0</span>
+            </div>
+
+            <div class="button-group">
+                <a href="{% url 'my_consumablerequests' %}" class="cancel-btn text-white">Cancel</a>
+                <button type="submit" class="submit-btn" id="submitBtn">Update Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const totalAmountEl = document.getElementById('totalAmount');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('editConsumableForm');
+
+        function updateTotal() {
+            let total = 0;
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const itemCard = cb.closest('.item-card');
+                    const qtyInput = itemCard.querySelector('.quantity-input');
+                    const price = parseFloat(cb.dataset.price) || 0;
+                    const qty = parseInt(qtyInput.value) || 0;
+                    total += price * qty;
+                }
+            });
+            totalAmountEl.textContent = total.toLocaleString();
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const itemCard = cb.closest('.item-card');
+                const qtyInput = itemCard.querySelector('.quantity-input');
+                qtyInput.disabled = !cb.checked;
+                
+                // Toggle visual style
+                if (cb.checked) {
+                    itemCard.classList.add('selected');
+                    if (!qtyInput.value) {
+                        qtyInput.value = 1;
+                    }
+                } else {
+                    itemCard.classList.remove('selected');
+                    qtyInput.value = '';
+                }
+                updateTotal();
+            });
+        });
+
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const maxStock = parseInt(input.getAttribute('max')) || 0;
+                if (parseInt(input.value) > maxStock) {
+                    input.value = maxStock;
+                }
+                updateTotal();
+            });
+        });
+
+        // Initialize total on page load
+        updateTotal();
+
+        // Form validation and confirmation
+        form.addEventListener('submit', function(e) {
+            const selectedItems = document.querySelectorAll('.item-checkbox:checked');
+            if (selectedItems.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one item.');
+                return false;
+            }
+
+            const loanTerm = document.getElementById('id_loan_term_months').value;
+            if (!loanTerm || parseInt(loanTerm) <= 0) {
+                e.preventDefault();
+                alert('Please enter a valid loan term.');
+                return false;
+            }
+
+            // Confirm submission
+            if (!confirm('Are you sure you want to update this request?')) {
+                e.preventDefault();
+                return false;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updating...';
+        });
+    });
+</script>
+
+{% endblock content %}

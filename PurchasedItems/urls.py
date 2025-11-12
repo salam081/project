@@ -7,10 +7,11 @@ urlpatterns = [
     # Dashboard
     path('purchasedashboard/', views.purchase_consumable_dashboard, name='purchase_consumable_dashboard'),
     path('consumable_request_list/', views.consumable_purchase_request_list, name='consumable_purchase_request_list'),
-    path('purchase_request_review/<int:pk>/', views.consumable_purchase_review, name='consumable_purchase_review'),
 
     path('requests/create/', views.consumable_purchase_request_create, name='consumable_purchase_request_create'),
+    path('request_edit/<int:pk>/', views.consumable_request_edit, name='consumable_request_edit'),
     path('requests/<int:pk>/', views.consumable_purchase_request_detail, name='consumable_purchase_request_detail'),
+    path('purchase_request_review/<int:pk>/', views.consumable_purchase_review, name='consumable_purchase_review'),
     path('requests/<int:pk>/approve/', views.consumable_purchase_approve, name='consumable_purchase_approve'),
 
     

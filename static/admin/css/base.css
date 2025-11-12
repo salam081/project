@@ -18,7 +18,7 @@ html[data-theme="light"],
 
     --header-color: #ffc;
     --header-branding-color: var(--accent);
-    --header-bg: var(--link-hover-color);
+    --header-bg: var(--secondary);
     --header-link-color: var(--primary-fg);
 
     --breadcrumbs-fg: #c4dce8;
@@ -170,14 +170,14 @@ h3 {
 }
 
 h4 {
-    font-size: 0.75rem;
+    font-size: 0.35rem;
     margin: 1em 0 .8em 0;
     padding-bottom: 3px;
     color: var(--body-medium-color);
 }
 
 h5 {
-    /* font-size: 0.625rem; */
+    font-size: 0.625rem;
     margin: 1.5em 0 .5em 0;
     color: var(--body-quiet-color);
     text-transform: uppercase;
@@ -475,7 +475,7 @@ table thead th.sorted .sortoptions a.descending:hover {
 
 input, textarea, select, .form-row p, form .button {
     margin: 2px 0;
-    padding: 2px 3px;
+    padding: 1px 0px;
     vertical-align: middle;
     font-family: var(--font-family-primary);
     font-weight: normal;
@@ -515,13 +515,13 @@ input[type=tel]:focus, textarea:focus, select:focus, .vTextField:focus {
 }
 
 /* select {
-    height: 2.875rem;
+    height: 1.275rem;
 } */
 
 select[multiple] {
     /* Allow HTML size attribute to override the height in the rule above. */
     height: auto;
-    min-height: 150px;
+    min-height: 100px;
 }
 
 /* FORM BUTTONS */

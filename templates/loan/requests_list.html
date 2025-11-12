@@ -1,8 +1,8 @@
 {% extends 'base/base.html' %}
 {% block content %}
-<div class="container-fluid mt-4">
+<div class="container mt-2">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="fas fa-list me-2"></i>Loan Requests</h2>
+            <h6><i class="fas fa-list me-2"></i>Loan Requests List</h6>
         </div>
 
         <!-- Filters -->
@@ -45,7 +45,7 @@
                 
             </div>
         </div>
-        <div class=" p-3 text-dark">
+        <div class=" p-1 text-dark">
 
         {% comment %} <strong>All Approved Amount</strong> <b class="text-success fs-5">₦{{total_approved_amount}}</b>   {% endcomment %}
         </div>
@@ -112,46 +112,73 @@
                                     <div>{{ request.application_date|date:"M d, Y" }}</div>
                                     <small class="text-muted">{{ request.application_date|time:"H:i" }}</small>
                                 </td> -->
-                              <td>
-                               
-                                    <div class="btn-group" role="group">
-                                      
-                                       
-                                        {% if request.status == 'approved' %}   
-                                         <a href="{% url 'loan_request_detail' request.id %}" class="btn btn-sm btn-outline-info" title="View Details">
-                                            <i class="fas fa-book "></i>
-                                        </a>   
-                                            <a href="{% url 'add_payment' %}" class="btn btn-sm btn-outline-success" title="Add Repayment">
-                                                <i class="bi bi-money-bill "></i>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    {% if user.is_authenticated and user.group.title == 'admin' %}
+                                        {% if request.status == 'approved' %}
+                                            <!-- View Details -->
+                                            <a href="{% url 'loan_request_detail' request.id %}" 
+                                            class="btn btn-sm btn-outline-info" 
+                                            title="View Details">
+                                                <i class="fas fa-book"></i>
                                             </a>
-                                            
-                                              {% elif  request.status == 'pending' %} 
-                                       
-                                       
-                                             <a href="{% url 'loan_request_detail' request.id %}" class="btn btn-sm btn-outline-info" title="View Details">
-                                            <i class="bi bi-eye "></i>
-                                            </a>  
-                                              <a href="{% url 'approve_loan_request' request.id %}" class="btn btn-sm btn-outline-primary text-dark" title="Approve Requests">
-                                                <i class="bi bi-check "></i>
-                                             </a>
-                                                <a href="{% url 'edit_requested_loan' request.id %}" class="btn btn-sm btn-outline-warning" title="Edit Requests">
-                                                 <i class="bi bi-pen "></i>
+
+                                            <!-- Add Repayment -->
+                                            <a href="{% url 'add_payment' %}" 
+                                            class="btn btn-sm btn-outline-success" 
+                                            title="Add Repayment">
+                                                <i class="bi bi-money-bill"></i>
                                             </a>
-                                            <a href="{% url 'reject_loan_request' request.id %}" class="btn btn-sm btn-outline-danger text-dark" title="Rejecte Requests">
+
+                                        {% elif request.status == 'pending' %}
+                                            <!-- View Details -->
+                                            <a href="{% url 'loan_request_detail' request.id %}" 
+                                            class="btn btn-sm btn-outline-info" 
+                                            title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+
+                                            <!-- Approve Request -->
+                                            <a href="{% url 'approve_loan_request' request.id %}" 
+                                            class="btn btn-sm btn-outline-primary text-dark" 
+                                            title="Approve Request">
+                                                <i class="bi bi-check"></i>
+                                            </a>
+
+                                            <!-- Edit Request -->
+                                            <a href="{% url 'edit_requested_loan' request.id %}" 
+                                            class="btn btn-sm btn-outline-warning" 
+                                            title="Edit Request">
+                                                <i class="bi bi-pen"></i>
+                                            </a>
+
+                                            <!-- Reject Request -->
+                                            <a href="{% url 'reject_loan_request' request.id %}" 
+                                            class="btn btn-sm btn-outline-danger text-dark" 
+                                            title="Reject Request">
                                                 <i class="bi bi-x-lg"></i>
                                             </a>
-                                           {% elif  request.status == 'Fullpaid' %} 
-                                                <a href="{% url 'loan_request_detail' request.id %}" class="btn btn-sm btn-outline-info" title="View Details">
-                                            <i class="bi bi-book "></i>
-                                            </a> 
 
+                                        {% elif request.status == 'Fullpaid' %}
+                                            <!-- View Details -->
+                                            <a href="{% url 'loan_request_detail' request.id %}" 
+                                            class="btn btn-sm btn-outline-info" 
+                                            title="View Details">
+                                                <i class="bi bi-book"></i>
+                                            </a>
                                         {% endif %}
 
-                                    </div>
-                                </td>
+                                    {% else %}
+                                        <!-- Non-admin users: View Details only -->
+                                        <a href="{% url 'loan_request_detail' request.id %}" 
+                                        class="btn btn-sm btn-outline-info" 
+                                        title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
 
-                  
-                            </tr>
                             {% empty %}
                             <tr>
                                 <td colspan="9" class="text-center py-4">

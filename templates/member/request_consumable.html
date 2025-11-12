@@ -179,9 +179,9 @@
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="row">
-                <div class="form-group col-md-4">
+                <div class="col-md-4">
                     <label for="id_consumable_type">Consumable Type</label>
-                    <select name="consumable_type" id="id_consumable_type" required>
+                    <select name="consumable_type" id="id_consumable_type" class="form-select " required>
                         <option value="">Select a consumable type...</option>
                         {% for type in consumable_types %}
                             <option value="{{ type.id }}">{{ type.name }}</option>
@@ -197,6 +197,11 @@
                 <div class="form-group col-md-4">
                     <label for="id_file_payslpt">Payslip (Image)</label>
                     <input type="file" name="file_payslpt" id="id_file_payslpt" accept="image/*" required>
+                </div>
+                 <div class="form-group col-md-4">
+                    <label for="passport" class="form-label">Upload Passport</label>
+                    <input type="file" name="passport" id="passport" 
+                        accept="image/*" required>
                 </div>
             </div>
             

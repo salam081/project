@@ -16,10 +16,14 @@ urlpatterns = [
 
    
     path('request/', views.request_consumable, name='request_consumable'),
+    path('consumable/edit/<int:request_id>/', views.edit_consumable_request, name='edit_consumable_request'),
     path('my_consumablerequests', views.my_consumable_requests, name='my_consumablerequests'),
     path('request_detail/<int:request_id>/', views.request_detail, name='request_detail'),
     path('cancel_consumable_request/<int:id>/', views.cancel_consumable_request, name='cancel_consumable_request'),
+    
     path('member-withdrawal/', views.member_withdrawal_request, name='member_withdrawal_request'),
+    path('partial-withdrawal-create/', views.create_partial_withdrawal_request, name='create_partial_withdrawal_request'),
+    path('my-partial-withdrawal/', views.my_partial_withdrawal_requests, name='my_partial_withdrawal_requests'),
 
     path('project-finance-list/',views.project_finance_application_list,name='project_finance_application_list'),
     path('project-finance-update/<int:id>/',views.update_project_finance_application,name='update_project_finance_application'),

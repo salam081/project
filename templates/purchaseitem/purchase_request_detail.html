@@ -17,7 +17,7 @@
             </i>Back to List
         </a>
         {% if consumable_request.status == 'pending' %}
-            <a href="{% url 'edit_purchased_item' pk=consumable_request.pk %}" class="btn btn-warning text-dark me-2">
+            <a href="{% url 'consumable_request_edit' pk=consumable_request.pk %}" class="btn btn-warning text-dark me-2">
                 </i>Edit
             </a>
             <a href="{% url 'consumable_purchase_approve' pk=consumable_request.pk %}" class="btn btn-success text-white">

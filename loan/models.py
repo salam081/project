@@ -99,6 +99,7 @@ class LoanRepayback(models.Model):
     repayment_date = models.DateField()  
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2)  
     balance_remaining = models.DecimalField(max_digits=10, decimal_places=2) 
+    loan_receipt = models.ImageField(upload_to='loan_receipts', blank=True, null=True)
     comment = models.TextField(max_length=200,blank=True,null=True)
     created_by = models.ForeignKey(User,on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)

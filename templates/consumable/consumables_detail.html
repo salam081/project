@@ -438,8 +438,19 @@
                         <th>💰 Payslip</th>
                         <td>
                           <a href="{{ consumable_request.file_payslpt.url }}" target="_blank" 
-                            class=" payslip-link">
+                            class=" payslip-link fw-bold">
                             View Payslip
+                          </a>
+                        </td>
+                      </tr>
+                    {% endif %}
+                    {% if consumable_request.passport %}
+                      <tr>
+                        <th>💰 Photo</th>
+                        <td>
+                          <a href="{{ consumable_request.passport.url }}" target="_blank" 
+                            class=" payslip-link fw-bold">
+                            View Passport Photo
                           </a>
                         </td>
                       </tr>
@@ -449,7 +460,7 @@
               </div>
             </div>
 
-
+            {% if user.is_authenticated and user.group.title == 'admin' %}
             {% if consumable_request.status == 'Pending' %}
               <form action="{% url 'admin_request_approve' consumable_request.id %}" method="post" style="display:inline;">
                 {% csrf_token %}
@@ -459,6 +470,7 @@
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger">Decline</button>
               </form>
+            {% endif %}
             {% endif %}
           </div>
 
@@ -494,7 +506,7 @@
               {% for detail in consumable_request.details.all %}
                 <li class="d-flex justify-content-between align-items-center">
                   <div>
-                    <div class="item-title">{{ detail.quantity }} × {{ detail.selling_item.purchased_item.item_name }}</div>
+                    <div class="item-title fs-6">{{ detail.quantity }} × {{ detail.selling_item.purchased_item.item_name }}</div>
                     <div class="item-details">Unit Price: ₦{{ detail.item_price|floatformat:2 }}</div>
                   </div>
                   <div class="item-price">₦{{ detail.total_price|floatformat:2 }}</div>

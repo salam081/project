@@ -104,7 +104,6 @@ class Withdrawal(models.Model):
 
     def decline(self, admin_user, reason=None):
         
-
         with transaction.atomic():
             self.status = "Declined"
             self.date_approved = timezone.now()
@@ -141,16 +140,138 @@ class Withdrawal(models.Model):
         }
 
 
-class DividendHistory(models.Model):
-    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="dividends")
-    savings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    dividend_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_savings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_dividend_pool = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    date_distributed = models.DateTimeField(default=timezone.now)
+class PartialWithdrawal(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Declined', 'Declined'),
+    ]
+    
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='partial_withdrawals')
+    amount_requested = models.DecimalField(max_digits=12, decimal_places=2)
+    reason = models.TextField(blank=True, null=True)
+    date_requested = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    
+    # Admin fields
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    date_approved = models.DateTimeField(null=True, blank=True)
+    decline_reason = models.TextField(blank=True, null=True)
+    
+    # Record keeping
+    withdrawn_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    withdrawn_from_loanable = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    withdrawn_from_investment = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.member} - ₦{self.dividend_amount} on {self.date_distributed.date()}"
+        return f"{self.member} - ₦{self.amount_requested} - {self.status}"
+
+    @transaction.atomic
+    def approve(self, admin_user):
+        """Approve and process withdrawal"""
+        # Get totals
+        total_savings = Savings.objects.filter(member=self.member).aggregate(
+            total=models.Sum('month_saving')
+        )['total'] or Decimal('0.00')
+        
+        total_loanable = Loanable.objects.filter(member=self.member).aggregate(
+            total=models.Sum('amount')
+        )['total'] or Decimal('0.00')
+        
+        total_investment = Investment.objects.filter(member=self.member).aggregate(
+            total=models.Sum('amount')
+        )['total'] or Decimal('0.00')
+        
+        # Check if enough money
+        if self.amount_requested > total_savings:
+            raise ValueError(f"Not enough savings. Available: ₦{total_savings:,.2f}")
+        
+        # Calculate 50/50 split
+        from_loanable = self.amount_requested / Decimal('2.00')
+        from_investment = self.amount_requested / Decimal('2.00')
+        
+        if from_loanable > total_loanable:
+            raise ValueError("Not enough in loanable account")
+        
+        if from_investment > total_investment:
+            raise ValueError("Not enough in investment account")
+        
+        # Save withdrawal info
+        self.withdrawn_amount = self.amount_requested
+        self.withdrawn_from_loanable = from_loanable
+        self.withdrawn_from_investment = from_investment
+        self.status = "Approved"
+        self.date_approved = timezone.now()
+        self.approved_by = admin_user
+        self.save()
+        
+        # Update member total
+        self.member.total_savings = total_savings - self.amount_requested
+        self.member.save()
+        
+        # Reduce savings
+        self._reduce_savings(self.amount_requested)
+        self._reduce_loanable(from_loanable)
+        self._reduce_investment(from_investment)
+    
+    def _reduce_savings(self, amount):
+        """Remove from savings records"""
+        remaining = amount
+        savings_list = Savings.objects.filter(member=self.member).order_by('date_created')
+        
+        for saving in savings_list:
+            if remaining <= 0:
+                break
+            if saving.month_saving <= remaining:
+                remaining -= saving.month_saving
+                saving.delete()
+            else:
+                saving.month_saving -= remaining
+                saving.save()
+                remaining = Decimal('0.00')
+    
+    def _reduce_loanable(self, amount):
+        """Remove from loanable records"""
+        remaining = amount
+        loanable_list = Loanable.objects.filter(member=self.member).order_by('date_created')
+        
+        for loanable in loanable_list:
+            if remaining <= 0:
+                break
+            if loanable.amount <= remaining:
+                remaining -= loanable.amount
+                loanable.delete()
+            else:
+                loanable.amount -= remaining
+                loanable.save()
+                remaining = Decimal('0.00')
+    
+    def _reduce_investment(self, amount):
+        """Remove from investment records"""
+        remaining = amount
+        investment_list = Investment.objects.filter(member=self.member).order_by('date_created')
+        
+        for investment in investment_list:
+            if remaining <= 0:
+                break
+            if investment.amount <= remaining:
+                remaining -= investment.amount
+                investment.delete()
+            else:
+                investment.amount -= remaining
+                investment.save()
+                remaining = Decimal('0.00')
+    
+    def decline(self, admin_user, reason):
+        """Decline withdrawal"""
+        self.status = "Declined"
+        self.date_approved = timezone.now()
+        self.approved_by = admin_user
+        self.decline_reason = reason
+        self.save()
+
+    class Meta:
+        ordering = ['-date_requested']
 
 
 class Dividend(models.Model):
@@ -158,6 +279,7 @@ class Dividend(models.Model):
     profit = models.DecimalField(max_digits=15, decimal_places=2)  # The profit entered by admin
     unit_profit = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)  # Profit per share
     dividend_amount = models.DecimalField(max_digits=15, decimal_places=2)  # What this member got
+    date = models.DateField(blank=True,null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User,on_delete=models.SET_NULL, null=True,blank=True,related_name="created_dividends")
 

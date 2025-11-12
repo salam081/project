@@ -1,0 +1,62 @@
+
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h6><i class="bi bi-check-circle"></i> Confirm Withdrawal Approval</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        <strong>Warning:</strong> This action cannot be undone!
+                    </div>
+
+                    <h5>Withdrawal Details:</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Member:</th>
+                            <td><strong>{{ withdrawal.member }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Amount Requested:</th>
+                            <td><strong class="text-success">₦{{ withdrawal.amount_requested|floatformat:2 }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Date Requested:</th>
+                            <td>{{ withdrawal.date_requested|date:"M d, Y h:i A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Reason:</th>
+                            <td>{{ withdrawal.reason|default:"No reason provided" }}</td>
+                        </tr>
+                    </table>
+
+                    <div class="alert alert-info">
+                        <h6>Breakdown (50/50 Split):</h6>
+                        <ul class="mb-0">
+                            <li>From Loanable: ₦{% widthratio withdrawal.amount_requested 2 1 %}</li>
+                            <li>From Investment: ₦{% widthratio withdrawal.amount_requested 2 1 %}</li>
+                        </ul>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> Confirm Approval
+                            </button>
+                            <a href="{% url 'pending_partial_withdrawals' %}" class="btn btn-secondary text-white">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

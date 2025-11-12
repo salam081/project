@@ -21,4 +21,8 @@ class SavingsAdmin(admin.ModelAdmin):
 )
     list_display = ('member__member__first_name', 'member__member__last_name', 'member__ippis', 'month', 'month_saving', 'original_amount', 'date_created')
 
-# admin.site.register(Savings)
+@admin.register(DeleteLog)
+class DeleteLogAdmin(admin.ModelAdmin):
+    list_display = ("user", "action", "month", "records_deleted", "timestamp")
+    list_filter = ("action", "month", "user")
+    search_fields = ("user__username", "remarks")

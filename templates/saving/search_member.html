@@ -70,15 +70,21 @@
                             <td><span class="fw-bold text-dark">{{ member.ippis }}</span></td>
                             <td>
                                 <div class="d-flex justify-content-center align-items-center gap-2"> {# Bootstrap flexbox for button spacing #}
+                                    <a href="{% url 'member_active_summary' member.id %}" class="btn btn-warning btn-sm text-white" title='View Activity'>
+                                       <i class="bi bi-arrow-clockwise me-1"></i> 
+                                   </a> 
+                                   
+                                   {% if user.is_authenticated and user.group.title == 'admin' %}
+                                    
+                                  
+                                     
                                     <a href="{% url 'add_individual_savings' id=member.id %}" class="btn btn-sm btn-add-savings text-white" title='Add Savings'>
                                         <i class="bi bi-plus-circle me-1"></i> 
                                     </a>
-                                     {% comment %} <a href="" class="btn btn-sm btn-reset-password" title='reset password'>
-                                        <i class="fas fa-key me-1"></i> 
-                                    </a>  {% endcomment %}
                                     <button type="button" class="btn btn-primary text-white" data-bs-toggle="modal" data-bs-target="#staticBackdrop{{ member.id }}" title='Assign User To Group'>
                                     <i class="bi bi-people"></i>
                                     </button>
+                                     {% endif %}
                                     <!-- <a href="{% url 'add_user_to_group' id=member.id %}" class="btn btn-sm btn-reset-password" title='Assign User To Group'>
                                         <i class="bi bi-people-fill"></i>
                                     </a> -->

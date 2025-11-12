@@ -939,7 +939,14 @@ def delete_monthly_savings(request):
                     ).delete()
 
                     total_deleted = savings_deleted + loanable_deleted + investment_deleted + interest_deleted
-
+                    # ✅ Create delete log
+                    DeleteLog.objects.create(
+                        user=request.user,
+                        action="monthly_savings_delete",
+                        month=month_date,
+                        records_deleted=total_deleted,
+                        remarks=f"Deleted Savings, Loanable, Investment, and Interest for {month_date.strftime('%B %Y')}."
+                    )
                     if total_deleted > 0:
                         messages.success(request, f"Successfully deleted all records for {month_date.strftime('%B %Y')}.")
                     else:

@@ -51,6 +51,10 @@
                             <div class="d-flex flex-column flex-md-row gap-2">
                                 <a href="{% url 'request_detail' data.consumable.id %}"
                                     class="btn btn-outline-info btn-sm">View</a>
+                                    {% if data.consumable.status == 'Pending' or data.consumable.status == 'Approved' %}
+                                   <a href="{% url 'edit_consumable_request' data.consumable.id %}"
+                                    class="btn btn-warning btn-sm">Edit</a>
+                                    {% endif %}
                                 {% if data.consumable.status == 'Pending' %}
                                 <a href="{% url 'cancel_consumable_request' data.consumable.id %}"
                                     class="btn btn-outline-danger btn-sm">Cancel</a>

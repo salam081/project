@@ -73,20 +73,21 @@ def purchase_consumable_dashboard(request):
     return render(request, 'purchaseitem/purchase_dashboard.html', context)
 
 # ============== CONSUMABLE PURCHASE REQUEST VIEWS ==============
-
 @login_required
 def consumable_purchase_request_list(request):
     """List all consumable requests with filtering and pagination"""
-    requests = ConsumablePurchasedRequest.objects.all().order_by('-date_requested')
+    # Staff see all, others see only theirs
+    if request.user.is_staff:
+        requests = ConsumablePurchasedRequest.objects.all()
+    else:
+        requests = ConsumablePurchasedRequest.objects.filter(requested_by=request.user)
     
+    requests = requests.order_by('-date_requested')
+
     # Filter by status
     status_filter = request.GET.get('status')
     if status_filter:
         requests = requests.filter(status=status_filter)
-    
-    # Filter by user (for non-staff users, show only their requests)
-    if not request.user.is_staff :
-        requests = requests.filter(requested_by=request.user)
     
     # Search functionality
     search_query = request.GET.get('search')
@@ -96,35 +97,51 @@ def consumable_purchase_request_list(request):
             Q(requested_by__username__icontains=search_query) |
             Q(remarks__icontains=search_query)
         )
+    
     # Pagination
     paginator = Paginator(requests, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    context = {'page_obj': page_obj,
+    context = {
+        'page_obj': page_obj,
         'status_choices': ConsumablePurchasedRequest.STATUS_CHOICES,
-        'current_status': status_filter,'search_query': search_query,}
+        'current_status': status_filter,
+        'search_query': search_query,
+    }
     return render(request, 'purchaseitem/purchase_request_list.html', context)
 
-
-@login_required
-def consumable_purchase_review(request, pk):
-    """Review consumable purchase request before approval"""
-    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
-
-    if request.method == "POST":
-        comment = request.POST.get("comment", "").strip()
-        try:
-            consumable_request.review(request.user, comment)
-            messages.success(request, "Request reviewed successfully! It is now ready for approval.")
-            return redirect("purchase_consumable_dashboard")
-        except ValidationError as e:
-            messages.error(request, str(e))
-
-    context = {
-        "consumable_request": consumable_request,
-    }
-    return render(request, "purchaseitem/purchase_request_review.html", context)
+# @login_required
+# def consumable_purchase_request_list(request):
+#     """List all consumable requests with filtering and pagination"""
+#     requests = ConsumablePurchasedRequest.objects.all().order_by('-date_requested')
+    
+#     # Filter by status
+#     status_filter = request.GET.get('status')
+#     if status_filter:
+#         requests = requests.filter(status=status_filter)
+    
+#     # Filter by user (for non-staff users, show only their requests)
+#     if not request.user.is_staff :
+#         requests = requests.filter(requested_by=request.user)
+    
+#     # Search functionality
+#     search_query = request.GET.get('search')
+#     if search_query:
+#         requests = requests.filter(
+#             Q(purpose__icontains=search_query) |
+#             Q(requested_by__username__icontains=search_query) |
+#             Q(remarks__icontains=search_query)
+#         )
+#     # Pagination
+#     paginator = Paginator(requests, 10)
+#     page_number = request.GET.get('page')
+#     page_obj = paginator.get_page(page_number)
+    
+#     context = {'page_obj': page_obj,
+#         'status_choices': ConsumablePurchasedRequest.STATUS_CHOICES,
+#         'current_status': status_filter,'search_query': search_query,}
+#     return render(request, 'purchaseitem/purchase_request_list.html', context)
 
 
 @login_required
@@ -177,9 +194,14 @@ def consumable_request_edit(request, pk):
     """Edit existing consumable purchase request"""
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
     
+    # ✅ Restrict editing to the user who made the request
+    if consumable_request.requested_by != request.user:
+        messages.error(request, "You are not authorized to edit this request.")
+        return redirect('consumable_purchase_request_detail', pk=pk)
+    
     if not consumable_request.can_be_modified():
         messages.error(request, 'This request cannot be modified.')
-        return redirect('consumable_request_detail', pk=pk)
+        return redirect('consumable_purchase_request_detail', pk=pk)
     
     if request.method == 'POST':
         try:
@@ -192,7 +214,7 @@ def consumable_request_edit(request, pk):
             consumable_request.save()
             
             messages.success(request, 'Request updated successfully!')
-            return redirect('consumable_request_detail', pk=pk)
+            return redirect('consumable_purchase_request_detail', pk=pk)
             
         except (ValueError, ValidationError) as e:
             messages.error(request, f'Error updating request: {str(e)}')
@@ -201,7 +223,26 @@ def consumable_request_edit(request, pk):
         'consumable_request': consumable_request,
         'title': 'Edit Consumable Request'
     }
-    return render(request, 'purchaseitem/request_form.html', context)
+    return render(request, 'purchaseitem/edit_request_form.html', context)
+
+@login_required
+def consumable_purchase_review(request, pk):
+    """Review consumable purchase request before approval"""
+    consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
+
+    if request.method == "POST":
+        comment = request.POST.get("comment", "").strip()
+        try:
+            consumable_request.review(request.user, comment)
+            messages.success(request, "Request reviewed successfully! It is now ready for approval.")
+            return redirect("purchase_consumable_dashboard")
+        except ValidationError as e:
+            messages.error(request, str(e))
+
+    context = {
+        "consumable_request": consumable_request,
+    }
+    return render(request, "purchaseitem/purchase_request_review.html", context)
 
 
 @login_required
@@ -226,21 +267,6 @@ def consumable_purchase_approve(request, pk):
     return render(request, 'purchaseitem/purchase_request_approve.html', context)
 
 
-# @login_required
-# def consumable_request_mark_accounted(request, pk):
-#     """Mark consumable request as fully accounted"""
-#     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
-    
-#     if request.method == 'POST':
-#         try:
-#             consumable_request.mark_as_accounted()
-#             messages.success(request, 'Request marked as fully accounted!')
-#             return redirect('consumable_request_detail', pk=pk)
-            
-#         except ValidationError as e:
-#             messages.error(request, f'Error: {str(e)}')
-    
-#     return redirect('consumable_request_detail', pk=pk)
 
 login_required
 def consumable_request_mark_accounted(request, pk):
@@ -338,7 +364,7 @@ def purchased_item_create(request, request_pk):
             item.save()
             
             messages.success(request, 'Purchased item added successfully!')
-            # return redirect('consumable_purchase_request_detail', pk=request_pk)
+            
             return redirect('purchased_item_list') #now
             
         except (ValueError, ValidationError) as e:
@@ -353,10 +379,15 @@ def purchased_item_create(request, request_pk):
 
 @login_required
 def purchased_item_list(request):
-    """List all purchased items"""
+    """List all purchased items — staff see all, users see only their own"""
+    # Base queryset with related request for efficiency
     items = PurchasedItem.objects.select_related('consumable_purchased_request')
     
-    # Filtering
+    # ✅ Restrict to only the user's own requests if not staff
+    if not request.user.is_staff:
+        items = items.filter(consumable_purchased_request__requested_by=request.user)
+    
+    # 🔍 Filtering
     search_query = request.GET.get('search')
     if search_query:
         items = items.filter(
@@ -368,8 +399,8 @@ def purchased_item_list(request):
     if request_id:
         items = items.filter(consumable_purchased_request_id=request_id)
     
-    # Pagination
-    paginator = Paginator(items, 20)
+    # 📄 Pagination
+    paginator = Paginator(items.order_by('-id'), 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -379,6 +410,36 @@ def purchased_item_list(request):
         'request_id': request_id,
     }
     return render(request, 'purchaseitem/purchased_item_list.html', context)
+
+
+# @login_required
+# def purchased_item_list(request):
+#     """List all purchased items"""
+#     items = PurchasedItem.objects.select_related('consumable_purchased_request')
+    
+#     # Filtering
+#     search_query = request.GET.get('search')
+#     if search_query:
+#         items = items.filter(
+#             Q(item_name__icontains=search_query) |
+#             Q(description__icontains=search_query)
+#         )
+    
+#     request_id = request.GET.get('request_id')
+#     if request_id:
+#         items = items.filter(consumable_purchased_request_id=request_id)
+    
+#     # Pagination
+#     paginator = Paginator(items, 20)
+#     page_number = request.GET.get('page')
+#     page_obj = paginator.get_page(page_number)
+    
+#     context = {
+#         'page_obj': page_obj,
+#         'search_query': search_query,
+#         'request_id': request_id,
+#     }
+#     return render(request, 'purchaseitem/purchased_item_list.html', context)
 
 
 @login_required
@@ -394,7 +455,8 @@ def purchased_item_edit(request, pk):
     """Edit purchased item"""
     item = get_object_or_404(PurchasedItem, pk=pk)
     if request.user != item.created_by and request.user.group.title != 'admin':
-        return HttpResponseForbidden("You don't have permission to Edit this item.")
+        messages.error(request, "You don't have permission to edit this item.")
+        return redirect("purchased_item_list")
     
     if request.method == 'POST':
         try:
@@ -438,20 +500,21 @@ def purchased_item_edit(request, pk):
 def purchased_item_delete(request, pk):
     """Delete purchased item"""
     item = get_object_or_404(PurchasedItem, pk=pk)
+
+    # ✅ Allow only the creator or admin
     if request.user != item.created_by and getattr(request.user.group, 'title', '') != 'admin':
-        return HttpResponseForbidden("You don't have permission to delete this item.")
+        messages.error(request, "You don't have permission to delete this item.")
+        return redirect("purchased_item_list")
 
     request_pk = item.consumable_purchased_request.pk
-    
+
     if request.method == 'POST':
         item.delete()
         messages.success(request, 'Purchased item deleted successfully!')
         return redirect('purchased_item_list')
-    
-    context = {'item': item,}
+
+    context = {'item': item}
     return render(request, 'purchaseitem/purchased_item_confirm_delete.html', context)
-
-
 # ============== SELLING PLAN VIEWS ==============
 
 @login_required
@@ -494,27 +557,61 @@ def selling_plan_create(request, item_pk):
 
 @login_required
 def selling_plan_list(request):
+    """List all selling plans — staff see all, users see only their own"""
     plans = SellingPlan.objects.select_related('purchased_item', 'created_by')
-    
-    # Filtering
+
+    #  Restrict non-staff users to only their own requests' items
+    if not request.user.is_staff:
+        plans = plans.filter(purchased_item__consumable_purchased_request__requested_by=request.user)
+
+    #  Search filter
     search_query = request.GET.get('search')
     if search_query:
         plans = plans.filter(
             Q(purchased_item__item_name__icontains=search_query) |
             Q(notes__icontains=search_query)
         )
-    
+
+    #  Filter available plans only if requested
     available_only = request.GET.get('available_only')
     if available_only:
         plans = plans.filter(available=True)
-    
-    # Pagination
-    paginator = Paginator(plans, 20)
+
+    #  Pagination
+    paginator = Paginator(plans.order_by('-id'), 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
-    context = {'page_obj': page_obj,'search_query': search_query,'available_only': available_only,}
+
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'available_only': available_only,
+    }
     return render(request, 'purchaseitem/selling_plan_list.html', context)
+
+# @login_required
+# def selling_plan_list(request):
+#     plans = SellingPlan.objects.select_related('purchased_item', 'created_by')
+    
+#     # Filtering
+#     search_query = request.GET.get('search')
+#     if search_query:
+#         plans = plans.filter(
+#             Q(purchased_item__item_name__icontains=search_query) |
+#             Q(notes__icontains=search_query)
+#         )
+    
+#     available_only = request.GET.get('available_only')
+#     if available_only:
+#         plans = plans.filter(available=True)
+    
+#     # Pagination
+#     paginator = Paginator(plans, 20)
+#     page_number = request.GET.get('page')
+#     page_obj = paginator.get_page(page_number)
+    
+#     context = {'page_obj': page_obj,'search_query': search_query,'available_only': available_only,}
+#     return render(request, 'purchaseitem/selling_plan_list.html', context)
 
 @login_required
 def selling_plan_detail(request, pk):
@@ -531,7 +628,8 @@ def selling_plan_edit(request, pk):
     """Edit selling plan"""
     plan = get_object_or_404(SellingPlan, pk=pk)
     if request.user != plan.created_by and request.user.group.title != 'admin':
-        return HttpResponseForbidden("You don't have permission to edit this plan.")
+        messages.error(request, "You don't have permission to edit this plan.")
+        return redirect("selling_plan_list")
     
     if request.method == 'POST':
         try:
@@ -571,7 +669,8 @@ def selling_plan_delete(request, pk):
     """Delete selling plan"""
     plan = get_object_or_404(SellingPlan, pk=pk)
     if request.user != plan.created_by and request.user.group.title != 'admin':
-        return HttpResponseForbidden("You don't have permission to Delete this plan.")
+        messages.error(request, "You don't have permission to delete this plan.")
+        return redirect("selling_plan_list")
     
     if request.method == 'POST':
         plan.delete()

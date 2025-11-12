@@ -64,16 +64,18 @@ class ConsumableRequest(models.Model):
     
     def calculate_total_price(self):
         return sum(detail.total_price for detail in self.details.all())
-
+    
+    @property
     def total_paid(self):
         return self.repayments.aggregate(total=Sum('amount_paid'))['total'] or 0
-
+    
+    @property
     def balance(self):
-        return self.calculate_total_price() - self.total_paid()
+        return self.calculate_total_price() - self.total_paid
 
     def update_status_based_on_balance(self, save=True):
         """Automatically update status based on payment balance."""
-        if self.balance() <= 0 and self.status != 'FullyPaid':
+        if self.balance <= 0 and self.status != 'FullyPaid':
             self.status = 'FullyPaid'
             if save:
                 self.save(update_fields=['status'])
@@ -114,6 +116,7 @@ class PaybackConsumable(models.Model):
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
     repayment_date = models.DateField()
     balance_remaining = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    payment_receipt = models.ImageField(upload_to='payment_receipts', blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -158,7 +161,11 @@ class ConsumableFormFee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.member.member.first_name} {self.member.member.last_name} - ₦{self.form_fee}"
+        if self.member and self.member.member:
+            user = self.member.member  # This is the related User instance
+            return f"{user.first_name} {user.last_name} - ₦{self.form_fee}"
+        else:
+            return f"{self.guest_name or 'Guest'} ({self.guest_ippis or 'N/A'}) - ₦{self.form_fee}"
 
 
 class PickedLog(models.Model):

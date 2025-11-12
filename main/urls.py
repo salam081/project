@@ -5,15 +5,20 @@ from .import views
 urlpatterns = [
     path('', views.home, name='home'),
     path('dashboard/',views.admin_dashboard,name="admin_dashboard"),
+    path('staff-dashboard/',views.staff_dashboard,name="staff_dashboard"),
 
     path('financial_list/', views.list_financial_summaries, name='financial_list'),
     path('financial-summary/delete/<int:pk>/', views.delete_financial_summary, name='delete_financial_summary'),
     
-    path("cooperative_summary/", views.cooperative_summary, name="cooperative_summary"),
+    # path("cooperative_summary/", views.cooperative_summary, name="cooperative_summary"),
     path('list_withdrawal_requests/', views.list_withdrawal_requests, name='list_withdrawal_requests'),
     path('approve/<int:pk>/', views.approve_withdrawal_request, name='approve_withdrawal_request'),
     path('decline/<int:pk>/', views.decline_withdrawal_request, name='decline_withdrawal_request'),
     path('eligible-members/', views.eligible_members_view, name='eligible_members_view'),
+    
+    path('partial-withdrawals/', views.partial_withdrawals_list, name='partial_withdrawals_list'),
+    path('partial-withdrawals/<int:pk>/approve/', views.approve_withdrawal_request, name='partial_approve_withdrawal_request'),
+    path('partial-withdrawals/<int:pk>/decline/', views.decline_withdrawal_request, name='partial_decline_withdrawal_request'),
     
     path("guest/request/", views.guest_request_consumable, name="guest_request_consumable"),
     path("active-requests/", views.member_active_requests, name="member_active_requests"),
@@ -27,8 +32,8 @@ urlpatterns = [
 
     # path("landing_page/", views.landing_page, name="landing_page"),
    
-   path("popup_form", views.popup_message_form, name="popup_form"),
-   path("active-summary/<int:pk>/", views.not_work_with_member_active_summary, name="not_work_with_member_active_summary"),
+    path("popup_form", views.popup_message_form, name="popup_form"),
+    path("active-summary/<int:pk>/", views.member_active_summary, name="member_active_summary"),
    
    
     path('user_activity/', views.user_activity_list, name='user_activity_list'),

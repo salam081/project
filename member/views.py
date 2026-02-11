@@ -26,6 +26,7 @@ from consumable.models import *
 from consumable.models import *
 from projectfinance.models import *
 from .models import *
+from special_savings.models import *
 
 
 @login_required(login_url='login')
@@ -193,37 +194,40 @@ def member_savings(request):
     }
     return render(request, 'member/member_savings.html', context)
 
-# @login_required
-# @group_required(['members','non staff member'])
-# def member_savings(request):
-#     try:
-#         member = Member.objects.get(member=request.user)
-#     except Member.DoesNotExist:
-#         return redirect('login')
+@login_required
+def member_special_savings(request):
+    try:
+        member = Member.objects.get(member=request.user)
+    except Member.DoesNotExist:
+        return HttpResponse("Access Denied: You don't have a member profile.")
 
-#     # Fetch all savings for this member
-#     savings = Savings.objects.filter(member=member)
+    special_savings = SpecialSavings.objects.filter(member=member)
+    
+    total_special_saving = special_savings.aggregate(total=Sum('month_savings'))['total'] or 0
+   
+     # Single summarized object instead of list
+    context = {
+        "member":member,
+        'special_savings':special_savings,
+        'total_special_saving':total_special_saving,
+         }
+    return render(request,'member/member_special_savings.html',context)
 
-#     # Total savings BEFORE deductions
-#     total_savings = savings.aggregate(total=Sum('month_saving'))['total'] or 0
+@login_required
+def member_target_savings(request):
+    try:
+        member = Member.objects.get(member=request.user)
+    except Member.DoesNotExist:
+        return HttpResponse("Access Denied: You don't have a member profile.")
 
-#     # Get subscription fee from Interest table if available
-#     subscription_fee = member.interest.amount if hasattr(member, 'interest') and member.interest else 0
+    target_savings = TargetSavings.objects.filter(member=member)
+    
+    total_target_saving =target_savings.aggregate(total=Sum('month_savings'))['total'] or 0
+   
+     # Single summarized object instead of list
+    context = { "member":member,'target_savings':target_savings,'total_target_saving':total_target_saving,}
+    return render(request,'member/member_target_savings.html',context)
 
-#     # Deduct subscription fee only once per month
-#     net_savings = total_savings - subscription_fee
-
-#     # Correctly calculate Investment and Loanable from net savings
-#     total_investment = net_savings / 2
-#     total_loanable = net_savings / 2
-
-#     context = {
-#         'savings': savings,
-#         'total_savings': total_savings,
-#         'total_investment': total_investment,
-#         'total_loanable': total_loanable,
-#     }
-#     return render(request, 'member/member_savings.html', context)
 
 
 def ajax_load_bank_code(request):
@@ -907,6 +911,43 @@ def member_withdrawal_request(request):
     return render(request, 'member/withdrawal_request_form.html', {'member': member})
 
 
+# @login_required
+# def create_partial_withdrawal_request(request):
+#     """Member creates withdrawal request using percentage"""
+#     member = request.user.member
+
+#     # Member's total savings
+#     total_savings = Savings.objects.filter(member=member).aggregate(
+#         total=models.Sum('month_saving')
+#     )['total'] or Decimal('0.00')
+
+#     if request.method == 'POST':
+#         # User enters percentage instead of amount
+#         percentage_str = request.POST.get('amount', '0')  # reuse field name "amount"
+#         try:
+#             percentage = Decimal(percentage_str)
+#         except:
+#             messages.error(request, "Enter a valid percentage.")
+#             return redirect('create_partial_withdrawal_request')
+
+#         # Validate percentage range
+#         if percentage <= 0 or percentage > 100:
+#             messages.error(request, "Percentage must be between 1 and 100.")
+#             return redirect('create_partial_withdrawal_request')
+
+#         # Convert percentage to real amount
+#         amount = (percentage / Decimal('100')) * total_savings
+
+#         reason = request.POST.get('reason', '').strip()
+
+#         # Create request (store the actual money amount)
+#         PartialWithdrawal.objects.create(member=member,amount_requested=amount,reason=reason)
+#         messages.success(request,f'Withdrawal request of {percentage}% (₦{amount:,.2f}) submitted!')
+#         return redirect('my_partial_withdrawal_requests')
+
+#     return render( request,'member/create_partial_withdrawal_request.html',{'total_savings': total_savings})
+
+
 
 @login_required
 def create_partial_withdrawal_request(request):
@@ -924,7 +965,7 @@ def create_partial_withdrawal_request(request):
         
         if amount > total_savings:
             messages.error(request, f'Amount exceeds your savings of ₦{total_savings:,.2f}')
-            return redirect('create_withdrawal_request')
+            return redirect('my_partial_withdrawal_requests')
         
         # Create request
         PartialWithdrawal.objects.create(

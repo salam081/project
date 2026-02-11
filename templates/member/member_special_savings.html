@@ -1,0 +1,171 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% load static %}
+
+{% block title %}Dashboard - Admin Panel{% endblock %}
+
+{% block content %}
+<style>
+    /* New styles for the mobile-friendly card layout */
+    .savings-card {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .savings-card-title {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+
+    .savings-card-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px dashed #f0f0f0;
+    }
+
+    .savings-card-item:last-child {
+        border-bottom: none;
+    }
+
+    .savings-card-label {
+        color: #6c757d;
+        font-weight: 500;
+        font-size: 0.9em;
+    }
+
+    .savings-card-value {
+        font-weight: 600;
+        text-align: right;
+    }
+
+    .savings-summary-card {
+        padding: 15px;
+        color: white;
+        border-radius: 8px;
+        margin-top: 10px;
+        text-align: center;
+      
+    }
+    
+    .savings-summary-card h6 {
+        margin-bottom: 5px;
+        font-weight: normal;
+        
+    }
+
+    .savings-summary-card p {
+        margin: 0;
+        font-size: 1.1em;
+        font-weight: bold;
+    }
+
+    /* Colors from original template */
+    .a1 {
+       
+        background: linear-gradient(134deg, #227681ff 0%, #42a4e5ff 100%);
+    }
+
+    .a2 {
+        background: linear-gradient(134deg, #67d8d6 0%, #4779ca 100%);
+    }
+
+    .a3 {
+        background: linear-gradient(134deg, #3fb6c6ff 0%, #42a4e5ff 100%);
+    }
+
+   
+
+    /* Hide the cards on larger screens and show the table instead */
+    @media (min-width: 768px) {
+        .savings-card-list {
+            display: none;
+        }
+    }
+
+    .container {
+        padding: 20px;
+    }
+
+    h4.text-center {
+        margin-bottom: 20px;
+    }
+</style>
+
+
+    
+<div class="container">
+    
+    
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h6 class="text-center fw-bold">
+            Special Savings For {{ member.member.first_name }} {{ member.member.last_name }}
+        </h6>
+      <a href="{% url 'member_savings' %}" class="btn btn-secondary"><i class="bi bi-arrow-left text-white"></i> </a>
+    </div>
+  
+   {% if special_savings %}
+   <div class="table-responsive">
+           <table class="table table-hover table-striped">
+            <thead class="table table-info">
+                <tr>
+                    <th>S/N</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Full Name</th>
+                    <th>IPPIS</th>
+                    <th class="text-nowrap">Savings Month</th>
+                    <th class="text-nowrap">Monthly Savings Amount</th>
+                    <th>Group</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in special_savings %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.member.member.first_name }} {{ m.member.member.last_name }}</td>
+                    <td>{{ m.member.ippis }}</td>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.month }}</td>
+                    <td>₦{{ m.month_savings|default:0|intcomma }}</td>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.member.member.group }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No savings records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+ 
+
+    <div class="row g-2 mt-3 ">
+        <div class="col-12 col-md-12">
+            <div class="savings-summary-card a1">
+                <h6> Your Special Savings Total</h6>
+                <p>₦{{ total_special_saving|default:0|intcomma }}</p>
+            </div>
+        </div>
+        
+    </div>
+     {% else %}
+      <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-clipboard-list fa-5x text-muted"></i>
+                </div>
+                <h6 class="text-muted">No Special Savings Records Yet</h6>
+                <p class="text-muted mb-4">No Deduction for Special Savings Request yet.</p>
+                <a href="{% url 'request_special_savings' %}" class="btn btn-primary text-white">
+                    <i class="fas fa-plus me-2"></i>Make Your First  Request Special Savings
+                </a>
+            </div>
+    </div>
+     
+    {% endif %}
+</div>
+{% endblock content %}

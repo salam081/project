@@ -6,7 +6,7 @@
 {% if has_active %}
 
   <!-- 🟦 Loans -->
-  <h4>Loans</h4>
+  <h6 class="text-primary  fw-bold">Loans</h6>
   {% if active_loans %}
   <div class="table-responsive">
     <table class="table table-bordered">
@@ -21,7 +21,7 @@
       </thead>
       <tbody>
         {% for loan in active_loans %}
-        <tr class="fw-bold bg-light">
+        <tr class=" bg-light">
           <td>{{ loan.loan_type }}</td>
           <td>₦{{ loan.amount|floatformat:2 }}</td>
           <td>₦{{ loan.total_paid|default:"0.00" }}</td>
@@ -44,16 +44,16 @@
   {% endif %}
 
   <!-- 🟨 Consumables -->
-  <h4>Consumables</h4>
+  <h6 class="text-primary  fw-bold">Consumables</h6>
   {% if active_consumables %}
    <div class="table-responsive">
     <table class="table table-bordered">
       <thead class="bg-light">
         <tr>
           <th>Description</th>
-          <th>Total Amount</th>
-          <th>Paid</th>
-          <th>Balance</th>
+          <th>Items Total Amount</th>
+          <th>Amount Paid</th>
+          <th>Balance Remaining</th>
           <th>Status</th>
         </tr>
       </thead>
@@ -67,7 +67,7 @@
           </td>
           <td>₦{{ c.total_amount_agg|floatformat:2 }}</td>
           <td>₦{{ c.total_paid_agg|default:"0.00" }}</td>
-          <td>₦{{ c.balance|floatformat:2 }}</td>
+          <td>₦{{ c.balance_agg|floatformat:2 }}</td>
           <td>{{ c.status }}</td>
         </tr>
         {% endfor %}
@@ -86,7 +86,7 @@
   {% endif %}
 
   <!-- 🟧 Project Finance -->
-  <h4>Project Finance</h4>
+  <h6 class="text-primary  fw-bold">Project Finance</h6>
   {% if active_project_finances %}
    <div class="table-responsive">
     <table class="table table-bordered">
@@ -124,7 +124,7 @@
   {% endif %}
 
   <!-- 🟩 Withdrawals -->
-  <h4>Withdrawals</h4>
+  <h6 class="text-primary  fw-bold">Withdrawals</h6>
   {% if withdrawals %}
    <div class="table-responsive">
     <table class="table table-bordered">
@@ -155,7 +155,7 @@
   <hr>
 
   <!-- 🧮 Overall Summary -->
-  <h4>Overall Summary</h4>
+  <h6 class="text-primary  fw-bold">Overall Summary</h6>
    <div class="table-responsive">
   <table class="table table-bordered">
     <thead class="bg-light">

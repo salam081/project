@@ -1,0 +1,87 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Monthly Savings Summary{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="page-header mb-4">
+        <h6>
+            <i class="bi bi-chart me-2"></i>All Special Savings Request 
+        </h6>
+    </div>
+
+    <!-- Monthly Breakdown Table -->
+    <div class="card shadow">
+        <div class="card-body ">
+            {% if special_requests %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Full Name</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Amount </th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in special_requests %}
+                        <tr>
+                            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ data.member.member.first_name }}</td>
+                            <td > ₦{{ data.amount|floatformat:2|intcomma }}</td>
+                            <td class="fs-6  fw-blod ">{{ data.status}}</td>
+                            <td>
+                                <a href="{% url 'approve_special_savings' data.pk %}" class="btn btn-sm btn-primary text-white"><i class="bi bi-check me-1"></i></a>
+                                <a href="{% url 'reject_special_savings' data.pk %}" class="btn btn-sm btn-danger text-white"><i class="bi bi- me-1"></i>Reject</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                   
+                </table>
+            </div>
+            {% else %}
+            <div class="p-5 text-center">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No savings data available yet</h5>
+                <p class="text-muted">Start adding member savings to see statistics here.</p>
+            </div>
+            {% endif %}
+        </div>
+          {% if special_sav.has_other_pages %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if special_sav.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_loan_type %}loan_type={{ current_loan_type }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ special_sav.previous_page_number }}">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in special_sav.paginator.page_range %}
+                            {% if special_sav.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > special_sav.number|add:'-3' and num < special_sav.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_loan_type %}loan_type={{ current_loan_type }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if special_sav.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_loan_type %}loan_type={{ current_loan_type }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ special_sav.next_page_number }}">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+    </div>
+</div>
+{% endblock %}

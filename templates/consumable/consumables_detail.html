@@ -464,11 +464,16 @@
             {% if consumable_request.status == 'Pending' %}
               <form action="{% url 'admin_request_approve' consumable_request.id %}" method="post" style="display:inline;">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-success">Approve</button>
+                <button type="submit" class="btn btn-success"
+                onclick="return confirm('Are you sure you want to Approve This Request? This action cannot be undone.');"
+                >
+                Approve</button>
               </form>
               <form action="{% url 'admin_request_reject' consumable_request.id %}" method="post" style="display:inline;">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-danger">Decline</button>
+                <button type="submit" class="btn btn-danger"
+                onclick="return confirm('Are you sure you want to Decline this Request? This action cannot be undone.');"
+                >Decline</button>
               </form>
             {% endif %}
             {% endif %}

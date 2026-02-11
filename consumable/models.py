@@ -72,7 +72,7 @@ class ConsumableRequest(models.Model):
     @property
     def balance(self):
         return self.calculate_total_price() - self.total_paid
-
+   
     def update_status_based_on_balance(self, save=True):
         """Automatically update status based on payment balance."""
         if self.balance <= 0 and self.status != 'FullyPaid':

@@ -17,12 +17,12 @@ class ActivityLogMiddleware(MiddlewareMixin):
             '/admin',
             '/static',
             '/media',
-            '/', 
+            '/home'
         )
 
         # Redirect to login if session expired, but skip exempt paths
         if not request.user.is_authenticated and not any(request.path.startswith(p) for p in exempt_paths):
-            messages.warning(request, "Your session has expired. Please log in again.")
+            messages.warning(request, "Your session has expired. Login.")
             return redirect('login')
 
 

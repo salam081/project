@@ -150,14 +150,15 @@
                                                     data-bs-target="#declineConfirmModal" 
                                                     data-request-id="{{ request_obj.id }}"
                                                     data-url="{% url 'admin_request_reject' request_obj.id %}"
-                                                    title="Decline">
+                                                    title="Decline"  >
                                                 <i class="bi bi-x"></i>
                                             </button>
 
                                         {% elif request_obj.status == 'Approved' %}
                                             <!-- Mark as Item Picked -->
-                                            <a href="{% url 'admin_request_taking' request_obj.id %}" 
-                                            class="btn btn-sm btn-info p-1 me-1" title="Mark as Item Picked">
+                                            <a href="{% url 'admin_request_taking' request_obj.id %}" class="btn btn-sm btn-info p-1 me-1" title="Mark as Item Picked"
+                                            onclick="return confirm('Are you sure you want to Mark This Items As Picked? This action cannot be undone.');"
+                                            >
                                                 <i class="bi bi-box-seam"></i>
                                             </a>
                                             <!-- Edit -->

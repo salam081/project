@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from accounts.decorators import group_required
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, F
 from django.db.models import Sum, F, DecimalField
@@ -29,6 +30,7 @@ from accounts.views import *
 
 
 @login_required
+@group_required(['admin'])
 def purchase_consumable_dashboard(request):
     
     # Summary statistics
@@ -74,6 +76,7 @@ def purchase_consumable_dashboard(request):
 
 # ============== CONSUMABLE PURCHASE REQUEST VIEWS ==============
 @login_required
+@group_required(['admin'])
 def consumable_purchase_request_list(request):
     """List all consumable requests with filtering and pagination"""
     # Staff see all, others see only theirs
@@ -145,6 +148,7 @@ def consumable_purchase_request_list(request):
 
 
 @login_required
+@group_required(['admin'])
 def consumable_purchase_request_detail(request, pk):
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
     
@@ -167,6 +171,7 @@ def consumable_purchase_request_detail(request, pk):
 
 
 @login_required
+@group_required(['admin'])
 def consumable_purchase_request_create(request):
     if request.method == 'POST':
         try:
@@ -190,6 +195,7 @@ def consumable_purchase_request_create(request):
 
 
 @login_required
+@group_required(['admin'])
 def consumable_request_edit(request, pk):
     """Edit existing consumable purchase request"""
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
@@ -226,6 +232,7 @@ def consumable_request_edit(request, pk):
     return render(request, 'purchaseitem/edit_request_form.html', context)
 
 @login_required
+@group_required(['admin'])
 def consumable_purchase_review(request, pk):
     """Review consumable purchase request before approval"""
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
@@ -246,6 +253,7 @@ def consumable_purchase_review(request, pk):
 
 
 @login_required
+@group_required(['admin'])
 def consumable_purchase_approve(request, pk):
     """Approve consumable purchase request"""
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
@@ -268,7 +276,8 @@ def consumable_purchase_approve(request, pk):
 
 
 
-login_required
+@login_required
+@group_required(['admin'])
 def consumable_request_mark_accounted(request, pk):
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
 
@@ -295,6 +304,7 @@ def consumable_request_mark_accounted(request, pk):
 
 
 @login_required
+@group_required(['admin'])
 @transaction.atomic
 def refund_and_account_request(request, pk):
     request_obj = get_object_or_404(ConsumablePurchasedRequest, pk=pk)
@@ -328,6 +338,7 @@ def refund_and_account_request(request, pk):
 
 # ============== PURCHASED ITEM VIEWS ==============
 @login_required
+@group_required(['admin'])
 def purchased_item_create(request, request_pk):
     """Add new purchased item to a request"""
     consumable_request = get_object_or_404(ConsumablePurchasedRequest, pk=request_pk)
@@ -378,6 +389,7 @@ def purchased_item_create(request, request_pk):
 
 
 @login_required
+@group_required(['admin'])
 def purchased_item_list(request):
     """List all purchased items — staff see all, users see only their own"""
     # Base queryset with related request for efficiency
@@ -443,6 +455,7 @@ def purchased_item_list(request):
 
 
 @login_required
+@group_required(['admin'])
 def purchased_item_detail(request, pk):
     """Detail view for purchased item"""
     item = get_object_or_404(PurchasedItem, pk=pk)
@@ -451,6 +464,7 @@ def purchased_item_detail(request, pk):
     return render(request, 'purchaseitem/purchased_item_detail.html', context)
 
 @login_required
+@group_required(['admin'])
 def purchased_item_edit(request, pk):
     """Edit purchased item"""
     item = get_object_or_404(PurchasedItem, pk=pk)
@@ -497,6 +511,7 @@ def purchased_item_edit(request, pk):
 
 
 @login_required
+@group_required(['admin'])
 def purchased_item_delete(request, pk):
     """Delete purchased item"""
     item = get_object_or_404(PurchasedItem, pk=pk)
@@ -518,6 +533,7 @@ def purchased_item_delete(request, pk):
 # ============== SELLING PLAN VIEWS ==============
 
 @login_required
+@group_required(['admin'])
 def selling_plan_create(request, item_pk):
     """Create selling plan for purchased item"""
     purchased_item = get_object_or_404(PurchasedItem, pk=item_pk)
@@ -556,6 +572,7 @@ def selling_plan_create(request, item_pk):
     return render(request, 'purchaseitem/selling_plan_form.html', context)
 
 @login_required
+@group_required(['admin'])
 def selling_plan_list(request):
     """List all selling plans — staff see all, users see only their own"""
     plans = SellingPlan.objects.select_related('purchased_item', 'created_by')
@@ -614,6 +631,7 @@ def selling_plan_list(request):
 #     return render(request, 'purchaseitem/selling_plan_list.html', context)
 
 @login_required
+@group_required(['admin'])
 def selling_plan_detail(request, pk):
     selling_plan = get_object_or_404(SellingPlan, pk=pk)
     context = {
@@ -624,6 +642,7 @@ def selling_plan_detail(request, pk):
 
 
 @login_required
+@group_required(['admin'])
 def selling_plan_edit(request, pk):
     """Edit selling plan"""
     plan = get_object_or_404(SellingPlan, pk=pk)
@@ -665,6 +684,7 @@ def selling_plan_edit(request, pk):
 
 
 @login_required
+@group_required(['admin'])
 def selling_plan_delete(request, pk):
     """Delete selling plan"""
     plan = get_object_or_404(SellingPlan, pk=pk)
@@ -686,6 +706,7 @@ def selling_plan_delete(request, pk):
 # ============== AJAX VIEWS ==============
 
 @login_required
+@group_required(['admin'])
 @require_http_methods(["GET"])
 def get_request_balance(request, pk):
     """AJAX view to get remaining balance for a request"""
@@ -707,6 +728,7 @@ def get_request_balance(request, pk):
 
 
 @login_required
+@group_required(['admin'])
 @require_http_methods(["POST"])
 def calculate_item_total(request):
     """AJAX view to calculate item total cost"""
@@ -730,6 +752,7 @@ def calculate_item_total(request):
 
 
 @login_required
+@group_required(['admin'])
 @require_http_methods(["POST"])
 def calculate_selling_profit(request):
     """AJAX view to calculate selling profit"""

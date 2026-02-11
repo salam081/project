@@ -71,10 +71,40 @@
                     <i class="bi bi-eye"></i>
                     <span class="nav-text">Members Savings</span>
                 </a>
+                <a href="{% url 'savings_request_form_payment'  %}" class="nav-link" >
+                    <i class="bi bi-wallet-fill"></i>
+                    <span class="nav-text">Saving Request Form/List</span>
+                </a> 
+               
+                <a href="{% url 'upload_special_savings'  %}" class="nav-link" >
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Special Saving</span>
+                </a> 
+                <a href="{% url 'create_special_savings'  %}" class="nav-link" >
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">Add Special Saving</span>
+                </a> 
+                 <a href="{% url 'special_savings_list'  %}" class="nav-link" >
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Special Saving List</span>
+                </a> 
+                <a href="{% url 'upload_target_savings'  %}" class="nav-link" >
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Target Saving</span>
+                </a> 
+                <a href="{% url 'create_target_savings' %}" class="nav-link" >
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">Add Target Saving</span>
+                </a> 
+                <a href="{% url 'target_savings_list' %}" class="nav-link" >
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Target Saving List</span>
+                </a> 
                 <a href="{% url 'delete_monthly_savings'  %}" class="nav-link" >
                     <i class="bi bi-trash"></i>
                     <span class="nav-text">Delete Savings</span>
                 </a>
+                
                 <a href="{% url 'saving_report'  %}" class="nav-link" >
                     <i class="bi bi-wallet-fill"></i>
                     <span class="nav-text">Saving Report</span>
@@ -299,15 +329,25 @@
                 </a>
             </div>
         </div>
+           <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#WithdrawalSubmenu" aria-expanded="false" aria-controls="casesSubmenu">
+                <i class="bi bi-wallet"></i>
+                <span class="nav-text">Withdrawal</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="WithdrawalSubmenu">
+                <a href="{% url 'partial_withdrawals_list'  %}" class="nav-link" >
+                    <i class="bi bi-wallet-fill"></i>
+                    <span class="nav-text">Partial Withdrawal List</span>
+                </a>
+                <a href="{% url 'list_withdrawal_requests'  %}" class="nav-link" >
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Complate Withdrawal List</span>
+                </a>
+            </div>
+        </div> 
         <div class="nav-item">
-            <a href="{% url 'list_withdrawal_requests' %}" class="nav-link" >
-                <i class="bi bi-people"></i>
-                <span class="nav-text">Withdrawal Requests List</span>
-            </a>
-            <a href="{% url 'partial_withdrawals_list' %}" class="nav-link" >
-                <i class="bi bi-clock-history"></i>
-                <span class="nav-text">Partial Withdrawal List</span>
-            </a>
+         
             {% if request.user.is_superuser %}
             <a href="{% url 'user_activity_list' %}" class="nav-link" >
                 <i class="bi bi-people"></i>
@@ -460,11 +500,28 @@
         </div>
         <div class="nav-item">
             <a href="{% url 'project_finance_application_list' %}" class="nav-link">
-                <i class="bi bi-cart4"></i>
+                <i class="bi bi-cart3"></i>
                 <span class="nav-text">Project Finance</span>
             </a>
         </div>
-        <div class="nav-item">
+          <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#Withdrawal" aria-expanded="false" aria-controls="casesSubmenu">
+                <i class="bi bi-wallet"></i>
+                <span class="nav-text">Withdrawal</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="Withdrawal">
+                <a href="{% url 'my_partial_withdrawal_requests'  %}" class="nav-link" >
+                    <i class="bi bi-wallet-fill"></i>
+                    <span class="nav-text">Partial Withdrawal Request</span>
+                </a>
+                <a href="{% url 'member_withdrawal_request'  %}" class="nav-link" >
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Fully Withdrawal Request</span>
+                </a>
+            </div>
+        </div> 
+        {% comment %} <div class="nav-item">
             <a href="{% url 'member_withdrawal_request' %}" class="nav-link">
                 <i class="bi bi-bank2"></i>
                 <span class="nav-text">Fully Withdrawal Request</span>
@@ -475,7 +532,7 @@
                 <i class="bi bi-bank2"></i>
                 <span class="nav-text">Partial Withdrawal Request</span>
             </a>
-        </div>
+        </div> {% endcomment %}
         {% endif %}
         {% endif %}
     </div>

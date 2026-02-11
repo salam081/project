@@ -102,7 +102,9 @@
                         </button>
                     </td>
                     <td>
-                        <a class="btn btn-sm btn-outline-warning" href="{% url 'reset_password' m.member.id %}" title="Reset Password">
+                        <a class="btn btn-sm btn-outline-warning" href="{% url 'reset_password' m.member.id %}" title="Reset Password" 
+                        onclick="return confirm('Are you sure you want to Reset this Password? This action cannot be undone.');"
+                        >
                             <i class="bi bi-key"></i>
                         </a>
                     </td>
@@ -121,7 +123,9 @@
                     </td>
                     <td>
                         {% if user.is_authenticated and user.group.title == 'admin' %}
-                        <a class="btn btn-sm btn-outline-danger" href="{% url 'delete_member' m.member.id %}" title="Delete Member">
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'delete_member' m.member.id %}" title="Delete Member"
+                        onclick="return confirm('Are you sure you want to Delete This User? This action cannot be undone.');"
+                        >
                             <i class="bi bi-trash"></i>
                         </a>
                         {% endif %}

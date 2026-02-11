@@ -20,9 +20,6 @@ class Savings(models.Model):
         super().save(*args, **kwargs)
         self.member.update_total_savings()
 
-    # def delete(self, *args, **kwargs):
-    #     super().delete(*args, **kwargs)
-    #     self.member.update_total_savings()
 
     def __str__(self):
         return f"{self.member} - {self.month.strftime('%B %Y')}: ₦{self.month_saving}"

@@ -1,0 +1,50 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% load static %}
+
+{% block title %}Dashboard - Admin Panel{% endblock %}
+
+{% block content %}
+
+
+    
+<div class="container">
+    <div class="col-md-12">
+    <div class="container shadow col-md-12">
+       
+        <h6 class="text-center  mb-4">Make Special Savings Request</h6>
+
+    
+
+        <form  method="POST" enctype="multipart/form-data" action="" class="bg-light p-4 rounded">
+            {% csrf_token %}
+            <div class="row">
+               
+                <div class="col-md-6 mb-3">
+                    <label for="amount" class="form-label">Savings Amount (₦) <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" id="amount" name="amount" placeholder="Enter amount to be saving" required >
+                </div>
+            </div>
+
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="purpose" class="form-label">Purpose <span class="text-danger">*</span></label>
+                    <input type="text"  class="form-control" id="loan_term_months" name="purpose" placeholder="Enter Purpose" required >
+                </div>
+               
+            </div>
+
+         
+           
+
+            <!-- Submit Button -->
+            <div class="d-flex">
+                <button type="submit" class="btn btn-primary">Submit Request</button>
+            </div>
+        </form>
+       
+    </div>
+</div>
+</div>
+{% endblock content %}

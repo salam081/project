@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required,user_passes_test
+from accounts.decorators import group_required
 from django.template.loader import get_template
 from openpyxl.utils import get_column_letter
 from django.views.decorators.http import require_http_methods
@@ -37,6 +38,7 @@ from consumable.models import *
 
 
 @login_required
+@group_required(['admin','staff'])
 def admin_loan_settings(request):
     try:
         settings = LoanSettings.objects.latest('id')
@@ -60,6 +62,7 @@ def admin_loan_settings(request):
     return render(request, 'loan/settings.html', context)
 
 @login_required
+@group_required(['admin','staff'])
 def add_loan_type(request):
     loan_types = LoanType.objects.all()
 
@@ -101,6 +104,7 @@ def add_loan_type(request):
     return render(request, 'loan/add_loan_type.html', context)
 
 @login_required
+@group_required(['admin','staff'])
 def loan_request_fee_payment(request):
     member_info = None
     loan_types = LoanType.objects.filter(available=True)
@@ -182,124 +186,9 @@ def loan_request_fee_payment(request):
 
     return render(request, "loan/loan_request_fee.html", context)
 
-# def loan_request_fee_payment(request):
-#     member_info = None
-#     loan_types = LoanType.objects.filter(available=True)
-
-#     if request.method == "POST":
-#         if "search_member" in request.POST:  # step 1: search
-#             ippis = request.POST.get("ippis")
-#             try:
-#                 member = Member.objects.get(ippis=ippis)
-#             except Member.DoesNotExist:
-#                 messages.error(request, f"No member found with IPPIS {ippis}.")
-#                 member = None
-
-#             if member:
-#                 latest_loanable = Loanable.objects.filter(member=member).order_by('-month').first()
-#                 total_loanable = latest_loanable.total_amount if latest_loanable else Decimal("0.00")
-
-#                 member_info = {
-#                     "id": member.id,
-#                     "name": f"{member.member.first_name} {member.member.last_name}",
-#                     "ippis": member.ippis,
-#                     "total_loanable": total_loanable,
-#                 }
-
-#         elif "make_payment" in request.POST:  # step 2: make payment
-#             member_id = request.POST.get("member_id")
-#             loan_type_id = request.POST.get("loan_type")
-#             loan_amount = Decimal(request.POST.get("loan_amount") or "0.00")
-
-#             member = get_object_or_404(Member, id=member_id)
-#             loan_type = get_object_or_404(LoanType, id=loan_type_id)
-
-#             # Prevent duplicate fee payments
-#             if LoanRequestFee.objects.filter(member=member, loan_type=loan_type).exists():
-#                 messages.warning(request, f"{member} has already paid the request fee for {loan_type.name}.")
-#                 return redirect("loan_request_fee_payment")
-
-#             #  Create the record
-#             LoanRequestFee.objects.create( member=member,loan_type=loan_type, form_fee=loan_type.request_fee,
-#                 loan_amount=loan_amount, created_by=request.user)
-#             messages.success(request, f"Loan request fee of ₦{loan_type.request_fee} recorded for {member}.")
-#             return redirect("loan_request_fee_payment")
-
-#     #  Aggregates always calculated (whether search, payment, or first load)
-#     loan = LoanRequestFee.objects.aggregate(total=Sum('loan_amount'))['total'] or Decimal("0.00")
-#     fee = LoanRequestFee.objects.aggregate(total=Sum('form_fee'))['total'] or Decimal("0.00")
-#     loan_req_form = LoanRequestFee.objects.count()
-
-#     # Fetch all loan request fees with member details
-#     members = LoanRequestFee.objects.select_related('member')
-
-#     # Pagination
-#     page_number = request.GET.get('page')
-#     paginator = Paginator(members, 100)
-#     page_obj = paginator.get_page(page_number)
-
-#     context = {"fee": fee,"loan": loan,"loan_req_form": loan_req_form, "members": members,
-#         "page_obj": page_obj,"loan_types": loan_types,
-#         "member_info": member_info,  # keep this so search results still show
-#     }
-#     return render(request, "loan/loan_request_fee.html", context)
-
-
-# def loan_fee(request):
-#     if request.method == 'POST':
-#         ippis = request.POST.get('ippis')
-#         form_fee = request.POST.get('form_fee')
-#         loan_amount = request.POST.get('loan_amount')
-
-#         # Validate IPPIS input
-#         if not ippis or not ippis.isdigit():
-#             messages.error(request, "Please enter a valid IPPIS number.")
-#             return redirect('loan_fee')
-
-#         ippis = int(ippis)  # Convert to integer
-
-#         try:
-#             member = Member.objects.get(ippis=ippis)
-#         except Member.DoesNotExist:
-#             messages.error(request, f"No member found with IPPIS {ippis}.")
-#             return redirect('loan_fee')
-
-#         # Create the loan request fee record
-#         LoanRequestFee.objects.create(
-#             member=member,
-#             form_fee=form_fee,
-#             loan_amount=loan_amount,
-#             created_by=request.user
-#         )
-
-#         messages.success(request, "Payment recorded successfully.")
-#         return redirect('loan_fee')
-
-    # # Aggregates
-    # loan = LoanRequestFee.objects.aggregate(total=Sum('loan_amount'))['total'] or 0
-    # fee = LoanRequestFee.objects.aggregate(total=Sum('form_fee'))['total'] or 0
-    # loan_req_form = LoanRequestFee.objects.count()
-
-    # # Fetch all loan request fees with member details
-    # members = LoanRequestFee.objects.select_related('member')
-
-    # # Pagination
-    # page_number = request.GET.get('page')
-    # paginator = Paginator(members, 100)
-    # page_obj = paginator.get_page(page_number)
-
-#     context = {
-#         "fee": fee,
-#         "loan": loan,
-#         "loan_req_form": loan_req_form,
-#         "members": members,
-#         "page_obj": page_obj,
-#     }
-#     return render(request, "loan/loan_fee.html", context)
-
-
-
 #  =========list of Pending Loans and others ==========
+@login_required
+@group_required(['admin','staff'])
 def admin_loan_requests_list(request):
     requests_list = LoanRequest.objects.select_related('member', 'loan_type', 'bank_name').order_by('-date_created')
     # Filtering
@@ -358,7 +247,8 @@ def admin_loan_requests_list(request):
 
 # ========admin loan request details=========
 
-
+@login_required
+@group_required(['admin','staff'])
 def loan_request_detail(request, id):
     loan_request = get_object_or_404(LoanRequest, id=id)
     repayments = loan_request.repaybacks.all().order_by('-repayment_date')
@@ -375,6 +265,7 @@ def is_admin(user):
     return user.is_staff
 
 @login_required
+@group_required(['admin'])
 def approve_loan_request(request, id):
     loan_request = get_object_or_404(LoanRequest, id=id, status='pending')
     member = loan_request.member
@@ -437,13 +328,17 @@ def approve_loan_request(request, id):
     }
     return render(request, 'loan/approve_loan.html', context)
 
-
+@login_required
+@group_required(['admin','staff'])
 def payslip_img_details(request, id):
     payslip_img = LoanRequest.objects.get(id=id)
     context = {'payslip_img': payslip_img}
     return render(request, 'loan/payslip_img_details.html', context)
 
 #======edit loan request==========
+
+@login_required
+@group_required(['admin'])
 def edit_requested_loan(request, id):
     loan_types = LoanType.objects.all()
     loanobj = LoanRequest.objects.get(id=id)
@@ -508,6 +403,8 @@ def all_reject_loan(request):
     return render(request,'loan/all_reject_loan.html',{'rejected':rejected})
 
 # ======admin delete rejected loan=========
+@login_required
+@group_required(['admin'])
 def delete_reject_loan(request,id):
     rejectObj = LoanRequest.objects.get(id=id)
     rejectObj.delete()
@@ -515,7 +412,8 @@ def delete_reject_loan(request,id):
 
 
 #========list of loan request in a year===========
-
+@login_required
+@group_required(['admin','staff'])
 def loan_years_list(request):
     # Get distinct year and loan_type combinations
     loans = LoanRequest.objects.annotate(year=ExtractYear('application_date')).values('year', 'loan_type__name').distinct().order_by('-year', 'loan_type__name')
@@ -617,6 +515,7 @@ def loans_by_year(request, year, loan_type_filter):
 # ====== make payment for one member =========
 
 @login_required
+@group_required(['admin'])
 def add_payment(request):
     requests_list = []
     selected_user = None
@@ -720,7 +619,8 @@ def add_payment(request):
     return render(request, "loan/add_payment.html",context)
 
 
-
+@login_required
+@group_required(['admin','staff'])
 def get_loan_types_for_year(request):
     year = request.GET.get("year")
     if not year:
@@ -733,6 +633,8 @@ def get_loan_types_for_year(request):
     return JsonResponse({"loan_types": list(loan_types)})
 
 
+@login_required
+@group_required(['admin'])
 def upload_loan_repayment(request):
     # 1 — Group by LoanType
     available_loans = LoanRequest.objects.filter(status="approved").select_related(
@@ -851,7 +753,8 @@ def upload_loan_repayment(request):
     context = {"grouped_list": grouped_list}
     return render(request, "loan/upload_loan_payment.html", context)
 
-
+@login_required
+@group_required(['admin','staff'])
 def admin_repayment_tracking(request):
     """Track all loan repayments"""
     repayments_list = LoanRepayback.objects.select_related(
@@ -892,102 +795,6 @@ def admin_repayment_tracking(request):
 
 
 # views.py - Complete implementation for your loan analytics
-
-
-# Import the query functions from your previous artifact
-
-# def monthly_paybacks_summary():
-#     """Get monthly payback totals"""
-#     return LoanRepayback.objects.extra(
-#         select={'month': "strftime('%%Y-%%m', repayment_date)"}
-#     ).values('month').annotate(
-#         total_payments=Sum('amount_paid'),
-#         number_of_payments=Count('id'),
-#         average_payment=Sum('amount_paid') / Count('id')
-#     ).order_by('month')
-
-# def total_payments_by_loan_type():
-#     """Get total payments by each loan type"""
-#     return LoanRepayback.objects.values(
-#         'loan_request__loan_type__name'
-#     ).annotate(
-#         total_amount=Sum('amount_paid')
-#     ).order_by('-total_amount')
-
-# def monthly_payments_by_loan_type():
-#     """Get monthly breakdown AND loan type totals combined"""
-#     return LoanRepayback.objects.extra(
-#         select={'month': "strftime('%%Y-%%m', repayment_date)"}
-#     ).values(
-#         'month', 
-#         'loan_request__loan_type__name'
-#     ).annotate(
-#         total_amount=Sum('amount_paid'),
-#         payment_count=Count('id'),
-#         average_payment=Sum('amount_paid') / Count('id')
-#     ).order_by('month', 'loan_request__loan_type__name')
-
-
-# # MAIN VIEW FUNCTION WITH PAGINATION
-# def loan_analytics_view(request):
-    
-#     # Get the three main datasets
-#     monthly_payments = monthly_paybacks_summary()
-#     loan_type_totals = total_payments_by_loan_type()
-#     detailed_breakdown = monthly_payments_by_loan_type()
-    
-#     # Pagination for detailed breakdown
-#     paginator = Paginator(detailed_breakdown, 10)  # 10 items per page
-#     page_number = request.GET.get('page', 1)
-#     page_obj = paginator.get_page(page_number)
-    
-#     # Calculate summary statistics
-#     all_payments = LoanRepayback.objects.aggregate(
-#         total=Sum('amount_paid'),
-#         count=Count('id')
-#     )
-    
-#     # Get current month total
-#     current_month = timezone.now().date().replace(day=1)
-#     current_month_payments = LoanRepayback.objects.filter(
-#         repayment_date__gte=current_month
-#     ).aggregate(total=Sum('amount_paid'))
-    
-#     # Calculate percentages for loan types (for progress bars)
-#     total_all = all_payments['total'] or 0
-#     loan_type_list = []
-#     for item in loan_type_totals:
-#         percentage = (item['total_amount'] / total_all * 100) if total_all > 0 else 0
-#         loan_type_list.append({
-#             'loan_request__loan_type__name': item['loan_request__loan_type__name'],
-#             'total_amount': item['total_amount'],
-#             'percentage': percentage
-#         })
-    
-#     # Prepare context for template
-#     context = {
-#         # Main data for charts/tables
-#         'monthly_payments': monthly_payments,
-#         'loan_type_totals': loan_type_list,  # Modified with percentages
-#         'detailed_breakdown': page_obj,  # Paginated data
-        
-#         # Summary statistics for cards
-#         'total_all_payments': all_payments['total'] or 0,
-#         'total_transactions': all_payments['count'] or 0,
-#         'current_month_total': current_month_payments['total'] or 0,
-        
-#         # Additional data
-#         'today': timezone.now().date(),
-        
-#         # Pagination data
-#         'page_obj': page_obj,
-#         'is_paginated': page_obj.has_other_pages(),
-#     }
-    
-#     return render(request, 'loan/loan_analytics.html', context)
-
-
-
 # --- HELPERS ---
 
 def monthly_paybacks_summary():
@@ -1031,7 +838,8 @@ def monthly_payments_by_loan_type():
 
 
 # --- MAIN VIEW FUNCTION ---
-
+@login_required
+@group_required(['admin'])
 def loan_analytics_view(request):
     # Get the three main datasets
     monthly_payments = monthly_paybacks_summary()

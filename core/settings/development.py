@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'member',
     'nonstaff_app',
     'savings',
+    'special_savings',
     'PurchasedItems',
     'report',
     'projectfinance',

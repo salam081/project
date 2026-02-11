@@ -23,7 +23,7 @@
             <td>₦{{ round.profit|floatformat:2 }}</td>
             <td>₦{{ round.total_amount|floatformat:2 }}</td>
             <td>{{ round.count }}</td>
-            <td>{{ round.date|default:"N/A" }}</td>
+            <td>{{ round.distribution_date|default:"N/A" }}</td>
           
             <td>{{ round.created_by__first_name }} {{ round.created_by__last_name }}</td>
             <td>{{ round.created_at|date:"Y-m-d H:i" }}</td>

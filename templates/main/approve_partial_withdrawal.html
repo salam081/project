@@ -1,59 +1,193 @@
-
 {% extends 'base/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Approve Withdrawal{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card border-success">
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <a href="{% url 'partial_withdrawal_detail' withdrawal.pk %}" class="btn btn-secondary mb-3 text-white">← Back</a>
+            <h2>Approve Withdrawal Request</h2>
+        </div>
+    </div>
+
+    {% if not has_sufficient_funds %}
+    <div class="alert alert-danger">
+        <h6><i class="bi bi-exclamation-triangle"></i> Insufficient Funds</h6>
+        <p>This withdrawal cannot be approved due to insufficient funds in the member's accounts.</p>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <!-- Member & Request Info -->
+            <div class="card mb-4">
                 <div class="card-header bg-success text-white">
-                    <h6><i class="bi bi-check-circle"></i> Confirm Withdrawal Approval</h6>
+                    <h6 class="mb-0">Withdrawal Details</h6>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> 
-                        <strong>Warning:</strong> This action cannot be undone!
-                    </div>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Member:</dt>
+                        <dd class="col-sm-7">{{ withdrawal.member.member.first_name }} {{ withdrawal.member.member.last_name }}</dd>
 
-                    <h5>Withdrawal Details:</h5>
-                    <table class="table table-bordered">
-                        <tr>
-                            <th>Member:</th>
-                            <td><strong>{{ withdrawal.member }}</strong></td>
-                        </tr>
-                        <tr>
-                            <th>Amount Requested:</th>
-                            <td><strong class="text-success">₦{{ withdrawal.amount_requested|floatformat:2 }}</strong></td>
-                        </tr>
-                        <tr>
-                            <th>Date Requested:</th>
-                            <td>{{ withdrawal.date_requested|date:"M d, Y h:i A" }}</td>
-                        </tr>
-                        <tr>
-                            <th>Reason:</th>
-                            <td>{{ withdrawal.reason|default:"No reason provided" }}</td>
-                        </tr>
+                        <dt class="col-sm-5">IPPIS:</dt>
+                        <dd class="col-sm-7">{{ withdrawal.member.ippis }}</dd>
+
+                        <dt class="col-sm-5">Amount Requested:</dt>
+                        <dd class="col-sm-7"><strong class="text-primary">₦{{ withdrawal.amount_requested|floatformat:2|intcomma }}</strong></dd>
+
+                        <dt class="col-sm-5">Date Requested:</dt>
+                        <dd class="col-sm-7">{{ withdrawal.date_requested|date:"F d, Y" }}</dd>
+
+                        <dt class="col-sm-5">Reason:</dt>
+                        <dd class="col-sm-7">{{ withdrawal.reason|default:"No reason provided" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <!-- Balance Breakdown -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">Account Balances</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Account</th>
+                                <th class="text-end">Current</th>
+                                <th class="text-end">To Withdraw</th>
+                                <th class="text-end">Balance After</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Loanable</strong></td>
+                                <td class="text-end">₦{{ total_loanable|floatformat:2|intcomma }}</td>
+                                <td class="text-end text-danger">-₦{{ from_loanable|floatformat:2|intcomma }}</td>
+                                <td class="text-end">
+                                    {% if from_loanable <= total_loanable %}
+                                    <span class="text-success">₦{{ total_loanable|add:"-"|add:from_loanable|floatformat:2|intcomma }}</span>
+                                    {% else %}
+                                    <span class="text-danger">Insufficient</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Investment</strong></td>
+                                <td class="text-end">₦{{ total_investment|floatformat:2|intcomma }}</td>
+                                <td class="text-end text-danger">-₦{{ from_investment|floatformat:2|intcomma }}</td>
+                                <td class="text-end">
+                                    {% if from_investment <= total_investment %}
+                                    <span class="text-success">₦{{ total_investment|add:"-"|add:from_investment|floatformat:2|intcomma }}</span>
+                                    {% else %}
+                                    <span class="text-danger">Insufficient</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr class="table-primary">
+                                <td><strong>Total Savings</strong></td>
+                                <td class="text-end"><strong>₦{{ total_savings|floatformat:2|intcomma }}</strong></td>
+                                <td class="text-end text-danger"><strong>-₦{{ withdrawal.amount_requested|floatformat:2|intcomma }}</strong></td>
+                                <td class="text-end">
+                                    {% if has_sufficient_funds %}
+                                    <strong class="text-success">₦{{ balance_after|floatformat:2|intcomma }}</strong>
+                                    {% else %}
+                                    <strong class="text-danger">Insufficient</strong>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <div class="alert alert-info">
-                        <h6>Breakdown (50/50 Split):</h6>
-                        <ul class="mb-0">
-                            <li>From Loanable: ₦{% widthratio withdrawal.amount_requested 2 1 %}</li>
-                            <li>From Investment: ₦{% widthratio withdrawal.amount_requested 2 1 %}</li>
+    <!-- Withdrawal Breakdown Info -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Withdrawal Breakdown (50/50 Split)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded">
+                                <h6 class="text-muted">From Loanable Account</h6>
+                                <h3 class="text-primary">₦{{ from_loanable|floatformat:2|intcomma }}</h3>
+                                <small class="text-muted">50% of total</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded">
+                                <h6 class="text-muted">From Investment Account</h6>
+                                <h3 class="text-primary">₦{{ from_investment|floatformat:2|intcomma }}</h3>
+                                <small class="text-muted">50% of total</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-success text-white">
+                                <h6>Total Withdrawal</h6>
+                                <h3>₦{{ withdrawal.amount_requested|floatformat:2|intcomma }}</h3>
+                                <small>To be disbursed</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Form -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">Confirm Approval</h6>
+                </div>
+                <div class="card-body">
+                    {% if has_sufficient_funds %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Warning:</strong> This action will:
+                        <ul class="mb-0 mt-2">
+                            <li>Deduct ₦{{ withdrawal.amount_requested|floatformat:2|intcomma }} from the member's total savings</li>
+                            <li>Remove ₦{{ from_loanable|floatformat:2|intcomma }} from loanable account records</li>
+                            <li>Remove ₦{{ from_investment|floatformat:2|intcomma }} from investment account records</li>
+                            <li>Mark this withdrawal as approved and cannot be reversed</li>
                         </ul>
                     </div>
 
                     <form method="post">
                         {% csrf_token %}
-                        <div class="d-grid gap-2">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmCheck" required>
+                            <label class="form-check-label" for="confirmCheck">
+                                I confirm that I have verified the member's request and authorize this withdrawal.
+                            </label>
+                        </div>
+                        <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-success btn-lg">
-                                <i class="bi bi-check-circle"></i> Confirm Approval
+                                <i class="bi bi-check-circle"></i> Approve Withdrawal
                             </button>
-                            <a href="{% url 'pending_partial_withdrawals' %}" class="btn btn-secondary text-white">
-                                <i class="bi bi-arrow-left"></i> Cancel
-                            </a>
+                            <a href="{% url 'partial_withdrawal_detail' withdrawal.pk %}" class="btn btn-secondary btn-lg text-white">Cancel</a>
                         </div>
                     </form>
+                    {% else %}
+                    <div class="alert alert-danger mb-0">
+                        <i class="bi bi-x-circle"></i>
+                        <strong>Cannot Approve:</strong> Insufficient funds in member's accounts. Please decline this request or wait for the member to make additional deposits.
+                    </div>
+                    <a href="{% url 'partial_withdrawal_decline' withdrawal.pk %}" class="btn btn-danger mt-3 text-white">
+                        <i class="bi bi-x-circle"></i> Decline This Request
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

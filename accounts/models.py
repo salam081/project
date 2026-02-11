@@ -63,13 +63,15 @@ class Member(models.Model):
     ippis = models.IntegerField(unique=True)  # Required and unique
     total_savings = models.DecimalField(max_digits=12, decimal_places=2, default=0, blank=True, null=True)
     total_profit = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    # Special savings
+    total_special_savings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_target_savings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
     def __str__(self):
         return f"{self.member} ({self.ippis})"
 
     def update_total_savings(self):
         total = self.savings.aggregate(models.Sum("month_saving"))["month_saving__sum"] or 0.00
-
-        # total = self.savings_set.aggregate(models.Sum("month_saving"))["month_saving__sum"] or 0.00
         self.total_savings = total
 
         # Reset profit if savings is 0
@@ -77,6 +79,22 @@ class Member(models.Model):
             self.total_profit = 0
 
         self.save()
+    
+    # Special savings updater
+    def update_special_savings(self):
+        total = self.special_savings.aggregate(total=models.Sum("month_savings"))["total"] or Decimal("0.00")
+
+        self.total_special_savings = total
+        self.save(update_fields=["total_special_savings"])
+            
+    # Special savings updater
+    def update_target_savings(self):
+        total = self.target_savings.aggregate(total=models.Sum("month_savings"))["total"] or Decimal("0.00")
+
+        self.total_target_savings = total
+        self.save(update_fields=["total_target_savings"])
+            
+            
     # Add this method to your existing Member model
     def get_complete_financial_data(self):
         """Get complete financial data for the member"""

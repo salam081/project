@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
+from accounts.decorators import group_required
 from django.core.paginator import Paginator,PageNotAnInteger,EmptyPage
 from django.db.models import Sum, Count, F, DecimalField, ExpressionWrapper
 from django.forms import DecimalField
@@ -36,7 +36,8 @@ from main.models import *
 
 
 
-
+@login_required
+@group_required(['admin','staff'])
 def consumable_dashboard(request):
     # === Request Statistics ===
     total_requests = ConsumableRequest.objects.count()
@@ -128,6 +129,7 @@ def consumable_dashboard(request):
 
 
 @login_required
+@group_required(['admin','staff'])
 def add_consumable_type(request):
     consumable_types = ConsumableType.objects.all()
 
@@ -169,7 +171,8 @@ def add_consumable_type(request):
     context = {'consumable_types': consumable_types}
     return render(request, 'consumable/add_consumable_type.html', context)
 
-
+@login_required
+@group_required(['admin'])
 def process_item_pickup(request_id):
     try:
         request = ConsumableRequest.objects.get(id=request_id)
@@ -194,6 +197,7 @@ def process_item_pickup(request_id):
 
 
 @login_required
+@group_required(['admin','staff'])
 def consumable_fee(request):
     member_info = None
     consumable_types = ConsumableType.objects.filter(available=True)
@@ -299,101 +303,10 @@ def consumable_fee(request):
     return render(request, "consumable/consumable_fee.html", context)
 
 
-# @login_required
-# def consumable_fee(request):
-#     member_info = None
-#     consumable_types = ConsumableType.objects.filter(available=True)
-
-#     if request.method == "POST":
-#         # Step 1: Search Member
-#         if "search_member" in request.POST:
-#             ippis = request.POST.get("ippis")
-#             try:
-#                 member = Member.objects.get(ippis=ippis)
-#                 member_info = {
-#                     "id": member.id,
-#                     "name": f"{member.member.first_name} {member.member.last_name}",
-#                     "ippis": member.ippis,
-#                 }
-#             except Member.DoesNotExist:
-#                 messages.error(request, f"No member found with IPPIS {ippis}.")
-
-#         # Step 2: Member Payment
-#         elif "make_payment" in request.POST:
-#             member_id = request.POST.get("member_id")
-#             consumable_type_id = request.POST.get("consumable_type")
-
-#             member = get_object_or_404(Member, id=member_id)
-#             consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
-
-#             # prevent duplicate active payment
-#             if ConsumableFormFee.objects.filter(
-#                 member=member, consumable_type=consumable_type, status="paid"
-#             ).exists():
-#                 messages.warning(
-#                     request, f"{member} already has an active paid fee for {consumable_type.name}."
-#                 )
-#                 return redirect("consumable_fee")
-
-#             ConsumableFormFee.objects.create(
-#                 member=member,
-#                 consumable_type=consumable_type,
-#                 form_fee=consumable_type.request_fee,
-#                 status="paid",
-#                 created_by=request.user,
-#             )
-#             messages.success(
-#                 request,
-#                 f"Consumable form fee of ₦{consumable_type.request_fee} recorded for {member}.",
-#             )
-#             return redirect("consumable_fee")
-
-#         # Step 3: Guest Payment
-#         elif "make_guest_payment" in request.POST:
-#             guest_name = request.POST.get("guest_name")
-#             guest_ippis = request.POST.get("guest_ippis")
-#             consumable_type_id = request.POST.get("consumable_type")
-
-#             if not guest_name or not guest_ippis:
-#                 messages.error(request, "Guest Name and IPPIS are required.")
-#                 return redirect("consumable_fee")
-
-#             consumable_type = get_object_or_404(ConsumableType, id=consumable_type_id)
-
-#             ConsumableFormFee.objects.create(
-#                 guest_name=guest_name,
-#                 guest_ippis=guest_ippis,
-#                 consumable_type=consumable_type,
-#                 form_fee=consumable_type.request_fee,
-#                 status="paid",
-#                 created_by=request.user,
-#             )
-#             messages.success(
-#                 request,
-#                 f"Consumable form fee of ₦{consumable_type.request_fee} recorded for Guest {guest_name}.",
-#             )
-#             return redirect("consumable_fee")
-
-#     # ✅ Always load aggregates & fees
-#     total_fee = ConsumableFormFee.objects.aggregate(total=Sum("form_fee"))["total"] or Decimal("0.00")
-#     fee_count = ConsumableFormFee.objects.count()
-
-#     fees = ConsumableFormFee.objects.select_related("member", "consumable_type").order_by("-created_at")
-#     paginator = Paginator(fees, 50)
-#     page_number = request.GET.get("page")
-#     page_obj = paginator.get_page(page_number)
-
-#     context = {
-#         "total_fee": total_fee,
-#         "fee_count": fee_count,
-#         "page_obj": page_obj,
-#         "consumable_types": consumable_types,
-#         "member_info": member_info,
-#     }
-#     return render(request, "consumable/consumable_fee.html", context)
 
 
 @login_required
+@group_required(['admin','staff'])
 def consumable_items(request):
     consumables = SellingPlan.objects.all()
     
@@ -432,6 +345,7 @@ def consumable_items(request):
     return render(request, "consumable/consumable_items.html", context)
 
 @login_required
+@group_required(['admin'])
 def delete_item(request,id):
     itemObj = get_object_or_404(Item, id=id)
     itemObj.delete()
@@ -439,6 +353,7 @@ def delete_item(request,id):
     return redirect('consumable_items')
 
 @login_required
+@group_required(['admin','staff'])
 def admin_consumables_list(request):
     consumables_list = ConsumableRequest.objects.select_related(
         'user', 'consumable_type'
@@ -480,6 +395,7 @@ def admin_consumables_list(request):
 
 
 @login_required
+@group_required(['admin','staff'])
 def admin_consumable_detail(request, request_id):
     consumable_request = get_object_or_404(
         ConsumableRequest.objects.select_related('user', 'consumable_type')
@@ -497,7 +413,8 @@ def admin_consumable_detail(request, request_id):
     }
     return render(request, 'consumable/consumables_detail.html', context)
 
-
+@login_required
+@group_required(['admin'])
 @require_POST
 def admin_request_approve(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
@@ -508,7 +425,8 @@ def admin_request_approve(request, request_id):
         messages.success(request, f"Request #{request_id} has been approved.")
     return redirect('admin_consumable_detail', request_id=request_id)
 
-
+@login_required
+@group_required(['admin'])
 @require_POST
 def admin_request_reject(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
@@ -521,6 +439,7 @@ def admin_request_reject(request, request_id):
 
 
 @login_required
+@group_required(['admin'])
 def admin_request_taking(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
 
@@ -563,6 +482,7 @@ def admin_request_taking(request, request_id):
     return redirect('admin_consumable_detail', request_id=request_id)
 
 @login_required
+@group_required(['admin','staff'])
 def consumable_types_with_requests(request):
     # Group ConsumableTypes by status counts
     requested_types = ConsumableType.objects.filter(consumables_type__isnull=False).annotate(
@@ -578,6 +498,7 @@ def consumable_types_with_requests(request):
 
 
 @login_required
+@group_required(['admin','staff'])
 def members_by_consumable_type(request, id):
     consumable_type = get_object_or_404(ConsumableType, id=id)
     requests_qs = ConsumableRequest.objects.filter(
@@ -631,6 +552,7 @@ def members_by_consumable_type(request, id):
 
 
 @login_required
+@group_required(['admin'])
 def add_payment(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
     if request.method == 'POST':
@@ -683,6 +605,7 @@ def add_payment(request, request_id):
     return redirect('admin_consumable_detail', request_id=request_id)
 
 @login_required
+@group_required(['admin'])
 def admin_edit_consumable_request(request, request_id):
     consumable_request = get_object_or_404(ConsumableRequest, id=request_id)
     details = consumable_request.details.all()
@@ -725,6 +648,7 @@ def admin_edit_consumable_request(request, request_id):
 
 
 @login_required
+@group_required(['admin'])
 def add_single_consumable_payment(request):
     requests_list = []
     selected_user = None
@@ -814,6 +738,7 @@ def add_single_consumable_payment(request):
 
 
 @login_required
+@group_required(['admin'])
 def upload_consumable_payment(request):
     # 1 — Group by type instead of month
     available_requests = ConsumableRequest.objects.filter(status="Itempicked").select_related(
@@ -943,6 +868,7 @@ def upload_consumable_payment(request):
 
 
 @login_required
+@group_required(['admin','staff'])
 def item_list_with_requests(request):
     items = ( SellingPlan.objects.all().select_related("purchased_item")
         .prefetch_related("details__request") 
@@ -980,6 +906,7 @@ def item_list_with_requests(request):
     return render(request, "consumable/item_list.html", context)
 
 @login_required
+@group_required(['admin','staff'])
 def item_request_list(request, item_id):
     # Get the item (SellingPlan)
     selling_plan = get_object_or_404(SellingPlan, id=item_id)
@@ -1039,58 +966,8 @@ def monthly_consumable_payments_by_type():
 
 
 
-# def consumable_analytics_view(request):
-#     # Get datasets
-#     monthly_payments = monthly_consumable_paybacks_summary()
-#     type_totals = total_consumable_payments_by_type()
-#     detailed_breakdown = monthly_consumable_payments_by_type()
-
-#     # Pagination
-#     paginator = Paginator(detailed_breakdown, 10)
-#     page_number = request.GET.get("page", 1)
-#     page_obj = paginator.get_page(page_number)
-
-#     # Summary statistics
-#     all_payments = PaybackConsumable.objects.aggregate(
-#         total=Sum("amount_paid"),
-#         count=Count("id")
-#     )
-
-#     # Current month total
-#     current_month = timezone.now().date().replace(day=1)
-#     current_month_payments = PaybackConsumable.objects.filter(
-#         repayment_date__gte=current_month
-#     ).aggregate(total=Sum("amount_paid"))
-
-#     # Percentages by consumable type
-#     total_all = all_payments["total"] or Decimal("0.00")
-#     type_list = []
-#     for item in type_totals:
-#         percentage = (item["total_amount"] / total_all * 100) if total_all > 0 else 0
-#         type_list.append({
-#             "consumable_type": item["consumable_request__consumable_type__name"],
-#             "total_amount": item["total_amount"],
-#             "percentage": percentage
-#         })
-
-#     context = {
-#         # Data for charts/tables
-#         "monthly_payments": monthly_payments,
-#         "type_totals": type_list,
-#         "detailed_breakdown": page_obj,
-
-#         # Summary statistics
-#         "total_all_payments": total_all,
-#         "total_transactions": all_payments["count"] or 0,
-#         "current_month_total": current_month_payments["total"] or 0,
-
-#         # Pagination
-#         "page_obj": page_obj,
-#         "is_paginated": page_obj.has_other_pages(),
-#         "today": timezone.now().date(),
-#     }
-
-#     return render(request, "consumable/consumable_analytics.html", context)
+@login_required
+@group_required(['admin'])
 def consumable_analytics_view(request):
     # Get datasets
     monthly_payments = monthly_consumable_paybacks_summary()

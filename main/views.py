@@ -5,7 +5,11 @@ from datetime import datetime
 from django.db import transaction
 from django.http import HttpResponse
 from datetime import timedelta
-from django.db.models import Q, Sum, Count, Max, F, Min, OuterRef, Subquery, DecimalField 
+from django.db.models import Sum, F, DecimalField, OuterRef, Subquery
+from django.db.models.functions import Coalesce
+
+from django.db.models import Q, Sum, Count, Max, F, Min, OuterRef, Subquery, DecimalField ,Value
+from django.db.models import F, ExpressionWrapper, DecimalField  
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Sum
@@ -14,8 +18,6 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import datetime
 import datetime
-from django.db.models import F, ExpressionWrapper, DecimalField    
-from django.utils.dateparse import parse_datetime
 from django.conf import settings
 from django.contrib import messages
 from django.db.models.functions import TruncMonth
@@ -24,22 +26,22 @@ from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from decimal import Decimal
 import openpyxl
-from accounts.decorators import *
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from accounts.decorators import group_required
 from PurchasedItems.models import *
 from django import forms
 from projectfinance.models import *
 from .models import *
 from accounts.models import *
-from accounts.decorators import group_required
 from consumable.models import *
 from loan.models import *
 from savings.models import *
-from main.models import Withdrawal
+from main.models import Withdrawal,UserActivity
 from django.db.models.functions import ExtractMonth, ExtractYear
 from accounts.utils import get_cooperative_withdrawal_stats, get_members_eligible_for_withdrawal
 from accounts.views import *
 from .forms import *
-
 
 
 def home(request):
@@ -51,9 +53,7 @@ def home(request):
 
     return render(request, 'main/home.html', {"popup": popup})
 
-
-
-@login_required(login_url='login')
+@login_required
 @group_required(['admin'])
 def admin_dashboard(request):
     # Get the current year
@@ -72,9 +72,7 @@ def admin_dashboard(request):
         action__icontains="logged in",
         timestamp__date__gte=week_ago
     ).values('user').distinct().count()
-    
-    # Data retrieval for the current year
-    # total_members = Member.objects.count()
+   
     total_members = User.objects.filter(is_active=True).exclude(is_superuser=True).count()
     print('total_members', total_members)
     total_members_withdrawal = Withdrawal.objects.count()
@@ -163,11 +161,13 @@ def admin_dashboard(request):
         
         'daily_logins': daily_logins,
         'weekly_logins': weekly_logins,
+        
+       
     }
     return render(request, 'main/admin_dashboad.html', context)
 
 
-@login_required(login_url='login')
+@login_required
 @group_required(['staff'])
 def staff_dashboard(request):
         # Get the current year
@@ -218,7 +218,8 @@ def staff_dashboard(request):
     return render(request, 'main/staff_dashboard.html', context)
 
 
-@login_required(login_url='login')
+
+@login_required
 @group_required(['admin'])
 def list_financial_summaries(request):
     summaries = FinancialSummary.objects.select_related('user').all()
@@ -238,7 +239,7 @@ def is_admin(user):
     return user.is_staff or user.is_superuser
 
 
-@login_required(login_url='login')
+@login_required
 @group_required(['admin'])
 def list_withdrawal_requests(request):
     requests = Withdrawal.objects.select_related('member', 'approved_by').all()
@@ -247,9 +248,8 @@ def list_withdrawal_requests(request):
 
 
 
-@login_required(login_url='login')
+@login_required
 @group_required(['admin'])
-
 def approve_withdrawal_request(request, pk):
     withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
     member = withdrawal_request.member  
@@ -295,7 +295,8 @@ def approve_withdrawal_request(request, pk):
     })
 
 
-@login_required(login_url='login')
+
+@login_required
 @group_required(['admin'])
 def decline_withdrawal_request(request, pk):
     withdrawal_request = get_object_or_404(Withdrawal, pk=pk, status='Pending')
@@ -313,113 +314,229 @@ def decline_withdrawal_request(request, pk):
     return render(request, 'main/decline_withdrawal_request.html', {'request_obj': withdrawal_request})
 
 
-@login_required(login_url='login')
-def eligible_members_view(request):
-    eligible_members = get_members_eligible_for_withdrawal()
-    return render(request, 'main/eligible_members.html', {'eligible_members': eligible_members,})
-
-
-#========== Partial Withdrawal Views ==========#
-
-# @login_required
-# def pending_partial_withdrawals(request):
-#     """Admin sees pending requests"""
-#     if not request.user.is_staff:
-#         messages.error(request, 'Access denied')
-#         return redirect('pending_partial_withdrawals')
-    
-#     withdrawals = PartialWithdrawal.objects.filter(status__in=['Pending','Approved','Declined']).select_related('member').all()
-    
-#     return render(request, 'main/pending_partial_withdrawals.html', {'withdrawals': withdrawals})
-
 
 @login_required
 def partial_withdrawals_list(request):
-    """Admin sees Partial Withdrawal requests"""
-    if not request.user.is_staff:
-        messages.error(request, 'Access denied')
-        return redirect('partial_withdrawals_list')  # safer redirect than looping back to same page
+    """List all partial withdrawal requests with filtering"""
+    # Get filter parameters
+    status_filter = request.GET.get('status', '')
+    search = request.GET.get('search', '')
     
-    withdrawals_list = (
-        PartialWithdrawal.objects
-        .filter(status__in=['Pending', 'Approved', 'Declined'])
-        .select_related('member')
-        .order_by('-id')  # optional: newest first
-    )
+    # Base queryset
+    withdrawals = PartialWithdrawal.objects.select_related('member', 'approved_by').all()
     
-    paginator = Paginator(withdrawals_list, 10)  # 10 per page
+    # Apply status filter
+    if status_filter:
+        withdrawals = withdrawals.filter(status=status_filter)
+    
+    # Apply search filter (member name or registration number)
+    if search:
+        withdrawals = withdrawals.filter(
+            Q(member__member__first_name__icontains=search) |
+            Q(member__member__last_name__icontains=search) |
+            Q(member__ippis__icontains=search)
+        )
+    
+    # Pagination
+    paginator = Paginator(withdrawals, 20)
     page_number = request.GET.get('page')
-    withdrawals = paginator.get_page(page_number)
-
-    return render(request,'main/partial_withdrawals_list.html',{'withdrawals': withdrawals})
+    page_obj = paginator.get_page(page_number)
+    
+    # Get counts for status badges
+    status_counts = {
+        'pending': PartialWithdrawal.objects.filter(status='Pending').count(),
+        'approved': PartialWithdrawal.objects.filter(status='Approved').count(),
+        'declined': PartialWithdrawal.objects.filter(status='Declined').count(),
+    }
+    
+    context = {
+        'page_obj': page_obj,
+        'status_filter': status_filter,
+        'search': search,
+        'status_counts': status_counts,
+    }
+    
+    return render(request, 'main/partial_withdrawal_list.html', context)
 
 
 @login_required
-def approve_withdrawal_request(request, pk):
-    if not request.user.is_staff:
-        messages.error(request, 'Access denied')
-        return redirect('partial_withdrawals_list')
+def partial_withdrawal_detail(request, pk):
+    """View details of a specific withdrawal request"""
+    withdrawal = get_object_or_404(PartialWithdrawal.objects.select_related('member', 'approved_by'),pk=pk)
     
+    total_savings = Savings.objects.filter(member=withdrawal.member).aggregate(
+        total=Sum('month_saving'))['total'] or Decimal('0.00')
+    
+    total_loanable = Loanable.objects.filter(member=withdrawal.member).aggregate(
+        total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    total_investment = Investment.objects.filter(member=withdrawal.member).aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0.00')
+    
+    context = {
+        'withdrawal': withdrawal,
+        'total_savings': total_savings,
+        'total_loanable': total_loanable,
+        'total_investment': total_investment,
+    }
+    
+    return render(request, 'main/partial_withdrawal_detail.html', context)
+
+
+@login_required
+def partial_withdrawal_approve(request, pk):
+    """Approve a withdrawal request"""
     withdrawal = get_object_or_404(PartialWithdrawal, pk=pk)
     
+    # Check if already processed
     if withdrawal.status != 'Pending':
-        messages.warning(request, 'Already processed')
-        return redirect('partial_withdrawals_list')
+        messages.warning(request, f'This withdrawal has already been {withdrawal.status.lower()}.')
+        return redirect('partial_withdrawal_detail', pk=pk)
     
     if request.method == 'POST':
         try:
             withdrawal.approve(request.user)
-            messages.success(request, f'Approved ₦{withdrawal.amount_requested:,.2f} for {withdrawal.member}')
+            messages.success(request,f'Withdrawal of ₦{withdrawal.amount_requested:,.2f} for {withdrawal.member} approved successfully.')
+            return redirect('partial_withdrawals_list')
         except ValueError as e:
-            messages.error(request, str(e))
+            messages.error(request, f'Approval failed: {str(e)}')
+            return redirect('partial_withdrawal_detail', pk=pk)
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return redirect('partial_withdrawal_detail', pk=pk)
         
-        return redirect('partial_withdrawals_list')
+    # GET request - show approval confirmation
     
-    return render(request, 'main/approve_partial_withdrawal.html', {'withdrawal': withdrawal})
+    total_savings = Savings.objects.filter(member=withdrawal.member).aggregate(
+        total=Sum('month_saving')
+    )['total'] or Decimal('0.00')
+    
+    total_loanable = Loanable.objects.filter(member=withdrawal.member).aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0.00')
+    
+    total_investment = Investment.objects.filter(member=withdrawal.member).aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0.00')
+    
+    # Calculate what will be withdrawn
+    from_loanable = withdrawal.amount_requested / Decimal('2.00')
+    from_investment = withdrawal.amount_requested / Decimal('2.00')
+    
+    # Check if sufficient funds
+    has_sufficient_funds = (
+        withdrawal.amount_requested <= total_savings and
+        from_loanable <= total_loanable and
+        from_investment <= total_investment
+    )
+    
+    context = {
+        'withdrawal': withdrawal,
+        'total_savings': total_savings,
+        'total_loanable': total_loanable,
+        'total_investment': total_investment,
+        'from_loanable': from_loanable,
+        'from_investment': from_investment,
+        'has_sufficient_funds': has_sufficient_funds,
+        'balance_after': total_savings - withdrawal.amount_requested if has_sufficient_funds else None,
+    }
+    
+    return render(request, 'main/approve_partial_withdrawal.html', context)
 
 
 @login_required
-def decline_withdrawal_request(request, pk):
-    if not request.user.is_staff:
-        messages.error(request, 'Access denied')
-        return redirect('partial_withdrawals_list')
-    
+def partial_withdrawal_decline(request, pk):
+    """Decline a withdrawal request"""
     withdrawal = get_object_or_404(PartialWithdrawal, pk=pk)
     
+    # Check if already processed
     if withdrawal.status != 'Pending':
-        messages.warning(request, 'Already processed')
-        return redirect('partial_withdrawals_list')
+        messages.warning(request, f'This withdrawal has already been {withdrawal.status.lower()}.')
+        return redirect('partial_withdrawal_detail', pk=pk)
     
     if request.method == 'POST':
-        reason = request.POST.get('reason', 'No reason provided')
-        withdrawal.decline(request.user, reason)
-        messages.success(request, 'Withdrawal declined')
+        reason = request.POST.get('decline_reason', '').strip()
+        
+        if not reason:
+            messages.error(request, 'Please provide a reason for declining.')
+            return redirect('partial_withdrawal_decline', pk=pk)
+        
+        try:
+            withdrawal.decline(request.user, reason)
+            messages.success(
+                request,
+                f'Withdrawal request for {withdrawal.member} has been declined.'
+            )
+            return redirect('partial_withdrawals_list')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+            return redirect('partial_withdrawal_detail', pk=pk)
+    
+    # GET request - show decline form
+    context = {'withdrawal': withdrawal,}
+    return render(request, 'main/partial_withdrawal_decline_form.html', context)
+
+
+@login_required
+def partial_withdrawal_bulk_action(request):
+    """Handle bulk actions on withdrawal requests"""
+    if request.method != 'POST':
         return redirect('partial_withdrawals_list')
     
-    return render(request, 'main/partial_withdrawal_decline_form.html', {'withdrawal': withdrawal})
-
-#=========  Members PartialWithdrawal View end ==========#
-
-
-# @login_required(login_url='login')
-# @group_required(['admin'])
-# def cooperative_summary(request):
-#     summary_totals = FinancialSummary.objects.aggregate(
-#         total_savings=Sum('total_savings'),
-#         total_interest=Sum('total_interest'),
-#         total_investment=Sum('total_investment'),
-#         total_loanable=Sum('total_loanable'),
-#         grand_total=Sum('grand_total'),
-#        )
-   
-#     context = {
-#         "total_savings": summary_totals['total_savings'] or Decimal('0.00'),
-#         "total_investment": summary_totals['total_investment'] or Decimal('0.00'),
-#         "total_loanable": summary_totals['total_loanable'] or Decimal('0.00'),
-#         "grand_total": summary_totals['grand_total'] or Decimal('0.00'),
+    action = request.POST.get('action')
+    withdrawal_ids = request.POST.getlist('withdrawal_ids')
+    
+    if not withdrawal_ids:
+        messages.warning(request, 'No withdrawals selected.')
+        return redirect('partial_withdrawals_list')
+    
+    withdrawals = PartialWithdrawal.objects.filter(
+        pk__in=withdrawal_ids,
+        status='Pending'
+    )
+    
+    if action == 'approve_selected':
+        success_count = 0
+        error_count = 0
         
-#     }
-#     return render(request, "widower/admin/coop_summary.html", context)
+        for withdrawal in withdrawals:
+            try:
+                withdrawal.approve(request.user)
+                success_count += 1
+            except Exception as e:
+                error_count += 1
+        
+        if success_count:
+            messages.success(request, f'Successfully approved {success_count} withdrawal(s).')
+        if error_count:
+            messages.warning(request, f'Failed to approve {error_count} withdrawal(s).')
+    
+    elif action == 'decline_selected':
+        reason = request.POST.get('bulk_decline_reason', '').strip()
+        
+        if not reason:
+            messages.error(request, 'Please provide a reason for declining.')
+            return redirect('partial_withdrawals_list')
+        
+        decline_count = 0
+        for withdrawal in withdrawals:
+            try:
+                withdrawal.decline(request.user, reason)
+                decline_count += 1
+            except Exception:
+                pass
+        
+        messages.success(request, f'Declined {decline_count} withdrawal(s).')
+    
+    return redirect('partial_withdrawals_list')
+
+
+@login_required
+def eligible_members_view(request):
+    eligible_members = get_members_eligible_for_withdrawal()
+    return render(request, 'withdrawal/members/eligible_members.html', {'eligible_members': eligible_members,})
+
 
 def guest_request_consumable(request):
     now = timezone.now()
@@ -546,15 +663,13 @@ def guest_request_consumable(request):
     selling_plans = SellingPlan.objects.filter(quantity__gt=0)
     consumable_types = ConsumableType.objects.filter(available=True)
 
-    return render(
-        request,
-        "guest/request_consumable.html",
-        {"consumable_types": consumable_types, "selling_plans": selling_plans},
-    )
+    return render(request,"guest/request_consumable.html",{"consumable_types": consumable_types, "selling_plans": selling_plans},)
 
 
-@login_required(login_url='login')
-@group_required(['admin', 'staff'])
+
+
+@login_required
+@group_required(['admin','staff'])
 def member_active_requests(request):
     ippis = request.GET.get("ippis", "").strip()
     member = None
@@ -617,91 +732,182 @@ def member_active_requests(request):
     })
 
 
+# @transaction.atomic
+# @login_required
+# @group_required(['admin'])
+# def upload_opening_balances(request):
+#     if request.method == "POST" and request.FILES.get("file"):
+#         file = request.FILES["file"]
+#         wb = openpyxl.load_workbook(file)
+#         ws = wb.active
+
+#         created, updated, skipped = 0, 0, 0
+#         opening_date = "2025-11-25"  # fixed opening balance date
+
+#         for row in ws.iter_rows(min_row=2, values_only=True):
+#             ippis, savings_total, loanable_total, investment_total = row
+
+#             if not ippis:
+#                 continue
+
+#             try:
+#                 member = Member.objects.get(ippis=str(ippis).strip())
+
+#                 # update member's total savings directly
+#                 member.total_savings = Decimal(savings_total or 0)
+#                 member.save(update_fields=["total_savings"])
+
+#                 # --- Savings ---
+#                 if savings_total:
+#                     savings_obj, created_flag = Savings.objects.update_or_create(
+#                         member=member,
+#                         month=opening_date,
+#                         defaults={
+#                             "month_saving": Decimal(savings_total or 0),
+#                             "original_amount": Decimal(savings_total or 0),
+#                         },
+#                     )
+#                     if created_flag:
+#                         created += 1
+#                     else:
+#                         updated += 1
+
+#                 # --- Loanable ---
+#                 loanable_obj, created_flag = Loanable.objects.update_or_create(
+#                     member=member,
+#                     month=opening_date,
+#                     defaults={
+#                         "amount": Decimal(loanable_total or 0),
+#                         "total_amount": Decimal(loanable_total or 0),
+#                     },
+#                 )
+#                 if created_flag:
+#                     created += 1
+#                 else:
+#                     updated += 1
+
+#                 # --- Investment ---
+#                 investment_obj, created_flag = Investment.objects.update_or_create(
+#                     member=member,
+#                     month=opening_date,
+#                     defaults={
+#                         "amount": Decimal(investment_total or 0),
+#                         "total_amount": Decimal(investment_total or 0),
+#                     },
+#                 )
+#                 if created_flag:
+#                     created += 1
+#                 else:
+#                     updated += 1
+
+#             except Member.DoesNotExist:
+#                 skipped += 1
+#                 messages.warning(request, f"⚠️ Member with IPPIS {ippis} not found, skipped")
+
+#         messages.success(
+#             request,
+#             f" Opening balances processed! {created} created, {updated} updated, {skipped} skipped."
+#         )
+#         return redirect("upload_opening_balances")
+
+#     return render(request, "main/upload_opening_balances.html")
+
+# from decimal import Decimal
+# import openpyxl
+# from django.contrib import messages
+# from django.shortcuts import render, redirect
+# from .models import Member, Savings, Loanable, Investment
+
 @transaction.atomic
-@login_required(login_url='login')
+@login_required
 @group_required(['admin'])
 def upload_opening_balances(request):
     if request.method == "POST" and request.FILES.get("file"):
         file = request.FILES["file"]
-        wb = openpyxl.load_workbook(file)
-        ws = wb.active
+
+        try:
+            wb = openpyxl.load_workbook(file)
+            ws = wb.active
+        except Exception:
+            messages.error(request, "Invalid Excel file. Please upload a valid .xlsx file.")
+            return redirect("upload_opening_balances")
 
         created, updated, skipped = 0, 0, 0
-        opening_date = "2025-01-01"  # fixed opening balance date
-
+        opening_date = "2025-11-25"   # fixed opening balance date
+        
         for row in ws.iter_rows(min_row=2, values_only=True):
             ippis, savings_total, loanable_total, investment_total = row
 
             if not ippis:
+                skipped += 1
                 continue
 
             try:
                 member = Member.objects.get(ippis=str(ippis).strip())
-
-                # update member's total savings directly
-                member.total_savings = Decimal(savings_total or 0)
-                member.save(update_fields=["total_savings"])
-
-                # --- Savings ---
-                if savings_total:
-                    savings_obj, created_flag = Savings.objects.update_or_create(
-                        member=member,
-                        month=opening_date,
-                        defaults={
-                            "month_saving": Decimal(savings_total or 0),
-                            "original_amount": Decimal(savings_total or 0),
-                        },
-                    )
-                    if created_flag:
-                        created += 1
-                    else:
-                        updated += 1
-
-                # --- Loanable ---
-                loanable_obj, created_flag = Loanable.objects.update_or_create(
-                    member=member,
-                    month=opening_date,
-                    defaults={
-                        "amount": Decimal(loanable_total or 0),
-                        "total_amount": Decimal(loanable_total or 0),
-                    },
-                )
-                if created_flag:
-                    created += 1
-                else:
-                    updated += 1
-
-                # --- Investment ---
-                investment_obj, created_flag = Investment.objects.update_or_create(
-                    member=member,
-                    month=opening_date,
-                    defaults={
-                        "amount": Decimal(investment_total or 0),
-                        "total_amount": Decimal(investment_total or 0),
-                    },
-                )
-                if created_flag:
-                    created += 1
-                else:
-                    updated += 1
-
             except Member.DoesNotExist:
                 skipped += 1
                 messages.warning(request, f"⚠️ Member with IPPIS {ippis} not found, skipped")
+                continue
 
+            # ----------------------------
+            # Update Member Total Savings
+            # ----------------------------
+            member.total_savings = Decimal(savings_total or 0)
+            member.save(update_fields=["total_savings"])
+
+            # ----------------------------
+            # Savings Record
+            # ----------------------------
+            if savings_total:
+                _, created_flag = Savings.objects.update_or_create(
+                    member=member,
+                    month=opening_date,
+                    defaults={
+                        "month_saving": Decimal(savings_total or 0),
+                        "original_amount": Decimal(savings_total or 0),
+                    },
+                )
+                created += 1 if created_flag else 1
+
+            # ----------------------------
+            # Loanable Record
+            # ----------------------------
+            _, created_flag = Loanable.objects.update_or_create(
+                member=member,
+                month=opening_date,
+                defaults={
+                    "amount": Decimal(loanable_total or 0),
+                    "total_amount": Decimal(loanable_total or 0),
+                },
+            )
+            created += 1 if created_flag else 1
+
+            # ----------------------------
+            # Investment Record
+            # ----------------------------
+            _, created_flag = Investment.objects.update_or_create(
+                member=member,
+                month=opening_date,
+                defaults={
+                    "amount": Decimal(investment_total or 0),
+                    "total_amount": Decimal(investment_total or 0),
+                },
+            )
+            created += 1 if created_flag else 1
+
+        # Summary Message
         messages.success(
             request,
-            f" Opening balances processed! {created} created, {updated} updated, {skipped} skipped."
+            f"Opening balances processed! {created} created, {updated} updated, {skipped} skipped."
         )
+
         return redirect("upload_opening_balances")
 
     return render(request, "main/upload_opening_balances.html")
 
 
 
-
 @login_required(login_url='login')
-@group_required(['admin'])
 def loan_totals(request):
     # Aggregate by month
     savings_by_month = (
@@ -755,13 +961,12 @@ def loan_totals(request):
     }
     return render(request, "main/loan_totals.html", context)
 
-# ============ inline Form for dividend ================
+# ===inline  Dividend Distribution Form === #
 class ProfitForm(forms.Form):
     start_date = forms.DateField(
         label="Savings Start Date",
         widget=forms.DateInput(attrs={'type': 'date'}),
         required=True
-        
     )
     end_date = forms.DateField(
         label="Savings End Date",
@@ -774,16 +979,16 @@ class ProfitForm(forms.Form):
         max_digits=15,
         required=False
     )
-    date = forms.DateField(
+    distribution_date = forms.DateField(
         label="Distribution Date",
         widget=forms.DateInput(attrs={'type': 'date'}),
         required=False
     )
 
 
+#=== Dividend Distribution Form End === #
 
-
-@login_required(login_url='login')
+@login_required
 @group_required(['admin'])
 def dividend_report(request):
     form = ProfitForm(request.POST or None)
@@ -850,7 +1055,7 @@ def dividend_report(request):
             start_date = form.cleaned_data["start_date"]
             end_date = form.cleaned_data["end_date"]
             profit = form.cleaned_data["profit"]
-            distribution_date = form.cleaned_data["date"]
+            distribution_date = form.cleaned_data["distribution_date"]
 
             savings_sum = (
                 Savings.objects.filter(
@@ -896,7 +1101,7 @@ def dividend_report(request):
                                 profit=profit,
                                 unit_profit=new_unit_profit,
                                 dividend_amount=dividend_amount,
-                                date=distribution_date,
+                                distribution_date=distribution_date,
                                 created_by=request.user,
                             )
                         )
@@ -931,7 +1136,7 @@ def dividend_report(request):
             "total_profit": m.total_profit or Decimal("0.00"),
         })
 
-    paginator = Paginator(enriched_members, 50)
+    paginator = Paginator(enriched_members, 80)
     page_number = request.GET.get("page", 1)
     shares = paginator.get_page(page_number)
 
@@ -950,7 +1155,7 @@ def dividend_report(request):
     return render(request, "main/dividends_report.html", context)
 
 
-@login_required(login_url='login')
+@login_required
 @group_required(['admin'])
 def delete_dividend_round_bulk(request, profit_amount):
     try:
@@ -1029,15 +1234,18 @@ def delete_dividend_round_bulk(request, profit_amount):
 
 
 
-@login_required(login_url='login')
+@login_required
 @group_required(['admin'])
 def list_dividend_rounds(request):
     # Group by profit and created_by, then summarize
     rounds = (
-        Dividend.objects.values("profit", "created_by", "created_by__first_name", "created_by__last_name","date")  
-        .annotate(total_amount=Sum("dividend_amount"),
+        Dividend.objects
+        .values("profit", "created_by", "created_by__first_name", "created_by__last_name")  
+        .annotate(
+            total_amount=Sum("dividend_amount"),
             count=Count("id"),
-            created_at=Min("created_at") 
+            created_at=Min("created_at"),  # first time the round was created
+            distribution_date=Min("distribution_date")  # first time the round was created
         )
         .order_by("-created_at")
     )
@@ -1076,9 +1284,8 @@ def popup_message_form(request):
     return render(request, 'main/popup_message.html')
 
 
-
 @login_required
-@group_required(['admin', 'staff'])
+@group_required(['admin','staff'])
 def member_active_summary(request, pk):
     member = get_object_or_404(Member, pk=pk)
 
@@ -1092,27 +1299,56 @@ def member_active_summary(request, pk):
     loan_paid = active_loans.aggregate(paid=Sum("total_paid"))["paid"] or 0
     loan_balance = loan_total - loan_paid
 
- 
+    details_total_sq = (
+        ConsumableRequestDetail.objects
+        .filter(request=OuterRef("pk"))
+        .values("request")
+        .annotate(
+            total=Sum(
+                ExpressionWrapper(
+                    F("quantity") * F("item_price"),
+                    output_field=DecimalField(max_digits=14, decimal_places=2)
+                )
+            )
+        )
+        .values("total")
+    )
+
+    repayment_total_sq = (
+        PaybackConsumable.objects
+        .filter(consumable_request=OuterRef("pk"))
+        .values("consumable_request")
+        .annotate(
+            total=Sum("amount_paid", output_field=DecimalField(max_digits=14, decimal_places=2))
+        )
+        .values("total")
+    )
+
     active_consumables = (
         ConsumableRequest.objects
         .filter(user=member.member, status="Itempicked")
         .annotate(
-            total_amount_agg=Sum(
-                ExpressionWrapper(
-                    F('details__quantity') * F('details__item_price'),
-                    output_field=DecimalField()
-                )
-            )
+            total_amount_agg=Coalesce(
+                Subquery(details_total_sq),
+                Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))
+            ),
+            total_paid_agg=Coalesce(
+                Subquery(repayment_total_sq),
+                Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))
+            ),
         )
         .annotate(
-            total_paid_agg=Sum('repayments__amount_paid')
+            balance_agg=ExpressionWrapper(
+                F("total_amount_agg") - F("total_paid_agg"),
+                output_field=DecimalField(max_digits=14, decimal_places=2)
+            )
         )
     )
 
-
     consumable_total = active_consumables.aggregate(total=Sum("total_amount_agg"))["total"] or 0
     consumable_paid = active_consumables.aggregate(total=Sum("total_paid_agg"))["total"] or 0
-    consumable_balance = consumable_total - consumable_paid
+    consumable_balance = active_consumables.aggregate(total=Sum("balance_agg"))["total"] or 0
+
 
     # 🟨 Active Project Finance Requests
     active_project_finances = ProjectFinanceRequest.objects.filter(application__member=member, status="Approved").annotate(
@@ -1170,6 +1406,7 @@ def member_active_summary(request, pk):
     return render(request, "main/member_active_summary.html", context)
 
 
+
 @login_required
 @group_required(['admin'])
 def user_activity_list(request):
@@ -1185,7 +1422,7 @@ def user_activity_list(request):
     return render(request, 'main/user_activity_list.html', {'page_obj': page_obj})
 
 
-@login_required
+login_required
 @group_required(['admin'])
 def delete_user_activity(request, pk):
     activity = get_object_or_404(UserActivity, pk=pk)

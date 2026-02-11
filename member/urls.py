@@ -6,6 +6,8 @@ from .import views
 urlpatterns = [
     path('member_dashboard/',views.member_dashboard,name="member_dashboard"),
     path('member_savings/',views.member_savings,name="member_savings"),
+    path('member_special_savings/',views.member_special_savings,name="member_special_savings"),
+    path('member_target_savings/',views.member_target_savings,name="member_target_savings"),
     path('ajax/load-bank-code/', views.ajax_load_bank_code, name='ajax_load_bank_code'),
 
     path('loan_request/',views.loan_request_view,name="loan_request"),

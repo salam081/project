@@ -16,9 +16,15 @@ urlpatterns = [
     path('decline/<int:pk>/', views.decline_withdrawal_request, name='decline_withdrawal_request'),
     path('eligible-members/', views.eligible_members_view, name='eligible_members_view'),
     
+    # path('partial-withdrawals/', views.partial_withdrawals_list, name='partial_withdrawals_list'),
+    # path('partial-withdrawals/<int:pk>/approve/', views.approve_withdrawal_request, name='partial_approve_withdrawal_request'),
+    # path('partial-withdrawals/<int:pk>/decline/', views.decline_withdrawal_request, name='partial_decline_withdrawal_request'),
+    
     path('partial-withdrawals/', views.partial_withdrawals_list, name='partial_withdrawals_list'),
-    path('partial-withdrawals/<int:pk>/approve/', views.approve_withdrawal_request, name='partial_approve_withdrawal_request'),
-    path('partial-withdrawals/<int:pk>/decline/', views.decline_withdrawal_request, name='partial_decline_withdrawal_request'),
+    path('withdrawals/<int:pk>/', views.partial_withdrawal_detail, name='partial_withdrawal_detail'),
+    path('withdrawals/<int:pk>/approve/', views.partial_withdrawal_approve, name='partial_withdrawal_approve'),
+    path('withdrawals/<int:pk>/decline/', views.partial_withdrawal_decline, name='partial_withdrawal_decline'),
+    path('withdrawals/bulk-action/', views.partial_withdrawal_bulk_action, name='partial_withdrawal_bulk_action'),
     
     path("guest/request/", views.guest_request_consumable, name="guest_request_consumable"),
     path("active-requests/", views.member_active_requests, name="member_active_requests"),

@@ -28,6 +28,7 @@ from openpyxl import Workbook
 from django.http import HttpResponse
 from loan.models import *
 from savings.models import *
+from special_savings.models import *
 from main.models import *
 from PurchasedItems.models import *
 from member.models import *
@@ -1359,6 +1360,9 @@ def calculate_total_income(filters):
         # Build Q objects for filtering
         admin_fee_filter = Q()
         saving_filter = Q()
+        saving_form_fee_filter = Q()
+        special_saving_filter = Q()
+        target_saving_filter = Q()
         member_payback_filter = Q()
         member_finance_payback_filter = Q()
         member_fees_filter = Q()
@@ -1367,7 +1371,10 @@ def calculate_total_income(filters):
         
         if date_from:
             admin_fee_filter &= Q(date_deducted__gte=date_from)
+            saving_form_fee_filter &= Q(date_created__gte=date_from)
             saving_filter &= Q(date_created__gte=date_from)
+            special_saving_filter &= Q(date_created__gte=date_from)
+            target_saving_filter &= Q(date_created__gte=date_from)
             member_payback_filter &= Q(repayment_date__gte=date_from)
             member_finance_payback_filter &= Q(amount_paid__gte=date_from)
             member_fees_filter &= Q(created_at__gte=date_from)
@@ -1377,6 +1384,9 @@ def calculate_total_income(filters):
         if date_to:
             admin_fee_filter &= Q(date_deducted__lte=date_to)
             saving_filter &= Q(date_created__lte=date_to)
+            saving_form_fee_filter &= Q(date_created__lte=date_to)
+            special_saving_filter &= Q(date_created__lte=date_to)
+            target_saving_filter &= Q(date_created__lte=date_to)
             member_payback_filter &= Q(repayment_date__lte=date_to)
             member_finance_payback_filter &= Q(created_at__lte=date_to)
             member_fees_filter &= Q(created_at__lte=date_to)
@@ -1393,8 +1403,42 @@ def calculate_total_income(filters):
         except Exception as e:
             logger.error(f"Error calculating saving income: {str(e)}")
             saving_income = Decimal('0')
+            
+        # 1. Income from saving items
+        try:
+            saving_form_fee_income = SpecialSavingsTergetSavingsRequestForm.objects.filter(
+                saving_form_fee_filter
+            ).aggregate(
+                total=Sum('form_fee')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating saving form fee income: {str(e)}")
+            saving_form_fee_income = Decimal('0')
+            
+        # 2. Income from special saving items
+        try:
+            special_saving_income = SpecialSavings.objects.filter(
+                special_saving_filter
+            ).aggregate(
+                total=Sum('month_savings')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating special saving income: {str(e)}")
+            special_saving_income = Decimal('0')
+            
+            
+        # 3. Income from target saving items
+        try:
+            target_saving_income = TargetSavings.objects.filter(
+                target_saving_filter
+            ).aggregate(
+                total=Sum('month_savings')
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error calculating target saving income: {str(e)}")
+            target_saving_income = Decimal('0')
 
-        # 2. Income from Admin fee items
+        # 4. Income from Admin fee items
         try:
             admin_fee_income = Interest.objects.filter(
                 admin_fee_filter
@@ -1405,7 +1449,7 @@ def calculate_total_income(filters):
             logger.error(f"Error calculating admin fee income: {str(e)}")
             admin_fee_income = Decimal('0')
 
-        # 3. Member repayments for consumables
+        # 5. Member repayments for consumables
         try:
             consumable_payback_income = PaybackConsumable.objects.filter(
                 member_payback_filter
@@ -1416,7 +1460,7 @@ def calculate_total_income(filters):
             logger.error(f"Error calculating consumable payback income: {str(e)}")
             consumable_payback_income = Decimal('0')
 
-        # 4. Member repayments for project finance
+        # 6. Member repayments for project finance
         try:
             finance_payback_income = ProjectFinancePayment.objects.filter(
                 member_finance_payback_filter
@@ -1427,7 +1471,7 @@ def calculate_total_income(filters):
             logger.error(f"Error calculating finance payback income: {str(e)}")
             finance_payback_income = Decimal('0')
             print('finance_payback_income',finance_payback_income)
-        # 5. Income from consumable form fees
+        # 7. Income from consumable form fees
         try:
             form_fee_income = ConsumableFormFee.objects.filter(
                 member_fees_filter
@@ -1438,7 +1482,7 @@ def calculate_total_income(filters):
             logger.error(f"Error calculating form fee income: {str(e)}")
             form_fee_income = Decimal('0')
             
-        # 6. Member repayments for loans
+        # 8. Member repayments for loans
         try:
             loan_payback_income = LoanRepayback.objects.filter(
                 loan_payback_filter
@@ -1449,7 +1493,7 @@ def calculate_total_income(filters):
             logger.error(f"Error calculating loan payback income: {str(e)}")
             loan_payback_income = Decimal('0')
 
-        # 7. Income from loan form fees
+        # 9. Income from loan form fees
         try:
             loan_form_fee_income = LoanRequestFee.objects.filter(
                 loan_fee_filter
@@ -1462,6 +1506,9 @@ def calculate_total_income(filters):
 
         return {
             'saving_income': saving_income,
+            'saving_form_fee_income': saving_form_fee_income,
+            'special_saving_income':special_saving_income,
+            'target_saving_income':target_saving_income,
             'admin_fee_income': admin_fee_income,
             'consumable_payback_income': consumable_payback_income,
             'finance_payback_income': finance_payback_income,
@@ -1474,6 +1521,9 @@ def calculate_total_income(filters):
         logger.error(f"Error in calculate_total_income: {str(e)}", exc_info=True)
         return {
             'saving_income': Decimal('0'),
+            'saving_form_fee_income': Decimal('0'),
+            'special_saving_income': Decimal('0'),
+            'target_saving_income': Decimal('0'),
             'admin_fee_income': Decimal('0'),
             'consumable_payback_income': Decimal('0'),
             'finance_payback_income': Decimal('0'),

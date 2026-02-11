@@ -9,9 +9,9 @@ from django.db import transaction
 from datetime import datetime
 from django.core.paginator import Paginator
 from django.db.models import Sum, Count
+from django.db.models.functions import TruncMonth
 from django.shortcuts import render
 from .models import Savings
-from django.db.models.functions import TruncMonth
 import openpyxl
 import io
 import os
@@ -43,7 +43,10 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from .models import *
 from accounts.models import *
+from accounts.decorators import *
 
+@login_required
+@group_required(['admin','staff'])
 def search_member_for_savings(request):
     groups = UserGroup.objects.all().order_by('title')
     results = []
@@ -80,6 +83,7 @@ def filter_requests(datefrom, dateto):
 
 
 @login_required
+@group_required(['admin','staff'])
 def add_member_savings(request):
     if request.method == "POST":
         ippis = request.POST.get("ippis")
@@ -190,6 +194,7 @@ def add_member_savings(request):
 
 
 @login_required
+@group_required(['admin'])
 def process_member_savings(request, id):
     member = get_object_or_404(Member, id=id)
 
@@ -273,7 +278,8 @@ def process_member_savings(request, id):
     context = {"member": member}
     return render(request, "saving/add_individual_savings.html", context)
 
-
+@login_required
+@group_required(['admin','staff'])
 @transaction.atomic
 def upload_savings(request):
     if request.method == "POST" and request.FILES.get("file"):
@@ -476,7 +482,8 @@ def upload_savings(request):
 
     return render(request, "saving/upload_savings.html")
 
-
+@login_required
+@group_required(['admin','staff'])
 @transaction.atomic
 def edit_saving(request, saving_id):
     saving = get_object_or_404(Savings, id=saving_id)
@@ -546,6 +553,150 @@ def edit_saving(request, saving_id):
 
 
 
+# def list_savings(request):
+#     groups = UserGroup.objects.all()
+#     selected_month = request.GET.get("month")
+#     search_name = request.GET.get("name", "").strip()
+#     search_ippis = request.GET.get("ippis", "").strip()
+#     search_group = request.GET.get("group", "").strip()
+#     date_from = request.GET.get("date_from")
+#     date_to = request.GET.get("date_to")
+#     per_page = request.GET.get("per_page", "25")
+
+#     # Validate per_page value
+#     try:
+#         per_page = int(per_page)
+#         if per_page not in [10, 25, 50, 100]:
+#             per_page = 25
+#     except (ValueError, TypeError):
+#         per_page = 25
+
+#     # Base queryset with optimized select_related
+#     savings = Savings.objects.select_related("member__member")
+   
+#     # Parse month filter
+#     month_filter = {}
+#     if selected_month:
+#         try:
+#             year, month_num = selected_month.split("-")
+#             month_filter = {"month__year": year, "month__month": month_num}
+#             savings = savings.filter(**month_filter)
+#         except (ValueError, IndexError):
+#             pass
+
+#     #  Apply date range filter
+#     if date_from and date_to:
+#         try:
+#             start_date = parse_date(date_from)
+#             end_date = parse_date(date_to)
+#             if start_date and end_date:
+#                 savings = savings.filter(month__range=[start_date, end_date])
+#         except:
+#             pass
+#     elif date_from:
+#         try:
+#             start_date = parse_date(date_from)
+#             if start_date:
+#                 savings = savings.filter(month__gte=start_date)
+#         except:
+#             pass
+#     elif date_to:
+#         try:
+#             end_date = parse_date(date_to)
+#             if end_date:
+#                 savings = savings.filter(month__lte=end_date)
+#         except:
+#             pass
+
+#     # Filter by member name
+#     if search_name:
+#         savings = savings.filter(
+#             Q(member__member__first_name__icontains=search_name) |
+#             Q(member__member__last_name__icontains=search_name)
+#         )
+
+#     # Filter by IPPIS
+#     if search_ippis:
+#         savings = savings.filter(member__ippis__icontains=search_ippis)
+
+#     # Filter by IPPIS
+#     if search_group.isdigit():
+#         savings = savings.filter(member__member__group_id=search_group)
+#         # savings = savings.filter(member__member__group__title__icontains=search_group)
+
+#     # Order results by user's first name
+#     savings = savings.order_by("-id", "member__member__first_name")
+
+#     # Pagination
+#     paginator = Paginator(savings, per_page)
+#     page_number = request.GET.get("page")
+#     page_obj = paginator.get_page(page_number)
+
+#     # Get member IDs from current page only
+#     current_page_member_ids = [saving.member_id for saving in page_obj.object_list]
+
+#     # Build dictionaries for loanable & investment amounts
+#     loanable_dict = {}
+#     investment_dict = {}
+
+#     if current_page_member_ids:
+#         loanable_filter = {"member_id__in": current_page_member_ids}
+#         investment_filter = {"member_id__in": current_page_member_ids}
+
+#         # Add month or date range filters to Loanable & Investment queries
+#         if month_filter:
+#             loanable_filter.update(month_filter)
+#             investment_filter.update(month_filter)
+#         elif date_from and date_to:
+#             loanable_filter["month__range"] = [start_date, end_date]
+#             investment_filter["month__range"] = [start_date, end_date]
+#         elif date_from:
+#             loanable_filter["month__gte"] = start_date
+#             investment_filter["month__gte"] = start_date
+#         elif date_to:
+#             loanable_filter["month__lte"] = end_date
+#             investment_filter["month__lte"] = end_date
+
+#         loanables = Loanable.objects.filter(**loanable_filter).values("member_id", "amount", "month")
+#         for loanable in loanables:
+#             key = (loanable["member_id"], loanable["month"])
+#             loanable_dict[key] = loanable["amount"]
+
+#         investments = Investment.objects.filter(**investment_filter).values("member_id", "amount", "month")
+#         for investment in investments:
+#             key = (investment["member_id"], investment["month"])
+#             investment_dict[key] = investment["amount"]
+
+#     # Assign amounts using dictionary lookups
+#     for saving in page_obj.object_list:
+#         lookup_key = (saving.member_id, saving.month)
+#         saving.loanable_amount = loanable_dict.get(lookup_key, Decimal("0.00"))
+#         saving.investment_amount = investment_dict.get(lookup_key, Decimal("0.00"))
+
+#     context = {
+#         "page_obj": page_obj,
+#         'groups':groups,
+#         "selected_month": selected_month,
+#         "search_name": search_name,
+#         "search_ippis": search_ippis,
+#         "search_group":search_group,
+#         "per_page": per_page,
+#         "date_from": date_from,
+#         "date_to": date_to,
+#         "total_records": paginator.count,
+#         "pagination_info": {
+#             "current_page": page_obj.number,
+#             "total_pages": paginator.num_pages,
+#             "has_previous": page_obj.has_previous(),
+#             "has_next": page_obj.has_next(),
+#             "previous_page": page_obj.previous_page_number() if page_obj.has_previous() else None,
+#             "next_page": page_obj.next_page_number() if page_obj.has_next() else None,
+#         },
+#     }
+
+#     return render(request, "saving/list_savings.html", context)
+@login_required
+@group_required(['admin','staff'])
 def list_savings(request):
     groups = UserGroup.objects.all()
     selected_month = request.GET.get("month")
@@ -564,7 +715,7 @@ def list_savings(request):
     except (ValueError, TypeError):
         per_page = 25
 
-    # Base queryset with optimized select_related
+    # Base queryset
     savings = Savings.objects.select_related("member__member")
 
     # Parse month filter
@@ -577,29 +728,20 @@ def list_savings(request):
         except (ValueError, IndexError):
             pass
 
-    #  Apply date range filter
+    # Apply date range filter
     if date_from and date_to:
-        try:
-            start_date = parse_date(date_from)
-            end_date = parse_date(date_to)
-            if start_date and end_date:
-                savings = savings.filter(month__range=[start_date, end_date])
-        except:
-            pass
+        start_date = parse_date(date_from)
+        end_date = parse_date(date_to)
+        if start_date and end_date:
+            savings = savings.filter(month__range=[start_date, end_date])
     elif date_from:
-        try:
-            start_date = parse_date(date_from)
-            if start_date:
-                savings = savings.filter(month__gte=start_date)
-        except:
-            pass
+        start_date = parse_date(date_from)
+        if start_date:
+            savings = savings.filter(month__gte=start_date)
     elif date_to:
-        try:
-            end_date = parse_date(date_to)
-            if end_date:
-                savings = savings.filter(month__lte=end_date)
-        except:
-            pass
+        end_date = parse_date(date_to)
+        if end_date:
+            savings = savings.filter(month__lte=end_date)
 
     # Filter by member name
     if search_name:
@@ -612,12 +754,16 @@ def list_savings(request):
     if search_ippis:
         savings = savings.filter(member__ippis__icontains=search_ippis)
 
-    # Filter by IPPIS
+    # Filter by group
     if search_group.isdigit():
         savings = savings.filter(member__member__group_id=search_group)
-        # savings = savings.filter(member__member__group__title__icontains=search_group)
 
-    # Order results by user's first name
+    # ✅ Compute total savings for current search/filter
+    total_savings_amount = (
+        savings.aggregate(total=Sum("month_saving"))["total"] or Decimal("0.00")
+    )
+    
+    # Order results
     savings = savings.order_by("-id", "member__member__first_name")
 
     # Pagination
@@ -636,7 +782,7 @@ def list_savings(request):
         loanable_filter = {"member_id__in": current_page_member_ids}
         investment_filter = {"member_id__in": current_page_member_ids}
 
-        # Add month or date range filters to Loanable & Investment queries
+        # Add date filters
         if month_filter:
             loanable_filter.update(month_filter)
             investment_filter.update(month_filter)
@@ -652,15 +798,13 @@ def list_savings(request):
 
         loanables = Loanable.objects.filter(**loanable_filter).values("member_id", "amount", "month")
         for loanable in loanables:
-            key = (loanable["member_id"], loanable["month"])
-            loanable_dict[key] = loanable["amount"]
+            loanable_dict[(loanable["member_id"], loanable["month"])] = loanable["amount"]
 
         investments = Investment.objects.filter(**investment_filter).values("member_id", "amount", "month")
         for investment in investments:
-            key = (investment["member_id"], investment["month"])
-            investment_dict[key] = investment["amount"]
+            investment_dict[(investment["member_id"], investment["month"])] = investment["amount"]
 
-    # Assign amounts using dictionary lookups
+    # Assign amounts
     for saving in page_obj.object_list:
         lookup_key = (saving.member_id, saving.month)
         saving.loanable_amount = loanable_dict.get(lookup_key, Decimal("0.00"))
@@ -668,15 +812,16 @@ def list_savings(request):
 
     context = {
         "page_obj": page_obj,
-        'groups':groups,
+        "groups": groups,
         "selected_month": selected_month,
         "search_name": search_name,
         "search_ippis": search_ippis,
-        "search_group":search_group,
+        "search_group": search_group,
         "per_page": per_page,
         "date_from": date_from,
         "date_to": date_to,
         "total_records": paginator.count,
+        "total_savings_amount": total_savings_amount, 
         "pagination_info": {
             "current_page": page_obj.number,
             "total_pages": paginator.num_pages,
@@ -689,7 +834,8 @@ def list_savings(request):
 
     return render(request, "saving/list_savings.html", context)
 
-
+@login_required
+@group_required(['admin'])
 def subscription_fee(request):
     if request.method == 'POST':
         amount = request.POST.get("amount")
@@ -699,7 +845,8 @@ def subscription_fee(request):
     subscription = InterestAmount.objects.all()
     return render(request,"saving/subscription_fee.html",{'subscription':subscription})
 
-
+@login_required
+@group_required(['admin'])
 def edit_subscription_fee(request,id):
     subscription_fee = InterestAmount.objects.get(id=id)
     if request.method == 'POST':
@@ -711,7 +858,8 @@ def edit_subscription_fee(request,id):
     return render(request,"saving/edit_subscription_fee.html",context)
 
 
-
+@login_required
+@group_required(['admin','staff'])
 def monthly_savings_uploads(request):
     # Get monthly savings uploads
 
@@ -768,7 +916,8 @@ def monthly_savings_uploads(request):
     context = { "monthly_uploads": monthly_uploads,}
     return render(request, "saving/monthly_uploads.html", context)
 
-
+@login_required
+@group_required(['admin','staff'])
 def view_monthly_savings(request, month):
     # Convert "YYYY-MM" into first day of the month
     try:
@@ -837,6 +986,7 @@ def view_monthly_savings(request, month):
 
 
 @login_required
+@group_required(['admin'])
 def delete_monthly_savings(request):
     selected_month = None
     
@@ -1015,6 +1165,7 @@ def delete_monthly_savings(request):
 
 
 @login_required
+@group_required(['admin','staff'])
 def report_view(request):
     """
     Generates a financial report with filtering and export capabilities.
@@ -1153,7 +1304,8 @@ def report_view(request):
 
 
 # =============member and non member ===============
-
+@login_required
+@group_required(['admin','staff'])
 def all_member_savings(request):
     group_title = request.GET.get('group')
 

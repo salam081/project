@@ -96,11 +96,17 @@
     }
 </style>
 
- 
+ <div class="container">
+    <a href="{% url 'member_special_savings' %}" class="btn btn-success text-white mt-2">Special Savings</a>
+    <a href="{% url 'member_target_savings' %}" class="btn btn-primary text-white mt-2">Target Savings</a>
+    
+</div>
 <h6 class="text-center">
     Savings For {{ member.member.first_name }} {{ member.member.last_name }}
 </h6>
-<div class="content-card">
+
+
+<div class="container">
     <div class="table-responsive">
         <table class="table table-hover">
             <thead class="table table-info">

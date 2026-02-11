@@ -268,7 +268,7 @@ body {
 }
 
 .submenu .nav-link {
-    padding-left: 28px; /* Slightly increased */
+    padding-left: 20px; /* Slightly increased */
     font-size: 0.85rem; /* Balanced font size */
     padding-top: 8px;
     padding-bottom: 8px;

@@ -33,6 +33,7 @@ from main.models import *
 
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
+from accounts.decorators import group_required
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Sum, F, Q, DecimalField, Count
@@ -45,6 +46,7 @@ from datetime import datetime, date
 
 # =============ProjectFinanceApplication===================
 @login_required
+@group_required(['admin','staff'])
 def application_list_view(request):
     applications = ProjectFinanceApplication.objects.select_related('member__member').order_by('-created_at')
     context = {'applications': applications}
@@ -52,6 +54,7 @@ def application_list_view(request):
 
 
 @login_required
+@group_required(['admin','staff'])
 def application_detail_view(request, application_id):
     application = get_object_or_404(ProjectFinanceApplication, id=application_id)
 
@@ -107,6 +110,7 @@ def application_detail_view(request, application_id):
    
 
 @login_required
+@group_required(['admin','staff'])
 def admin_project_finance_requests_list(request):
     status_filter = request.GET.get('status', '')
     requests = ProjectFinanceRequest.objects.select_related('application__member__member' ).order_by('-created_at')
@@ -117,6 +121,7 @@ def admin_project_finance_requests_list(request):
     return render(request, 'projectfinance/project_finance_list_requests.html', context)
 
 @login_required
+@group_required(['admin'])
 def admin_approve_finance_request(request, id):
     finance_request = get_object_or_404(ProjectFinanceRequest, id=id)
     
@@ -347,7 +352,8 @@ def generate_project_finance_report(start_date=None, end_date=None):
 # DJANGO VIEWS
 # ==========================================
 
-@staff_member_required  # Only allow staff/admin users
+@login_required
+@group_required(['admin','staff'])
 def project_finance_report_view(request):
     """
     Renders the project finance report page with data based on selected filters.
@@ -386,7 +392,8 @@ def project_finance_report_view(request):
     
     return render(request, 'projectfinance/project_finance_report.html', context)
 
-@staff_member_required
+@login_required
+@group_required(['admin','staff'])
 def project_finance_report_api(request):
     """
     API endpoint to get report data as JSON
@@ -492,7 +499,8 @@ def get_member_request_details(member_id, start_date=None, end_date=None):
     return request_details
 #=======================================
 
-
+@login_required
+@group_required(['admin','staff'])
 def project_finance_report_excel(request):
     """
     Export ONLY 'Section 2 — Members’ Breakdown' to Excel.
@@ -590,6 +598,7 @@ def project_finance_report_excel(request):
 
 
 @login_required
+@group_required(['admin'])
 def upload_project_finance_repayment(request):
     if request.method == "POST":
         file = request.FILES.get("file")
@@ -784,6 +793,7 @@ def upload_project_finance_repayment(request):
     return render(request, "projectfinance/upload_project_finance_payment.html", context)
 
 @login_required
+@group_required(['admin'])
 def make_finance_payment(request, id):
     finance_request = get_object_or_404(ProjectFinanceRequest, id=id)
 
@@ -840,45 +850,6 @@ def make_finance_payment(request, id):
     payments = finance_request.payments.all().order_by("-created_at")
     context = { "finance_request": finance_request, "form": form, "payments": payments,}
     return render(request, "projectfinance/make_payment.html", context)
-
-# @login_required
-# def make_finance_payment(request, id):
-#     finance_request = get_object_or_404(ProjectFinanceRequest, id=id)
-#     if request.method == "POST":
-#         form = ProjectFinancePaymentForm(request.POST)
-#         if form.is_valid():
-#             payment = form.save(commit=False)
-#             payment.request = finance_request
-#             payment.recorded_by = request.user
-
-#             # Calculate remaining balance
-#             total_paid = finance_request.payments.aggregate(total=Sum('amount_paid'))['total'] or Decimal('0.00')
-#             new_total_paid = total_paid + payment.amount_paid
-#             total_price = finance_request.total_repayment_amount or finance_request.requested_amount
-#             payment.balance_remaining = total_price - new_total_paid
-
-#             # Save payment
-#             payment.save()
-
-#             # Update finance request balance & status
-#             finance_request.update_balance_remaining()
-
-#             messages.success(request, f"Payment of ₦{payment.amount_paid} recorded successfully!")
-#             return redirect("admin_project_finance_requests_list", id=finance_request.id)
-#         else:
-#             messages.error(request, " Please correct the errors below.")
-#     else:
-#         form = ProjectFinancePaymentForm()
-
-#     # Fetch all previous payments
-#     payments = finance_request.payments.all().order_by("-created_at")
-
-#     context = {
-#         "finance_request": finance_request,
-#         "form": form,
-#         "payments": payments,
-#     }
-#     return render(request, "projectfinance/make_payment.html", context)
 
 
 #============================================

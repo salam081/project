@@ -1,0 +1,41 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block content %}
+  <div class="content-card col-12">
+    <div class="card shadow p-4">
+      <div class="card-header bg-warning text-dark rounded-top-2 mb-3">
+        <h3 class="card-title mb-0">{{ title }}</h3>
+      </div>
+
+      <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label for="item" class="form-label fw-semibold">Item</label>
+          <input type="text" name="item" id="item" class="form-control" value="{{ consumable_request.item }}" required />
+        </div>
+
+        <div class="mb-3">
+          <label for="purpose" class="form-label fw-semibold">Purpose</label>
+          <textarea name="purpose" id="purpose" class="form-control" rows="3" required>{{ consumable_request.purpose }}</textarea>
+        </div>
+
+        <div class="mb-3">
+          <label for="amount_requested" class="form-label fw-semibold">Amount Requested (₦)</label>
+          <input type="number" name="amount_requested" id="amount_requested" class="form-control" value="{{ consumable_request.amount_requested }}" step="0.01" required />
+        </div>
+
+        <div class="mb-3">
+          <label for="remarks" class="form-label fw-semibold">Remarks</label>
+          <textarea name="remarks" id="remarks" class="form-control" rows="2">{{ consumable_request.remarks }}</textarea>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <a href="{% url 'consumable_purchase_request_detail' pk=consumable_request.pk %}" class="btn btn-secondary text-white">Cancel</a>
+          <button type="submit" class="btn btn-warning text-dark fw-semibold">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

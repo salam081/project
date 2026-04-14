@@ -9,21 +9,21 @@ from .models import UserActivity
 
 
 class ActivityLogMiddleware(MiddlewareMixin):
-    def process_request(self, request):
-        # Skip login/logout/admin/static/media pages to avoid redirect loops
-        exempt_paths = (
-            '/login',
-            '/logout',
-            '/admin',
-            '/static',
-            '/media',
-            '/home'
-        )
+    # def process_request(self, request):
+    #     # Skip login/logout/admin/static/media pages to avoid redirect loops
+    #     exempt_paths = (
+    #         '/login',
+    #         '/logout',
+    #         '/admin',
+    #         '/static',
+    #         '/media',
+    #         '/home'
+    #     )
 
-        # Redirect to login if session expired, but skip exempt paths
-        if not request.user.is_authenticated and not any(request.path.startswith(p) for p in exempt_paths):
-            messages.warning(request, "Your session has expired. Login.")
-            return redirect('login')
+    #     # Redirect to login if session expired, but skip exempt paths
+    #     if not request.user.is_authenticated and not any(request.path.startswith(p) for p in exempt_paths):
+    #         messages.warning(request, "Your session has expired. Login.")
+    #         return redirect('login')
 
 
     def process_response(self, request, response):

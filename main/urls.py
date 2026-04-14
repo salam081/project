@@ -3,7 +3,7 @@ from .import views
 
 
 urlpatterns = [
-    path('', views.home, name='home'),
+   
     path('dashboard/',views.admin_dashboard,name="admin_dashboard"),
     path('staff-dashboard/',views.staff_dashboard,name="staff_dashboard"),
 
@@ -16,10 +16,7 @@ urlpatterns = [
     path('decline/<int:pk>/', views.decline_withdrawal_request, name='decline_withdrawal_request'),
     path('eligible-members/', views.eligible_members_view, name='eligible_members_view'),
     
-    # path('partial-withdrawals/', views.partial_withdrawals_list, name='partial_withdrawals_list'),
-    # path('partial-withdrawals/<int:pk>/approve/', views.approve_withdrawal_request, name='partial_approve_withdrawal_request'),
-    # path('partial-withdrawals/<int:pk>/decline/', views.decline_withdrawal_request, name='partial_decline_withdrawal_request'),
-    
+   
     path('partial-withdrawals/', views.partial_withdrawals_list, name='partial_withdrawals_list'),
     path('withdrawals/<int:pk>/', views.partial_withdrawal_detail, name='partial_withdrawal_detail'),
     path('withdrawals/<int:pk>/approve/', views.partial_withdrawal_approve, name='partial_withdrawal_approve'),

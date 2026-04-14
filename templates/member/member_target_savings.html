@@ -2,169 +2,157 @@
 {% load humanize %}
 {% load static %}
 
-{% block title %}Dashboard - Admin Panel{% endblock %}
+{% block title %}Target Savings{% endblock %}
 
 {% block content %}
 <style>
-    /* New styles for the mobile-friendly card layout */
-    .savings-card {
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        padding: 15px;
-        margin-bottom: 15px;
-    }
-
-    .savings-card-title {
-        font-weight: bold;
-        color: #333;
-        margin-bottom: 10px;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 5px;
-    }
-
-    .savings-card-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 5px 0;
-        border-bottom: 1px dashed #f0f0f0;
-    }
-
-    .savings-card-item:last-child {
-        border-bottom: none;
-    }
-
-    .savings-card-label {
-        color: #6c757d;
-        font-weight: 500;
-        font-size: 0.9em;
-    }
-
-    .savings-card-value {
-        font-weight: 600;
-        text-align: right;
-    }
-
     .savings-summary-card {
         padding: 15px;
         color: white;
         border-radius: 8px;
         margin-top: 10px;
         text-align: center;
-      
     }
-    
     .savings-summary-card h6 {
         margin-bottom: 5px;
         font-weight: normal;
-        
     }
-
     .savings-summary-card p {
         margin: 0;
         font-size: 1.1em;
         font-weight: bold;
     }
-
-    /* Colors from original template */
     .a1 {
-       
-        background: linear-gradient(134deg, #227681ff 0%, #bae542ff 100%);
+        background: linear-gradient(134deg, rgb(109, 198, 210) 0%, rgb(43, 227, 80) 100%);
     }
-
-    .a2 {
-        background: linear-gradient(134deg, #67d8d6 0%, #4779ca 100%);
-    }
-
-    .a3 {
-        background: linear-gradient(134deg, #3fb6c6ff 0%, #42a4e5ff 100%);
-    }
-
-   
-
-    /* Hide the cards on larger screens and show the table instead */
     @media (min-width: 768px) {
         .savings-card-list {
             display: none;
         }
     }
-
-    .container {
-        padding: 20px;
-    }
-
-    h4.text-center {
-        margin-bottom: 20px;
-    }
 </style>
 
+  {% comment %} <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mt-2 mb-3 gap-2">
+    <div>
+      <a href="{% url 'member_savings' %}" class="btn btn-success btn-sm text-white">Savings</a>
+      <a href="{% url 'member_special_savings' %}" class="btn btn-primary btn-sm text-white">Special Savings</a>
+    </div>
+    <div class="mt-2 mt-md-0">
+      <a href="{% url 'request_target_savings_withdrawal' %}" class="btn btn-outline-info btn-sm text-dark" style="background-color:lightblue;">
+        <i class="bi bi-cash me-1"></i> Withdraw Target Savings
+      </a>
+      <a href="{% url 'my_target_savings_withdrawals' %}" class="btn btn-secondary btn-sm">
+        <i class="bi bi-clock-history me-1"></i> Withdrawal History
+      </a>
+    </div>
+  </div> {% endcomment %}
 
-    
-<div class="container">
-    
-    
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <h6 class="text-center fw-bold">
-            Target Savings For {{ member.member.first_name }} {{ member.member.last_name }}
-        </h6>
-      <a href="{% url 'member_savings' %}" class="btn btn-secondary"><i class="bi bi-arrow-left text-white"></i> </a>
-      
-    </div>
-  
-   {% if target_savings %}
-   <div class="table-responsive">
-          <table class="table table-hover table-striped">
-                <thead class="table table-info">
-                    <tr>
-                        <th>S/N</th>
-                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Full Name</th>
-                        <th>IPPIS</th>
-                        <th class="text-nowrap">Savings Month</th>
-                        <th class="text-nowrap">Monthly Savings Amount</th>
-                        <th>Group</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for m in target_savings %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.member.member.first_name }} {{ m.member.member.last_name }}</td>
-                        <td>{{ m.member.ippis }}</td>
-                        <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.month }}</td>
-                        <td>₦{{ m.month_savings|default:0|intcomma }}</td>
-                        <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ m.member.member.group }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center">No savings records found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-    </div>
-
- 
-
-    <div class="row g-2 mt-3 ">
-        <div class="col-12 col-md-12">
-            <div class="savings-summary-card a1">
-                <h6> Your Target Savings Total</h6>
-                <p>₦{{ total_target_saving|default:0|intcomma }}</p>
-            </div>
-        </div>
-        
-    </div>
-     {% else %}
-      <div class="text-center py-5">
-                <div class="mb-4">
-                    <i class="fas fa-clipboard-list fa-5x text-muted"></i>
-                </div>
-                <h6 class="text-muted">No Target Savings Records Yet</h6>
-                <p class="text-muted mb-4">No Deduction for Target Savings Request yet.</p>
-               
-            </div>
-    </div>
-     
-    {% endif %}
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center mt-2 mb-3 gap-2">
+  <div class="d-flex gap-2">
+    <a href="{% url 'member_savings' %}" class="btn btn-success btn-sm text-white flex-fill">Savings</a>
+    <a href="{% url 'member_special_savings' %}" class="btn btn-primary btn-sm text-white flex-fill">Special Savings</a>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'request_target_savings_withdrawal' %}" class="btn btn-outline-info btn-sm text-white flex-fill" style="background-color:darkseagreen;">
+      <i class="bi bi-cash me-1"></i> Rquest Withdrawal
+    </a>
+    <a href="{% url 'my_target_savings_withdrawals' %}" class="btn btn-secondary btn-sm flex-fill text-white">
+      <i class="bi bi-clock-history me-1"></i> Withdrawal History
+    </a>
+  </div>
 </div>
+
+  <h6 class="text-center fw-bold">Target Savings</h6>
+
+  <div class="container">
+    {% if target_savings %}
+
+      <div class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead class="table table-info">
+            <tr>
+              <th>S/N</th>
+              <th class="text-nowrap">Full Name</th>
+              <th>IPPIS</th>
+              <th class="text-nowrap">Savings Month</th>
+              <th class="text-nowrap">Monthly Savings Amount</th>
+              <th>Group</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in target_savings %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                {{ m.member.member.first_name }} {{ m.member.member.last_name }}
+              </td>
+              <td>{{ m.member.ippis }}</td>
+              <td class="text-nowrap">{{ m.month }}</td>
+              <td>₦{{ m.month_savings|default:0|floatformat:2|intcomma }}</td>
+              <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                {{ m.member.member.group }}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center">No savings records found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <nav>
+  <ul class="pagination justify-content-center">
+
+    {% if target_savings.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1">First</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ target_savings.previous_page_number }}">Previous</a>
+      </li>
+    {% endif %}
+
+    <li class="page-item active">
+      <span class="page-link">
+        Page {{ target_savings.number }} of {{ target_savings.paginator.num_pages }}
+      </span>
+    </li>
+
+    {% if target_savings.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ target_savings.next_page_number }}">Next</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ target_savings.paginator.num_pages }}">Last</a>
+      </li>
+    {% endif %}
+
+  </ul>
+</nav>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="row g-2 mt-3">
+        <div class="col-12">
+          <div class="savings-summary-card a1">
+            <h6>Your Target Savings Total</h6>
+            <p>₦{{ total_target_saving|default:0|floatformat:2|intcomma }}</p>
+          </div>
+        </div>
+      </div>
+
+    {% else %}
+      <div class="text-center py-5">
+        <div class="mb-4">
+          <i class="fas fa-clipboard-list fa-5x text-muted"></i>
+        </div>
+        <h6 class="text-muted">No Target Savings Records Yet</h6>
+        <p class="text-muted mb-4">No Deduction for Target Savings Request yet.</p>
+        <a href="" class="btn btn-primary text-white">
+          <i class="bi bi-plus me-2"></i>For Target Savings Request Visit Cooperative
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
 {% endblock content %}

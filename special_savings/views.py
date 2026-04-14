@@ -32,7 +32,7 @@ def savings_request_form_payment(request):
             except Member.DoesNotExist:
                 messages.error(request, f"No member found with IPPIS {ippis}.")
 
-        elif "make_payment" in request.POST:  # Fixed indentation - now inside POST check
+        elif "make_payment" in request.POST:  
             member_id = request.POST.get("member_id")
             savings_type_id = request.POST.get("savings_type")
             duration_in_months = request.POST.get("duration_in_months")
@@ -58,7 +58,11 @@ def savings_request_form_payment(request):
                     f"{member} has already paid the request fee for {savings_type.title}."
                 )
                 return redirect("savings_request_form_payment")
-
+            if duration_in_months == "":
+                duration_in_months = None
+            else:
+                duration_in_months = int(duration_in_months)
+                
             SpecialSavingsTergetSavingsRequestForm.objects.create(
                 member=member,
                 savings_type=savings_type,
@@ -328,9 +332,53 @@ def delete_monthly_savings(request, year, month):
     return redirect('special_savings_list')
 
 
-# Target Savings Views can be added below similarly
+# Admin views all pending withdrawal requests
+@login_required
+def admin_special_savings_withdrawals(request):
+    withdrawals = SpecialSavingsWithdrawal.objects.select_related("member__member").order_by("-requested_at")
+
+    # Total savings deposited
+    total_savings = SpecialSavings.objects.aggregate(total=Sum("month_savings") )["total"] or 0
+
+    # Total approved withdrawals
+    total_withdrawals = SpecialSavingsWithdrawal.objects.filter(
+        status="approved").aggregate(total=Sum("amount"))["total"] or 0
+
+    # Available balance
+    total_available = total_savings - total_withdrawals
+
+    context = {
+        "withdrawals": withdrawals,
+        "total_savings": total_savings,
+        "total_withdrawals": total_withdrawals,
+        "total_available": total_available,
+    }
+
+    return render(request,"special_savings/admin_special_withdrawals.html",context,)
+
+# Admin approves or rejects
+@login_required
+def review_special_savings_withdrawal(request, pk):
+    withdrawal = get_object_or_404(SpecialSavingsWithdrawal, pk=pk)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        try:
+            if action == "approve":
+                withdrawal.approve(reviewed_by=request.user)
+                messages.success(request, f"Withdrawal of ₦{withdrawal.amount} approved.")
+            elif action == "reject":
+                withdrawal.reject(reviewed_by=request.user)
+                messages.warning(request, "Withdrawal request rejected.")
+        except ValueError as e:
+            messages.error(request, str(e))
+
+        return redirect("admin_special_savings_withdrawals")
+
+    return render(request, "special_savings/approve_special_withdrawal.html", {"withdrawal": withdrawal})
 
 
+# ============== Target Savings Views can be added below similarly ================
 
 @login_required
 def upload_target_savings(request):
@@ -458,7 +506,6 @@ def create_target_savings(request):
 
 @login_required
 def target_savings_list(request):
-    
     monthly_data = TargetSavings.objects.values('month').annotate(
      total_amount=Sum('month_savings'),
      member_count=Count('member', distinct=True)
@@ -521,9 +568,9 @@ def delete_monthly_target_savings(request, year, month):
     """
     Delete all savings for a specific month
     """
-    from django.contrib import messages
-    from django.shortcuts import redirect
-    from datetime import date
+    # from django.contrib import messages
+    # from django.shortcuts import redirect
+    # from datetime import date
     
     if request.method == 'POST':
         # Create date object for the specified month
@@ -550,3 +597,49 @@ def delete_monthly_target_savings(request, year, month):
     # If not POST, redirect back
     return redirect('target_savings_list')
 
+
+
+# Admin views all pending withdrawal requests
+@login_required
+def admin_target_savings_withdrawals(request):
+    withdrawals = TargetSavingsWithdrawal.objects.select_related("member__member").order_by("-requested_at")
+
+    # Total savings deposited
+    total_savings = TargetSavings.objects.aggregate(total=Sum("month_savings") )["total"] or 0
+
+    # Total approved withdrawals
+    total_withdrawals = TargetSavingsWithdrawal.objects.filter(
+        status="approved").aggregate(total=Sum("amount"))["total"] or 0
+
+    # Available balance
+    total_available = total_savings - total_withdrawals
+
+    context = {
+        "withdrawals": withdrawals,
+        "total_savings": total_savings,
+        "total_withdrawals": total_withdrawals,
+        "total_available": total_available,
+    }
+
+    return render(request,"special_savings/admin_target_withdrawals.html",context,)
+
+# Admin approves or rejects
+@login_required
+def review_target_savings_withdrawal(request, pk):
+    withdrawal = get_object_or_404(TargetSavingsWithdrawal, pk=pk)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        try:
+            if action == "approve":
+                withdrawal.approve(reviewed_by=request.user)
+                messages.success(request, f"Withdrawal of ₦{withdrawal.amount} approved.")
+            elif action == "reject":
+                withdrawal.reject(reviewed_by=request.user)
+                messages.warning(request, "Withdrawal request rejected.")
+        except ValueError as e:
+            messages.error(request, str(e))
+
+        return redirect("admin_target_savings_withdrawals")
+
+    return render(request, "special_savings/approve_target_withdrawal.html", {"withdrawal": withdrawal})

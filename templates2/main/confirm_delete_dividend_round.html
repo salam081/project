@@ -1,0 +1,44 @@
+{% extends "base/base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h4>Confirm Delete Dividend Round</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <strong>Danger!</strong> This will delete <strong>{{ dividend_count }}</strong> dividend(s) and reverse all member profits. This action cannot be undone!
+            </div>
+            
+            <p><strong>Profit Round:</strong> ₦{{ profit_amount|floatformat:2 }}</p>
+            <p><strong>Total Dividends:</strong> {{ dividend_count }}</p>
+            
+            <h5 class="mt-4">Preview (first 10 dividends):</h5>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Dividend Amount</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dividend in dividends %}
+                    <tr>
+                        <td>{{ dividend.member.first_name }} {{ dividend.member.last_name }}</td>
+                        <td>₦{{ dividend.dividend_amount|floatformat:2 }}</td>
+                        <td>{{ dividend.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Yes, Delete All {{ dividend_count }} Dividend(s)</button>
+                <a href="{% url 'dividend_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

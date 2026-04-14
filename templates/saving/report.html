@@ -15,11 +15,13 @@
     <form id="filter-form" method="GET" class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-3 mb-4 p-3 bg-white rounded-3 shadow">
         <div class="w-100 mb-2 mb-md-0">
             <label for="start_date" class="form-label text-dark fw-bold">Start Date:</label>
-            <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d'|default:'' }}">
+            <input type="month" name="start_month" value="{{ start_month }}" class="form-control">
+            {% comment %} <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d'|default:'' }}"> {% endcomment %}
         </div>
         <div class="w-100 mb-2 mb-md-0">
             <label for="end_date" class="form-label text-dark fw-bold">End Date:</label>
-            <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d'|default:'' }}">
+            {% comment %} <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d'|default:'' }}"> {% endcomment %}
+            <input type="month" name="end_month" value="{{ end_month }}" class="form-control">
         </div>
         <button type="submit" class="btn btn-primary mt-3 mt-md-0 w-100 w-md-auto">
             Apply Filter

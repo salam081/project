@@ -1,0 +1,169 @@
+
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<style>
+    /* Styles for the responsive form layout */
+    @media (max-width: 767.98px) {
+        /* On mobile, stack all form elements vertically */
+        .g-2.align-items-end {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+
+        /* Ensure form groups and buttons take full width */
+        .g-2 .col-md-6,
+        .g-2 .col-md-auto {
+            width: 100%;
+            margin-bottom: 10px; /* Add space between stacked items */
+        }
+        
+        /* Make the input field and buttons full width */
+        .g-2 .form-control,
+        .g-2 .btn {
+            width: 100%;
+        }
+        
+        /* Remove extra bottom margin from the last item */
+        .g-2 .col-md-auto:last-of-type {
+            margin-bottom: 0;
+        }
+    }
+</style>
+<div class="container py-2">
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <h4 class="card-title mb-3 text-primary">Search Member Active Requests</h4>
+            <form method="get" class="row g-2 align-items-end mb-3">
+                <div class="col-md-6">
+                    <label for="ippis" class="form-label">IPPIS Number:</label>
+                    <input type="text" name="ippis" id="ippis" value="{{ request.GET.ippis }}" class="form-control" required>
+                </div>
+                <div class="col-md-auto">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+                <div class="col-md-auto">
+                    <a href="{% url 'member_active_requests' %}" class="btn btn-secondary">Reset</a>
+                </div>
+            </form>
+
+            {% if member %}
+                <div class="alert alert-info mb-3">
+                    <strong>Results for:</strong> {{ member.member.first_name }} {{ member.member.last_name }} {{ member.ippis }}
+                </div>
+
+                <div class="row g-3">
+                   
+                    <div class="col-md-6">
+                        <div class="card card-custom mb-3">
+                            <div class="card-header bg-light fw-bold">Active Loan Requests</div>
+                            <div class="card-body">
+                                {% if active_loans %}
+                                    <ul class="list-group list-group-flush">
+                                        {% for loan in active_loans %}
+                                            <li class="list-group-item">
+                                                {{ loan.product.name }} - <span class="badge bg-primary">₦{{ loan.requested_amount|intcomma }}</span> ({{ loan.status }})
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p class="text-muted">No active loans.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                     <div class="col-md-6">
+                        <div class="card card-custom mb-3">
+                            <div class="card-header bg-light fw-bold">Active Consumable Requests</div>
+                            <div class="card-body">
+                                {% if active_consumables %}
+                                    <ul class="list-group list-group-flush">
+                                        {% for c in active_consumables %}
+                                            <li class="list-group-item">
+                                                {{ c.consumable_type }} - <span class="badge bg-success">₦{{ c.total_price|intcomma }}</span> ({{ c.status }})
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p class="text-muted">No active consumable requests.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card card-custom mb-3">
+                            <div class="card-header bg-light fw-bold">Active Project Finance Requests</div>
+                            <div class="card-body">
+                                {% if active_project_finances %}
+                                    <ul class="list-group list-group-flush">
+                                        {% for p in active_project_finances %}
+                                            <li class="list-group-item">
+                                                {{ p.application.product }} - <span class="badge bg-warning">₦{{ p.requested_amount|intcomma }}</span> ({{ p.status }})
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p class="text-muted">No active project finance requests.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card card-custom mb-3">
+                            <div class="card-header bg-light fw-bold">Pending Withdrawal Requests</div>
+                            <div class="card-body">
+                                {% if pending_withdrawals %}
+                                    <ul class="list-group list-group-flush">
+                                        {% for w in pending_withdrawals %}
+                                            <li class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span>
+                                                        <strong>Requested:</strong> {{ w.date_requested|date:"M d, Y" }}<br>
+                                                        <strong>Status:</strong> {{ w.status }}<br>
+                                                        <strong>Reason:</strong> {{ w.reason|default:"N/A" }}
+                                                    </span>
+                                                    <span>
+                                                        <form method="post" action="{% url 'approve_withdrawal_request' w.id %}" class="d-inline">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                                                        </form>
+                                                        <form method="post" action="{% url 'decline_withdrawal_request' w.id %}" class="d-inline">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-danger btn-sm">Decline</button>
+                                                        </form>
+                                                    </span>
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p class="text-muted">No pending withdrawals.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+                {% comment %} <div class="text-center my-3">
+                    {% if can_withdraw %}
+                        <form method="post" action="{% url 'approve_withdrawal_request' member.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-lg">Approve Withdrawal</button>
+                        </form>
+                    {% else %}
+                        <button class="btn btn-danger btn-lg" disabled>Withdrawal Blocked - Active Requests Exist</button>
+                    {% endif %}
+                </div> {% endcomment %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

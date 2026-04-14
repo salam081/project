@@ -1,0 +1,161 @@
+{% extends 'base/base.html' %}
+
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white text-center">
+                    <h1 class="h3 mb-0">{{ title }}</h1>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        <div class="messages mb-3">
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="alert alert-info" role="alert">
+                        You are creating a selling plan for item: <strong>{{ purchased_item.item_name }}</strong>.
+                        <br>
+                        <strong>Purchased Quantity:</strong> {{ purchased_item.quantity|intcomma }}
+                        <br>
+                        <strong>Unit Cost:</strong> ₦{{ purchased_item.unit_price|intcomma }}
+                    </div>
+
+                    <form method="post" action="{% url 'selling_plan_create' item_pk=purchased_item.pk %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_selling_price_per_unit" class="form-label">
+                                Selling Price Per Unit (₦) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" step="0.01" min="0" class="form-control" 
+                                   id="id_selling_price_per_unit" name="selling_price_per_unit" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_quantity" class="form-label">
+                                Quantity to Sell <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" min="1" max="{{ purchased_item.quantity }}" 
+                                   class="form-control" id="id_quantity" name="quantity" required>
+                            <div class="form-text">
+                                Must not exceed the purchased quantity of {{ purchased_item.quantity }}.
+                            </div>
+                        </div>
+
+                        <!-- Calculator display -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title mb-0">Total Selling Price:</h5>
+                                <h4 class="card-text text-success" id="total-selling-price">₦0.00</h4>
+                                <hr>
+                                <h5 class="card-title mb-0">Estimated Profit:</h5>
+                                <h4 class="card-text text-primary" id="profit-display">₦0.00</h4>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="id_include_expenditure" name="include_expenditure">
+                            <label class="form-check-label" for="id_include_expenditure">
+                                Include other expenditure in cost calculation
+                            </label>
+                        </div>
+                        <!-- hidden expenditure value -->
+                        <input type="hidden" id="extra-cost" value="{{ purchased_item.expenditure_amount|default:0 }}">
+
+                        <div class="mb-3">
+                            <label for="id_notes" class="form-label">Notes (Optional)</label>
+                            <textarea class="form-control" id="id_notes" name="notes" rows="3"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-plus-circle me-2"></i>Create Plan
+                            </button>
+                            <a href="{% url 'purchased_item_detail' pk=purchased_item.pk %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const priceInput = document.getElementById('id_selling_price_per_unit');
+    const quantityInput = document.getElementById('id_quantity');
+    const totalDisplay = document.getElementById('total-selling-price');
+    const profitDisplay = document.getElementById('profit-display');
+    const includeExpenditure = document.getElementById('id_include_expenditure');
+    const extraCostEl = document.getElementById('extra-cost'); // hidden input
+    const extraCost = extraCostEl ? parseFloat(extraCostEl.value) || 0 : 0;
+    const unitCost = parseFloat('{{ purchased_item.unit_price|default:0 }}') || 0;
+
+    // Safety: bail out if essential elements are missing
+    if (!priceInput || !quantityInput || !totalDisplay || !profitDisplay) {
+        console.warn('Selling plan calculator: required inputs not found.');
+        return;
+    }
+
+    function parseNumber(val) {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return val;
+        const cleaned = String(val).replace(/,/g, '').trim();
+        const n = Number(cleaned);
+        return isNaN(n) ? 0 : n;
+    }
+
+    function formatCurrency(n) {
+        return '₦' + Number(n || 0).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function calculateTotal() {
+        const maxQ = parseInt(quantityInput.getAttribute('max')) || Infinity;
+        let quantity = parseNumber(quantityInput.value);
+        if (quantity > maxQ) {
+            quantity = maxQ;
+            quantityInput.value = maxQ;
+        }
+        if (quantity < 0) quantity = 0;
+
+        const price = parseNumber(priceInput.value);
+        let total = price * quantity;
+
+        let cost = unitCost * quantity;
+        if (includeExpenditure && includeExpenditure.checked) {
+            total += extraCost;
+            cost += extraCost;
+        }
+
+        totalDisplay.textContent = formatCurrency(total);
+        const profit = total - cost;
+        profitDisplay.textContent = formatCurrency(profit);
+    }
+
+    priceInput.addEventListener('input', calculateTotal);
+    quantityInput.addEventListener('input', calculateTotal);
+    if (includeExpenditure) includeExpenditure.addEventListener('change', calculateTotal);
+    calculateTotal();
+});
+</script>
+{% endblock %}
+
+
+
+

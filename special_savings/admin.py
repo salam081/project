@@ -21,4 +21,5 @@ class SpecialSavingsRequestAdmin(admin.ModelAdmin):
     list_display = ("member","amount","savings_type","date_created")  
  
     
-admin.site.register(SavingType)    
+admin.site.register(SavingType)  
+admin.site.register(TargetSavingsWithdrawal)  

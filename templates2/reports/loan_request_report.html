@@ -1,0 +1,327 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Loan Request Status Report{% endblock %}
+
+{% block content %}
+
+
+
+    
+            <h6 class="page-title text-center">
+                <i class="bi bi-clipboard-list me-3"></i>
+                Loan Request Report
+            </h6>
+            <h6 class="page-subtitle text-dark text-center">Monitor and track all Loan requests across your organization</h6>
+            <div class="row mb-4">
+                <div class="col-12">
+           <div class="content-card">
+                 <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-filter me-2"></i>
+                        Filter Options
+                    </h5>
+                </div>
+              
+            <form method="get" id="filterForm">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="report-form-label" for="status">Status</label>
+                        <select class="form-control shadow"  name="status" id="status">
+                            {# The first option is "All Statuses" which value is 'all' #}
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="report-form-label" for="date_from">Date From</label>
+                        <input type="date" class="form-control shadow" name="date_from" id="date_from" value="{{ filters.date_from|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="report-form-label" for="date_to">Date To</label>
+                        <input type="date" class="form-control shadow" name="date_to" id="date_to" value="{{ filters.date_to|default:'' }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="report-form-label" for="month">Filter by Month</label>
+                        <select name="month" id="month" class="form-control shadow">
+                            <option value="">All Months</option>
+                            {% for m in months %}
+                                <option value="{{ m|date:"Y-m" }}" {% if filters.month == m|date:"Y-m" %}selected{% endif %}>
+                                    {{ m|date:"F Y" }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-md-3">
+                        <label for="">Loan Type</label>
+                    <select class="form-control shadow" name="loan_type" id="loan_type">
+                        <option value="">All Loan Types</option>
+                        {% for type in loan_types %}
+                            <option value="{{ type.name }}" {% if filters.loan_type == type.name %}selected{% endif %}>
+                                {{ type.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                 <div class="d-flex gap-2 mt-2">
+                    <button type="submit" class="btn btn-primary">Apply Filters </button>
+            
+                    <a href="{% url 'loan_request_report' %}" class="btn btn-secondary text-white">Clear</a>
+                    <a href="?download=excel" class="btn btn-success text-white"><i class="bi bi-file-earmark-excel"></i> Export to Excel</a>
+
+                </div>
+                </div>
+                
+            </form>
+            </div>
+
+         </div>
+            </div>
+        </div>
+   
+        <div class="stats-grid m-3">
+            <div class="stat-card shadow" style="border-top: 2px solid blue;">
+                <div class="stat-icon bg-primary">
+                    <i class="bi bi-list-ul"></i> 
+                </div>
+                <div class="stat-content">
+                    <h5>{{ summary.total_requests }}</h5>
+                    <p>Total Requests</p>
+                </div>
+            </div>
+            
+            <div class="stat-card shadow" style="border-top: 2px solid green;">
+                <div class="stat-icon bg-success">
+                    <i class="bi bi-money-bill"></i> 
+                </div>
+                <div class="stat-content">
+                    <h5>₦{{ summary.total_value|floatformat:2|intcomma }}</h5>
+                    <p>Total Approved Value</p>
+                </div>
+            </div>
+            
+            <div class="stat-card shadow"style="border-top: 2px solid cyan;">
+                <div class="stat-icon bg-info">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h5>₦{{ summary.total_paid|floatformat:2|intcomma }}</h5>
+                    <p>Total Repaid</p>
+                </div>
+            </div>
+            
+            <div class="stat-card shadow" style="border-top: 2px solid orange;">
+                <div class="stat-icon bg-warning">
+                    <i class="bi bi-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h5>₦{{ summary.total_balance|floatformat:2|intcomma }}</h5>
+                    <p>Balance Remaining</p>
+                </div>
+            </div>
+            
+            <div class="stat-card shadow" style="border-top: 2px solid purple;">
+                <div class="stat-icon bg-warning">
+                    <i class="bi bi-hourglass-half"></i>
+                </div>
+                <div class="stat-content">
+                    <h5>{{ summary.pending_count }}</h5>
+                    <p>Pending</p>
+                </div>
+            </div>
+            
+            <div class="stat-card shadow"style="border-top: 2px solid green;">
+                <div class="stat-icon bg-primary">
+                    <i class="bi bi-hand-thumbs-up"></i> 
+                </div>
+                <div class="stat-content">
+                    <h5>{{ summary.approved_count }}</h5>
+                    <p>Approved</p>
+                </div>
+            </div>
+            
+            <div class="stat-card shadow" style="border-top: 2px solid lightgreen;">
+                <div class="stat-icon bg-success" >
+                    <i class="bi bi-wallet"></i>
+                </div>
+                <div class="stat-content">
+                    <h5>{{ summary.paid_count }}</h5>
+                    <p>Fully Paid</p>
+                </div>
+            </div>
+            
+            <div class="stat-card shadow" style="border-top: 2px solid red;">
+                <div class="stat-icon bg-danger">
+                    <i class="bi bi-times-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h5>{{ summary.declined_count }}</h5>
+                    <p>Rejected</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-info">
+                        <tr>
+                            {% comment %} <th>ID</th> {% endcomment %}
+                            <th>Member</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Loan Type</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Requested Amount</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Approved Amount</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Application Date</th>
+                            <th>Status</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Paid</th>
+                            <th>Balance</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Monthly Payment</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in requests %}
+                       
+                        <tr>
+                            {% comment %} <td><strong>#{{ req.id }}</strong></td> {% endcomment %}
+                            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.member.member.first_name }} {{ req.member.member.last_name }} {{ req.member.ippis }}</td>
+                            <td class="text-nowrap text-truncate text-primary" style="max-width: 270px;">{{ req.loan_type.name|default:"N/A" }}</td>
+                            <td>₦{{ req.amount|floatformat:2|intcomma }}</td>
+                            <td>₦{{ req.approved_amount|default:"0.00"|floatformat:2|intcomma }}</td>
+                            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ req.application_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <span class="status-badge status-{{ req.status|lower }}">
+                                    {{ req.status }}
+                                </span>
+                            </td>
+                            <td>₦{{ req.total_paid|floatformat:2|intcomma }}</td>
+                            <td>₦{{ req.balance_value |floatformat:2|intcomma }}</td>
+                            <td>
+                                {% if req.monthly_payment %}
+                                    ₦{{ req.monthly_payment|floatformat:2|intcomma }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10">
+                                <div class="empty-state">
+                                    <i class="fas fa-search"></i>
+                                    <h5>No Records Found</h5>
+                                    <p>No records found for the selected criteria. Try adjusting your filters.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if requests.has_other_pages %} 
+        <div class="pagination">
+            <ul>
+                {% if requests.has_previous %} 
+                <li>
+                    <a class="page-link" href="?page={{ requests.previous_page_number }}{% if filters.status != 'all' %}&status={{ filters.status }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.month %}&month={{ filters.month }}{% endif %}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in requests.paginator.page_range %}
+                    {% if requests.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > requests.number|add:'-3' and num < requests.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if filters.status != 'all' %}&status={{ filters.status }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.month %}&month={{ filters.month }}{% endif %}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if requests.has_next %}
+                <li>
+                    <a class="page-link" href="?page={{ requests.next_page_number }}{% if filters.status != 'all' %}&status={{ filters.status }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}{% if filters.month %}&month={{ filters.month }}{% endif %}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // Show loading overlay on form submission
+    if (filterForm) {
+        filterForm.addEventListener('submit', function() {
+            loadingOverlay.style.display = 'flex';
+        });
+    }
+
+    // Hide loading overlay when page loads
+    window.addEventListener('load', function() {
+        loadingOverlay.style.display = 'none';
+    });
+
+    // Add smooth hover effects to table rows
+    const tableRows = document.querySelectorAll('.report-table tbody tr');
+    tableRows.forEach(row => {
+        if (!row.querySelector('.empty-state')) {
+            row.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateX(5px)';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateX(0)';
+            });
+        }
+    });
+
+    // Auto-submit form when filters change (optional)
+    const autoSubmitElements = document.querySelectorAll('.report-form-select');
+    autoSubmitElements.forEach(element => {
+        element.addEventListener('change', function() {
+            // Uncomment the line below to enable auto-submit
+            // filterForm.submit();
+        });
+    });
+
+    // Date validation
+    const dateFrom = document.getElementById('date_from');
+    const dateTo = document.getElementById('date_to');
+
+    if (dateFrom && dateTo) {
+        dateFrom.addEventListener('change', function() {
+            dateTo.min = this.value;
+        });
+
+        dateTo.addEventListener('change', function() {
+            dateFrom.max = this.value;
+        });
+    }
+
+    // Add animation to summary cards
+    const summaryCards = document.querySelectorAll('.stat-card');
+    summaryCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.classList.add('animate-fade-in');
+    });
+});
+</script>
+{% endblock %}

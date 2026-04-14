@@ -3,6 +3,10 @@ from django.contrib.auth.models import AbstractUser
 from django_countries.fields import CountryField
 from savings.models import Savings, Loanable, Investment
 from decimal import Decimal
+from django.db.models import Sum
+from django.utils import timezone
+from datetime import timedelta
+from special_savings.models import *
 
 # Create your models here.
 
@@ -66,7 +70,7 @@ class Member(models.Model):
     # Special savings
     total_special_savings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_target_savings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
+   
     def __str__(self):
         return f"{self.member} ({self.ippis})"
 
@@ -81,19 +85,48 @@ class Member(models.Model):
         self.save()
     
     # Special savings updater
+    # def update_special_savings(self):
+    #     total = self.special_savings.aggregate(total=models.Sum("month_savings"))["total"] or Decimal("0.00")
+
+    #     self.total_special_savings = total
+    #     self.save(update_fields=["total_special_savings"])
+            
+ 
+    
     def update_special_savings(self):
-        total = self.special_savings.aggregate(total=models.Sum("month_savings"))["total"] or Decimal("0.00")
+        from django.db.models import Sum
+        
+        total_saved = self.special_savings.aggregate(
+            total=Sum("month_savings")
+        )["total"] or Decimal("0.00")
 
-        self.total_special_savings = total
+        total_withdrawn = self.special_savings_withdrawals.filter(
+            status="approved"
+        ).aggregate(
+            total=Sum("amount")
+        )["total"] or Decimal("0.00")
+
+        self.total_special_savings = total_saved - total_withdrawn
         self.save(update_fields=["total_special_savings"])
-            
-    # Special savings updater
+        
+        
+        
     def update_target_savings(self):
-        total = self.target_savings.aggregate(total=models.Sum("month_savings"))["total"] or Decimal("0.00")
+        from django.db.models import Sum
+        
+        total_saved = self.target_savings.aggregate(
+            total=Sum("month_savings")
+        )["total"] or Decimal("0.00")
 
-        self.total_target_savings = total
+        total_withdrawn = self.target_savings_withdrawals.filter(
+            status="approved"
+        ).aggregate(
+            total=Sum("amount")
+        )["total"] or Decimal("0.00")
+
+        self.total_target_savings = total_saved - total_withdrawn
         self.save(update_fields=["total_target_savings"])
-            
+                
             
     # Add this method to your existing Member model
     def get_complete_financial_data(self):

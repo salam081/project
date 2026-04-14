@@ -114,14 +114,14 @@
     <div class="row align-items-center g-2">
         <!-- Dashboard Title Section -->
         <div class="col-lg-7 col-md-6">
-            <h4 class="mb-2 fw-bold">
+            <h6 class="mb-2 fw-bold">
                 <i class="fas fa-chart-line me-2"></i>Financial Dashboard
-            </h4>
+            </h6>
             <p class="mb-0 opacity-75">Complete Overview of Your Financial Portfolio</p>
         </div>
 
         <!-- Active Users Stats Section -->
-        <div class="col-lg-5 col-md-6">
+       <div class="col-lg-5 col-md-6">
             <div class="bg-white bg-opacity-10 rounded p-3 border border-white border-opacity-25">
                 <h6 class="mb-3 fw-semibold">
                     <i class="fas fa-users me-2"></i>Active Users
@@ -134,7 +134,6 @@
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="">This Week</span>
-                    
                     <span class="fs-5 fw-bold text-info">{{ weekly_logins|default:"0" }}</span>
                 </div>
             </div>
@@ -258,10 +257,8 @@
             <div class="summary-card grand-total-card shadow">
                 <div class="card-icon"><i class="fas fa-calculator"></i></div>
                 <div class="card-content">
-                    <a href="{% url 'financial_list' %}" style="text-decoration: none;">
                     <div class="card-label">GRAND TOTAL</div>
                     <div class="card-value">₦{{ grand_total|default:0|floatformat:2|intcomma }}</div>
-                </a>
                 </div>
             </div>
         </div>

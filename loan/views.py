@@ -28,7 +28,11 @@ from django.db.models.functions import ExtractYear
 from django.db import transaction
 import os
 from django.conf import settings
-from decimal import Decimal
+
+from openpyxl import Workbook
+from decimal import Decimal, ROUND_HALF_UP
+
+
 from .forms import *
 from .models import *
 from accounts.models import *
@@ -293,18 +297,25 @@ def approve_loan_request(request, id):
             if approved_amount <= 0:
                 messages.error(request, "Approved amount must be greater than zero.")
                 return redirect('approve_loan_request', id=id)
-
+            
+             # ✅ NEW CHECK — matches your DB constraint
+            if approved_amount > loan_request.amount:
+                messages.error(
+                    request,
+                    "Approved amount cannot exceed requested amount."
+                )
+                return redirect('approve_loan_request', id=id)
+            
             if (
                 loan_request.loan_type 
                 and loan_request.loan_type.max_amount is not None 
                 and approved_amount > loan_request.loan_type.max_amount
-            ):
+                ):
                 messages.error(
                     request,
                     f"Approved amount cannot exceed the maximum allowed: {loan_request.loan_type.max_amount}"
                 )
                 return redirect('approve_loan_request', id=id)
-
             # ✅ Save approval
             loan_request.approved_amount = approved_amount
             loan_request.approval_date = timezone.now().date()
@@ -895,3 +906,58 @@ def loan_analytics_view(request):
     }
 
     return render(request, "loan/loan_analytics.html", context)
+
+
+
+def export_loan_schedule(request, loan_id):
+    loan = LoanRequest.objects.get(id=loan_id)
+
+    amount = Decimal(loan.amount)
+    months = loan.loan_term_months
+
+    # Calculate base monthly
+    monthly = (amount / months).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    payments = [monthly] * months
+
+    # Fix last payment
+    total = sum(payments)
+    diff = amount - total
+    payments[-1] += diff
+
+    # Create Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Loan Schedule"
+
+    # Header
+    ws.append([
+        "Month",
+        "Payment Amount (₦)",
+        "Cumulative Paid (₦)",
+        "Balance Remaining (₦)"
+    ])
+
+    balance = amount
+    cumulative = Decimal('0.00')
+
+    for i, payment in enumerate(payments, start=1):
+        cumulative += payment
+        balance -= payment
+
+        ws.append([
+            i,
+            float(payment),
+            float(cumulative),
+            float(balance)
+        ])
+
+    # Response
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response['Content-Disposition'] = f'attachment; filename=loan_{loan.id}_schedule.xlsx'
+
+    wb.save(response)
+    return response
+

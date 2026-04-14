@@ -7,19 +7,33 @@
     <h3 class="card-title mb-0">Dividend Distribution</h3>
   </div>
 
-  <!-- Step 1: Filter Members -->
+  <!-- Error Messages -->
+  {% if errors %}
+    <div class="mt-2">
+      {% for field, msg in errors.items %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="fas fa-exclamation-circle"></i> {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- ✅ FORM 1: Filter Only — no hidden date inputs, no conflict -->
   <form method="post" class="mb-4">
     {% csrf_token %}
     <div class="card p-3 shadow-sm mb-3">
       <h6 class="mb-3">Filter Members by Savings Date Range</h6>
       <div class="row g-3 align-items-end">
         <div class="col-md-4">
-          {{ form.start_date.label_tag }}
-          {{ form.start_date }}
+         <label for="start_date" class="form-label">Savings Start Month</label>
+      <input type="date" name="start_date" id="start_date" class="form-control"
+       value="{{ start_date|date:'Y-m' }}" required>
         </div>
         <div class="col-md-4">
-          {{ form.end_date.label_tag }}
-          {{ form.end_date }}
+         <label for="end_date" class="form-label">Savings End Month</label>
+        <input type="date" name="end_date" id="end_date" class="form-control"
+       value="{{ end_date|date:'Y-m' }}" required>
         </div>
         <div class="col-md-4">
           <button type="submit" name="filter" class="btn btn-primary btn-sm">
@@ -31,37 +45,40 @@
         </div>
       </div>
     </div>
+  </form>
 
-    <!-- Step 2: Profit Input Section (only visible after filter) -->
-    {% if show_profit_section %}
+  <!-- ✅ FORM 2: Distribute Only — hidden dates are safe, no other date inputs here -->
+  {% if show_profit_section %}
+  <form method="post" class="mb-4">
+    {% csrf_token %}
     <div class="card p-3 shadow-sm mb-3">
       <h6 class="mb-3">Enter Profit and Distribution Date</h6>
       <div class="row g-3 align-items-end">
         <div class="col-md-3">
-          {{ form.profit.label_tag }}
-          {{ form.profit }}
+          <label for="profit" class="form-label">Enter Profit</label>
+          <input type="number" name="profit" id="profit" class="form-control"
+                 step="0.01" min="0" placeholder="0.00">
         </div>
         <div class="col-md-3">
-          {{ form.date.label_tag }}
-          {{ form.distribution_date }}
+          <label for="distribution_date" class="form-label">Distribution Date</label>
+          <input type="date" name="distribution_date" id="distribution_date" class="form-control">
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 d-flex align-items-end">
           <button type="submit" name="distribute" class="btn btn-success w-100"
             onclick="return confirm('Are you sure you want to distribute dividends? This action cannot be undone.');">
             <i class="fas fa-check-circle"></i> Distribute Dividend
           </button>
         </div>
       </div>
-
-      <!-- Preserve filtered dates -->
+      <!-- ✅ Hidden dates only in this form — no conflict with filter form -->
       <input type="hidden" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
       <input type="hidden" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
     </div>
-    {% endif %}
   </form>
+  {% endif %}
 
-  <!-- Step 3: Summary (Always Display) -->
-  <div class="card p-2 shadow ">
+  <!-- Summary -->
+  <div class="card p-2 shadow mb-3">
     <b class="mb-3">Summary</b>
     <div class="row">
       <div class="col-md-4">
@@ -89,7 +106,7 @@
     </div>
   </div>
 
-  <!-- Step 4: Table of Members -->
+  <!-- Table -->
   {% if shares %}
   <div class="card p-3 shadow-sm mb-3">
     <div class="table-responsive">
@@ -97,7 +114,7 @@
         <thead class="table-dark">
           <tr>
             <th>S/N</th>
-            <th>Members Name</th>
+            <th>Member</th>
             <th>IPPIS</th>
             <th>Savings (₦)</th>
             <th>Shares</th>
@@ -134,50 +151,66 @@
         </tbody>
       </table>
     </div>
-      <!-- Pagination Info -->
-            <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
-              <div class="text-muted small">
-                Showing {{ shares.start_index }} to {{ shares.end_index }} of {{ shares.paginator.count }} members
-              </div>
-              <div class="text-muted small">
-                Page {{ shares.number }} of {{ shares.paginator.num_pages }}
-              </div>
-            </div>
 
-            <!-- Pagination -->
-            {% if shares.has_other_pages %}
-              <nav aria-label="Dividend pagination">
-                <ul class="pagination pagination-sm justify-content-center mb-4">
-                  {% if shares.has_previous %}
-                    <li class="page-item"><a class="page-link" href="?page=1">&laquo;&laquo;</a></li>
-                    <li class="page-item"><a class="page-link" href="?page={{ shares.previous_page_number }}">&laquo;</a></li>
-                  {% else %}
-                    <li class="page-item disabled"><span class="page-link">&laquo;&laquo;</span></li>
-                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-                  {% endif %}
+    <!-- Pagination Info -->
+    <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+      <div class="text-muted small">
+        Showing {{ shares.start_index }} to {{ shares.end_index }} of {{ shares.paginator.count }} members
+      </div>
+      <div class="text-muted small">
+        Page {{ shares.number }} of {{ shares.paginator.num_pages }}
+      </div>
+    </div>
 
-                  {% for num in shares.paginator.page_range %}
-                    {% if num == shares.number %}
-                      <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                    {% elif num > shares.number|add:'-3' and num < shares.number|add:'3' %}
-                      <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-                    {% elif num == 1 or num == shares.paginator.num_pages %}
-                      <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-                    {% elif num == shares.number|add:'-4' or num == shares.number|add:'4' %}
-                      <li class="page-item disabled"><span class="page-link">...</span></li>
-                    {% endif %}
-                  {% endfor %}
+    <!-- Pagination -->
+    {% if shares.has_other_pages %}
+      <nav aria-label="Dividend pagination">
+        <ul class="pagination pagination-sm justify-content-center mb-4">
 
-                  {% if shares.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ shares.next_page_number }}">&raquo;</a></li>
-                    <li class="page-item"><a class="page-link" href="?page={{ shares.paginator.num_pages }}">&raquo;&raquo;</a></li>
-                  {% else %}
-                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-                    <li class="page-item disabled"><span class="page-link">&raquo;&raquo;</span></li>
-                  {% endif %}
-                </ul>
-              </nav>
+          {% if shares.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&filtered=1&page=1">&laquo;&laquo;</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&filtered=1&page={{ shares.previous_page_number }}">&laquo;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">&laquo;&laquo;</span></li>
+            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+          {% endif %}
+
+          {% for num in shares.paginator.page_range %}
+            {% if num == shares.number %}
+              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > shares.number|add:'-3' and num < shares.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&filtered=1&page={{ num }}">{{ num }}</a>
+              </li>
+            {% elif num == 1 or num == shares.paginator.num_pages %}
+              <li class="page-item">
+                <a class="page-link" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&filtered=1&page={{ num }}">{{ num }}</a>
+              </li>
+            {% elif num == shares.number|add:'-4' or num == shares.number|add:'4' %}
+              <li class="page-item disabled"><span class="page-link">...</span></li>
             {% endif %}
+          {% endfor %}
+
+          {% if shares.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&filtered=1&page={{ shares.next_page_number }}">&raquo;</a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&filtered=1&page={{ shares.paginator.num_pages }}">&raquo;&raquo;</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+            <li class="page-item disabled"><span class="page-link">&raquo;&raquo;</span></li>
+          {% endif %}
+
+        </ul>
+      </nav>
+    {% endif %}
+
   </div>
   {% endif %}
 </div>

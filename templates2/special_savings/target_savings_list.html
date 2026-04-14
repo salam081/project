@@ -1,0 +1,102 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Monthly Savings Summary{% endblock %}
+
+{% block content %}
+<div class="container mt-1">
+    <div class="page-header ">
+        <h6><i class="bi bi-chart me-2"></i>Monthly Target Savings Summary</h6>
+    </div>
+
+    <!-- Monthly Breakdown Table -->
+    <div class="card shadow">
+        <div class="card-header">
+            <h6 class="mb-0">
+                <i class="bi bi-calendar-alt me-2"></i>Monthly Breakdown
+            </h6>
+        </div>
+        <div class="card-body ">
+            {% if monthly_data %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead class="table-info">
+                        <tr>
+                            <th>Month</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Members Count</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Amount </th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in special_sav %}
+                        <tr>
+                            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ data.month|date:"F Y" }}</td>
+                            <td class="fs-6 text-primary fw-blod text-center">{{ data.member_count }}</td>
+                            <td > ₦{{ data.total_amount|floatformat:2|intcomma }}</td>
+                            <td>
+                                <a href="{% url 'target_monthly_detail' data.month.year data.month.month %}" 
+                                   class="btn btn-sm btn-primary text-white" title="View Details">
+                                    <i class="bi bi-eye me-1"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                           
+                            <td colspan="2" class="fw-blod fs-5"><strong>Grand Total =</strong></td>
+                          
+                            <td colspan="1">
+                                <strong class="text-success fw-blod fs-5">₦{{ overall_stats.total_amount|floatformat:2|intcomma|default:"0.00" }}</strong>
+                            </td>
+                           
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-5 text-center">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No savings data available yet</h5>
+                <p class="text-muted">Start adding member savings to see statistics here.</p>
+            </div>
+            {% endif %}
+        </div>
+          {% if special_sav.has_other_pages %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if special_sav.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_loan_type %}loan_type={{ current_loan_type }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ special_sav.previous_page_number }}">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in special_sav.paginator.page_range %}
+                            {% if special_sav.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > special_sav.number|add:'-3' and num < special_sav.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_loan_type %}loan_type={{ current_loan_type }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if special_sav.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_loan_type %}loan_type={{ current_loan_type }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ special_sav.next_page_number }}">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+    </div>
+</div>
+{% endblock %}

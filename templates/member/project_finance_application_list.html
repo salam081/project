@@ -82,10 +82,10 @@
                         <i class="bi bi-plus-circle"></i> Add Another Request
                     </a>
                 {% else %}
-                    <p class="text-success fw-bold mt-3">This application is approved. You can now make a request.</p>
+                    <p class="text-success fw-bold mt-3">This application is reviewed. You can now make a request.</p>
                     <a href="{% url 'create_project_finance_request' app.id %}" 
                         class="btn btn-success fw-semibold py-2 rounded-3 text-white">
-                        Make a New Request for this Application
+                        Make Your Request for this Application
                     </a>
                 {% endif %}
 

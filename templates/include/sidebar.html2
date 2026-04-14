@@ -1,0 +1,643 @@
+<!-- Sidebar -->
+
+<nav class="sidebar shadow" id="sidebar" aria-label="Sidebar Navigation">
+
+    <div class="sidebar-nav">
+
+        <!-- ===== ADMIN SECTION ===== -->
+        {% if user.is_authenticated and user.group.title == 'admin' %}
+
+        <!-- Dashboard -->
+        <div class="nav-item">
+            <a href="{% url 'admin_dashboard' %}" class="nav-link">
+                <i class="bi bi-speedometer2"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+        </div>
+
+        <!-- Members Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#membersSubmenu" aria-expanded="false" aria-controls="membersSubmenu">
+                <i class="bi bi-people"></i>
+                <span class="nav-text">Members</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="membersSubmenu">
+                <a href="{% url 'upload_users' %}" class="nav-link">
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Members</span>
+                </a>
+                <a href="{% url 'register' %}" class="nav-link">
+                    <i class="bi bi-person-plus"></i>
+                    <span class="nav-text">Add Member</span>
+                </a>
+                <a href="{% url 'all_members' %}" class="nav-link">
+                    <i class="bi bi-person"></i>
+                    <span class="nav-text">All Members</span>
+                </a>
+                <a href="{% url 'non_staff_members_list' %}" class="nav-link">
+                    <i class="bi bi-person-plus"></i>
+                    <span class="nav-text">All Non Staff Member</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Savings Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#savingsSubmenu" aria-expanded="false" aria-controls="savingsSubmenu">
+                <i class="bi bi-piggy-bank"></i>
+                <span class="nav-text">Savings</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="savingsSubmenu">
+                <a href="{% url 'upload_opening_balances' %}" class="nav-link">
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Opening Savings</span>
+                </a>
+                <a href="{% url 'upload_savings' %}" class="nav-link">
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Savings</span>
+                </a>
+                <a href="{% url 'add_member_savings' %}" class="nav-link">
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">Add Member Savings</span>
+                </a>
+                <a href="{% url 'monthly_savings_uploads' %}" class="nav-link">
+                    <i class="bi bi-eye"></i>
+                    <span class="nav-text">View Savings</span>
+                </a>
+                <a href="{% url 'list_savings' %}" class="nav-link">
+                    <i class="bi bi-eye"></i>
+                    <span class="nav-text">Members Savings</span>
+                </a>
+                <a href="{% url 'delete_monthly_savings' %}" class="nav-link">
+                    <i class="bi bi-trash"></i>
+                    <span class="nav-text">Delete Savings</span>
+                </a>
+                <a href="{% url 'saving_report' %}" class="nav-link">
+                    <i class="bi bi-wallet-fill"></i>
+                    <span class="nav-text">Saving Report</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Target Savings Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#targetSubmenu" aria-expanded="false" aria-controls="targetSubmenu">
+                <i class="bi bi-credit-card"></i>
+                <span class="nav-text">Target Savings</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="targetSubmenu">
+                <a href="{% url 'upload_target_savings' %}" class="nav-link">
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Target Saving</span>
+                </a>
+                <a href="{% url 'create_target_savings' %}" class="nav-link">
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">Add Target Saving</span>
+                </a>
+                <a href="{% url 'target_savings_list' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Target Saving List</span>
+                </a>
+                <a href="{% url 'admin_target_savings_withdrawals' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Target Saving Withdrawals list</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Special Savings Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#specialSubmenu" aria-expanded="false" aria-controls="specialSubmenu">
+                <i class="bi bi-bag"></i>
+                <span class="nav-text">Special Savings</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="specialSubmenu">
+                <a href="{% url 'upload_special_savings' %}" class="nav-link">
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Special Saving</span>
+                </a>
+                <a href="{% url 'create_special_savings' %}" class="nav-link">
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">Add Special Saving</span>
+                </a>
+                <a href="{% url 'special_savings_list' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Special Saving List</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Loan Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#loanSubmenu" aria-expanded="false" aria-controls="loanSubmenu">
+                <i class="bi bi-wallet2"></i>
+                <span class="nav-text">Loan</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="loanSubmenu">
+                <a href="{% url 'loan_request_fee_payment' %}" class="nav-link">
+                    <i class="bi bi-person"></i>
+                    <span class="nav-text">Loan Form Fee</span>
+                </a>
+                <a href="{% url 'admin_loan_settings' %}" class="nav-link">
+                    <i class="bi bi-sliders"></i>
+                    <span class="nav-text">Loan Settings</span>
+                </a>
+                <a href="{% url 'add_loan_type' %}" class="nav-link">
+                    <i class="bi bi-wallet2"></i>
+                    <span class="nav-text">Loan Type Management</span>
+                </a>
+                <a href="{% url 'admin_loan_requests' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Approve Loan</span>
+                </a>
+                <a href="{% url 'loan_years_list' %}" class="nav-link">
+                    <i class="bi bi-sliders"></i>
+                    <span class="nav-text">Loans Batches</span>
+                </a>
+                <a href="{% url 'all_reject_loan' %}" class="nav-link">
+                    <i class="bi bi-check-circle"></i>
+                    <span class="nav-text">All Reject Loan</span>
+                </a>
+                <a href="{% url 'upload_loan_payment' %}" class="nav-link">
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Payment</span>
+                </a>
+                <a href="{% url 'add_payment' %}" class="nav-link">
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">Add Payment Loan</span>
+                </a>
+                <a href="{% url 'loan_analytics' %}" class="nav-link">
+                    <i class="bi bi-folder"></i>
+                    <span class="nav-text">Loan Payment Report</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Consumables Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#consumableSubmenu" aria-expanded="false" aria-controls="consumableSubmenu">
+                <i class="bi bi-box"></i>
+                <span class="nav-text">Consumables</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="consumableSubmenu">
+                <a href="{% url 'consumable_dashboard' %}" class="nav-link">
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="{% url 'admin_loan_settings' %}" class="nav-link">
+                    <i class="bi bi-sliders"></i>
+                    <span class="nav-text">Consumable Settings</span>
+                </a>
+                <a href="{% url 'consumable_fee' %}" class="nav-link">
+                    <i class="bi bi-wallet2"></i>
+                    <span class="nav-text">Consumable Form Fee</span>
+                </a>
+                <a href="{% url 'add_consumable_type' %}" class="nav-link">
+                    <i class="bi bi-plus-circle"></i>
+                    <span class="nav-text">Add Consumable Type</span>
+                </a>
+                <a href="{% url 'admin_consumables_list' %}" class="nav-link">
+                    <i class="bi bi-graph-up"></i>
+                    <span class="nav-text">Approve Requests</span>
+                </a>
+                <a href="{% url 'item_list' %}" class="nav-link">
+                    <i class="bi bi-check-circle"></i>
+                    <span class="nav-text">Stock Items List</span>
+                </a>
+                <a href="{% url 'consumable_types_with_requests' %}" class="nav-link">
+                    <i class="bi bi-eye"></i>
+                    <span class="nav-text">Consumables Batches</span>
+                </a>
+                <a href="{% url 'upload_consumable_payment' %}" class="nav-link">
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Payment</span>
+                </a>
+                <a href="{% url 'add_single_consumable_payment' %}" class="nav-link">
+                    <i class="bi bi-wallet2"></i>
+                    <span class="nav-text">Add Payment</span>
+                </a>
+                <a href="{% url 'consumable_analytics_view' %}" class="nav-link">
+                    <i class="bi bi-bar-chart"></i>
+                    <span class="nav-text">Payments Report</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Investment Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#investmentSubmenu" aria-expanded="false" aria-controls="investmentSubmenu">
+                <i class="bi bi-graph-up-arrow"></i>
+                <span class="nav-text">Investment</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="investmentSubmenu">
+                <a href="{% url 'purchase_consumable_dashboard' %}" class="nav-link">
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="nav-text">Purchase Dashboard</span>
+                </a>
+                <a href="{% url 'consumable_purchase_request_list' %}" class="nav-link">
+                    <i class="bi bi-plus-circle"></i>
+                    <span class="nav-text">Make Request</span>
+                </a>
+                <a href="{% url 'purchased_item_list' %}" class="nav-link">
+                    <i class="bi bi-bag-check"></i>
+                    <span class="nav-text">Purchased Items List</span>
+                </a>
+                <a href="{% url 'selling_plan_list' %}" class="nav-link">
+                    <i class="bi bi-tag"></i>
+                    <span class="nav-text">Item Selling Plan</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Project Finance Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#financeSubmenu" aria-expanded="false" aria-controls="financeSubmenu">
+                <i class="bi bi-folder"></i>
+                <span class="nav-text">Project Finance</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="financeSubmenu">
+                <a href="{% url 'application_list' %}" class="nav-link">
+                    <i class="bi bi-folder2-open"></i>
+                    <span class="nav-text">Applications List</span>
+                </a>
+                <a href="{% url 'admin_project_finance_requests' %}" class="nav-link">
+                    <i class="bi bi-folder2-open"></i>
+                    <span class="nav-text">Requests List</span>
+                </a>
+                <a href="{% url 'upload_project_finance_payment' %}" class="nav-link">
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Payment</span>
+                </a>
+                <a href="{% url 'project_finance_report' %}" class="nav-link">
+                    <i class="bi bi-file-earmark-bar-graph"></i>
+                    <span class="nav-text">Report</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Dividends Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#dividendSubmenu" aria-expanded="false" aria-controls="dividendSubmenu">
+                <i class="bi bi-wallet-fill"></i>
+                <span class="nav-text">Dividends</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="dividendSubmenu">
+                <a href="{% url 'distribute_dividends' %}" class="nav-link">
+                    <i class="bi bi-wallet-fill"></i>
+                    <span class="nav-text">Distribute Dividends</span>
+                </a>
+                <a href="{% url 'dividend_list' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Dividends List</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Reports Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#reportSubmenu" aria-expanded="false" aria-controls="reportSubmenu">
+                <i class="bi bi-file-earmark-text"></i>
+                <span class="nav-text">Reports</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="reportSubmenu">
+                <a href="" class="nav-link">
+                    <i class="fas fa-file-alt me-2"></i>
+                    <span class="nav-text">Savings Report</span>
+                </a>
+                <a href="{% url 'summary' %}" class="nav-link">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    <span class="nav-text">Monthly Saving Report</span>
+                </a>
+                <a href="{% url 'loan_request_report' %}" class="nav-link">
+                    <i class="fas fa-money-check me-2"></i>
+                    <span class="nav-text">Loan Requests</span>
+                </a>
+                <a href="{% url 'loan_payment_tracking' %}" class="nav-link">
+                    <i class="fas fa-money-bill-wave me-2"></i>
+                    <span class="nav-text">Loan Repayments Report</span>
+                </a>
+                <a href="{% url 'request_status_report' %}" class="nav-link">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    <span class="nav-text">Consumable Request Report</span>
+                </a>
+                <a href="{% url 'payment_analysis_report' %}" class="nav-link">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    <span class="nav-text">Consumable Payment Report</span>
+                </a>
+                <a href="{% url 'consolidated_report' %}" class="nav-link">
+                    <i class="fas fa-coins me-2"></i>
+                    <span class="nav-text">Income &amp; Expenditure</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Withdrawal Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#withdrawalSubmenu" aria-expanded="false" aria-controls="withdrawalSubmenu">
+                <i class="bi bi-wallet"></i>
+                <span class="nav-text">Withdrawal</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="withdrawalSubmenu">
+                <a href="{% url 'partial_withdrawals_list' %}" class="nav-link">
+                    <i class="bi bi-wallet-fill"></i>
+                    <span class="nav-text">Partial Withdrawal List</span>
+                </a>
+                <a href="{% url 'list_withdrawal_requests' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Fully Withdrawal List</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Activity Logs & Messages -->
+        <div class="nav-item">
+            {% if request.user.is_superuser %}
+            <a href="{% url 'user_activity_list' %}" class="nav-link">
+                <i class="bi bi-people"></i>
+                <span class="nav-text">Activity Logs</span>
+            </a>
+            {% endif %}
+            <a href="{% url 'popup_form' %}" class="nav-link">
+                <i class="bi bi-megaphone"></i>
+                <span class="nav-text">Add Message</span>
+            </a>
+            <a href="{% url 'member_active_requests' %}" class="nav-link">
+                <i class="bi bi-sliders"></i>
+                <span class="nav-text">Member Active Requests</span>
+            </a>
+        </div>
+
+        <!-- My Info Dropdown (Admin's own account info) -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#myInfoSubmenu" aria-expanded="false" aria-controls="myInfoSubmenu">
+                <i class="bi bi-person-circle"></i>
+                <span class="nav-text">My Info</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="myInfoSubmenu">
+                <a href="{% url 'member_savings' %}" class="nav-link">
+                    <i class="bi bi-wallet"></i>
+                    <span class="nav-text">My Savings</span>
+                </a>
+                <a href="{% url 'my_loan_requests' %}" class="nav-link">
+                    <i class="bi bi-plus-circle"></i>
+                    <span class="nav-text">My Loan</span>
+                </a>
+                <a href="{% url 'my_consumablerequests' %}" class="nav-link">
+                    <i class="bi bi-cart4"></i>
+                    <span class="nav-text">My Consumables</span>
+                </a>
+                <a href="{% url 'project_finance_application_list' %}" class="nav-link">
+                    <i class="bi bi-folder"></i>
+                    <span class="nav-text">My Project Finance</span>
+                </a>
+                <a href="{% url 'my_partial_withdrawal_requests' %}" class="nav-link">
+                    <i class="bi bi-wallet-fill"></i>
+                    <span class="nav-text">Partial Withdrawal Request</span>
+                </a>
+                <a href="{% url 'member_withdrawal_request' %}" class="nav-link">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="nav-text">Fully Withdrawal Request</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- ===== LOAN COMMITTEE SECTION ===== -->
+        {% elif user.is_authenticated and user.group.title ==  'loan committee' %}
+
+        <!-- Dashboard -->
+        <div class="nav-item">
+            <a href="{% url 'staff_dashboard' %}" class="nav-link">
+                <i class="bi bi-speedometer2"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+        </div>
+            <!-- Loan Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#loanSubmenu" aria-expanded="false" aria-controls="loanSubmenu">
+                <i class="bi bi-wallet2"></i>
+                <span class="nav-text">Loan</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="loanSubmenu">
+                <a href="{% url 'loan_request_fee_payment' %}" class="nav-link">
+                    <i class="bi bi-person"></i>
+                    <span class="nav-text">Loan Form Fee</span>
+                </a>
+                <a href="{% url 'admin_loan_settings' %}" class="nav-link">
+                    <i class="bi bi-sliders"></i>
+                    <span class="nav-text">Loan Settings</span>
+                </a>
+                <a href="{% url 'add_loan_type' %}" class="nav-link">
+                    <i class="bi bi-wallet2"></i>
+                    <span class="nav-text">Loan Type Management</span>
+                </a>
+                <a href="{% url 'admin_loan_requests' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Approve Loan</span>
+                </a>
+                <a href="{% url 'loan_years_list' %}" class="nav-link">
+                    <i class="bi bi-sliders"></i>
+                    <span class="nav-text">Loans Batches</span>
+                </a>
+                <a href="{% url 'all_reject_loan' %}" class="nav-link">
+                    <i class="bi bi-check-circle"></i>
+                    <span class="nav-text">All Reject Loan</span>
+                </a>
+                <a href="{% url 'upload_loan_payment' %}" class="nav-link">
+                    <i class="bi bi-upload"></i>
+                    <span class="nav-text">Upload Payment</span>
+                </a>
+                <a href="{% url 'add_payment' %}" class="nav-link">
+                    <i class="bi bi-plus"></i>
+                    <span class="nav-text">Add Payment Loan</span>
+                </a>
+                <a href="{% url 'loan_analytics' %}" class="nav-link">
+                    <i class="bi bi-folder"></i>
+                    <span class="nav-text">Loan Payment Report</span>
+                </a>
+            </div>
+        </div>
+
+
+        {% elif user.is_authenticated and user.group.title == 'staff'  %}
+
+        <!-- Dashboard -->
+        <div class="nav-item">
+            <a href="{% url 'staff_dashboard' %}" class="nav-link">
+                <i class="bi bi-speedometer2"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+        </div>
+
+        <!-- Members Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#membersSubmenu" aria-expanded="false" aria-controls="membersSubmenu">
+                <i class="bi bi-people"></i>
+                <span class="nav-text">Members</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="membersSubmenu">
+                <a href="{% url 'register' %}" class="nav-link">
+                    <i class="bi bi-person-plus"></i>
+                    <span class="nav-text">Add Member</span>
+                </a>
+                <a href="{% url 'all_members' %}" class="nav-link">
+                    <i class="bi bi-person"></i>
+                    <span class="nav-text">All Members</span>
+                </a>
+                <a href="{% url 'non_staff_members_list' %}" class="nav-link">
+                    <i class="bi bi-person-plus"></i>
+                    <span class="nav-text">All Non Staff Member</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Savings -->
+        <div class="nav-item">
+            <a href="{% url 'savings_request_form_payment' %}" class="nav-link">
+                <i class="bi bi-wallet-fill"></i>
+                <span class="nav-text">Saving Request Form</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'monthly_savings_uploads' %}" class="nav-link">
+                <i class="bi bi-bank2"></i>
+                <span class="nav-text">View Savings</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'list_savings' %}" class="nav-link">
+                <i class="bi bi-list"></i>
+                <span class="nav-text">Members Savings</span>
+            </a>
+        </div>
+
+        <!-- Loan -->
+        <div class="nav-item">
+            <a href="{% url 'loan_request_fee_payment' %}" class="nav-link">
+                <i class="bi bi-person"></i>
+                <span class="nav-text">Loan Request Form</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'admin_loan_requests' %}" class="nav-link">
+                <i class="bi bi-graph-up"></i>
+                <span class="nav-text">Loan Requests List</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'admin_loan_settings' %}" class="nav-link">
+                <i class="bi bi-sliders"></i>
+                <span class="nav-text">Loan Settings</span>
+            </a>
+        </div>
+
+        <!-- Consumables -->
+        <div class="nav-item">
+            <a href="{% url 'consumable_fee' %}" class="nav-link">
+                <i class="bi bi-wallet2"></i>
+                <span class="nav-text">Consumable Request Form</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'admin_consumables_list' %}" class="nav-link">
+                <i class="bi bi-graph-up"></i>
+                <span class="nav-text">Consumable Requests List</span>
+            </a>
+        </div>
+
+        <!-- ===== MEMBER / NON-STAFF MEMBER SECTION ===== -->
+        {% elif user.is_authenticated and user.group.title == 'members' or user.group.title == 'non staff member' %}
+
+        <!-- Dashboard -->
+        <div class="nav-item">
+            {% if user.group.title == 'members' %}
+            <a href="{% url 'member_dashboard' %}" class="nav-link">
+                <i class="bi bi-speedometer2"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            {% elif user.group.title == 'non staff member' %}
+            <a href="{% url 'non_staff_dashboard' %}" class="nav-link">
+                <i class="bi bi-speedometer2"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- My Savings -->
+        <div class="nav-item">
+            <a href="{% url 'member_savings' %}" class="nav-link">
+                <i class="bi bi-wallet-fill"></i>
+                <span class="nav-text">My Savings</span>
+            </a>
+        </div>
+        {% comment %} <div class="nav-item">
+              <a href="{% url 'my_target_savings_withdrawals' %}" class="nav-link">
+                <i class="bi bi-list"></i>
+                <span class="nav-text">My Target Savings Withdrawals</span>
+            </a>
+        </div> {% endcomment %}
+
+        <!-- Loan -->
+        <div class="nav-item">
+            <a href="{% url 'my_loan_requests' %}" class="nav-link">
+                <i class="bi bi-bank2"></i>
+                <span class="nav-text">Loan</span>
+            </a>
+        </div>
+
+        <!-- Consumable -->
+        <div class="nav-item">
+            <a href="{% url 'my_consumablerequests' %}" class="nav-link">
+                <i class="bi bi-cart4"></i>
+                <span class="nav-text">Consumable</span>
+            </a>
+        </div>
+
+        <!-- Project Finance -->
+        <div class="nav-item">
+            <a href="{% url 'project_finance_application_list' %}" class="nav-link">
+                <i class="bi bi-folder"></i>
+                <span class="nav-text">Project Finance</span>
+            </a>
+        </div>
+
+        <!-- Withdrawal Dropdown -->
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#withdrawalSubmenu" aria-expanded="false" aria-controls="withdrawalSubmenu">
+                <i class="bi bi-wallet"></i>
+                <span class="nav-text">Withdrawal</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="withdrawalSubmenu">
+                <a href="{% url 'my_partial_withdrawal_requests' %}" class="nav-link">
+                    <i class="bi bi-wallet-fill"></i>
+                    <span class="nav-text">Partial Withdrawal Request</span>
+                </a>
+                <a href="{% url 'member_withdrawal_request' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Fully Withdrawal Request</span>
+                </a>
+                <a href="{% url 'request_target_savings_withdrawal' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Target Savings Withdrawal</span>
+                </a>
+            </div>
+        </div>
+
+        {% endif %}
+
+    </div>
+</nav>

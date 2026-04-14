@@ -1,0 +1,39 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Selling Plans</h2>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Selling Price/Unit</th>
+                <th>Total Revenue</th>
+                <th>Purchase Cost</th>
+                <th>Profit</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plan in selling_plans %}
+            <tr>
+                <td>{{ plan.purchased_item.item_name }}</td>
+                <td>{{ plan.quantity }}</td>
+                <td>₦{{ plan.selling_price_per_unit|floatformat:2 }}</td>
+                <td>₦{{ plan.total_sale_value|floatformat:2 }}</td>
+                <td>₦{{ plan.purchase_cost|floatformat:2 }}</td>
+                <td>₦{{ plan.total_profit|floatformat:2 }}</td>
+                <td>
+                    <a href="{% url 'selling_plan_detail' plan.id %}" class="btn btn-sm btn-primary">View</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7">No selling plans available.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

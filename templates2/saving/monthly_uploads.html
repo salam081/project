@@ -1,0 +1,43 @@
+{% extends 'base/base.html' %}
+
+{% load humanize %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-3">Monthly Savings Uploads</h3>
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th  class="text-nowrap text-truncate" style="max-width: 270px;">Total Members</th>
+                    <th  class="text-nowrap text-truncate" style="max-width: 270px;">Total Main Deductions</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Savings</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Subscription</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Loanable</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Investment</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for upload in monthly_uploads %}
+                <tr>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ upload.month_only|date:"F Y" }}</td>
+                    <td>{{ upload.total_members }}</td>
+                    <td>₦{{ upload.total_original_amount|floatformat:2|default:0|intcomma  }}</td>
+                    <td>₦{{ upload.total_uploaded|floatformat:2|default:0|intcomma }}</td>
+                    <td>₦{{ upload.total_interest|floatformat:2|default:0|intcomma }}</td>
+                    <td>₦{{ upload.total_loanable|floatformat:2|default:0|intcomma }}</td>
+                    <td>₦{{ upload.total_investment|floatformat:2|default:0|intcomma }}</td>
+                    <td>
+                    <a href="{% url 'view_monthly_savings' upload.month_only|date:'Y-m' %}"class="btn btn-sm btn-primary text-white" title="View Details">
+                        <i class="bi bi-eye"></i> </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+    {% endblock %}
+    

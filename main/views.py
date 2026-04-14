@@ -44,14 +44,7 @@ from accounts.views import *
 from .forms import *
 
 
-def home(request):
-    now = timezone.now()
-    popup = (
-        Popup.objects.filter(is_active=True, start_date__lte=now, end_date__gte=now).first()
-        or Popup.objects.filter(is_active=True).order_by('-start_date').first()
-    )
 
-    return render(request, 'main/home.html', {"popup": popup})
 
 @login_required
 @group_required(['admin'])
@@ -168,7 +161,7 @@ def admin_dashboard(request):
 
 
 @login_required
-@group_required(['staff'])
+@group_required(['staff','loan committee'])
 def staff_dashboard(request):
         # Get the current year
     # current_year = datetime.now().year
@@ -384,28 +377,69 @@ def partial_withdrawal_detail(request, pk):
     return render(request, 'main/partial_withdrawal_detail.html', context)
 
 
+# @login_required
+# def partial_withdrawal_approve(request, pk):
+#     """Approve a withdrawal request"""
+#     withdrawal = get_object_or_404(PartialWithdrawal, pk=pk)
+    
+#     # Check if already processed
+#     if withdrawal.status != 'Pending':
+#         messages.warning(request, f'This withdrawal has already been {withdrawal.status.lower()}.')
+#         return redirect('partial_withdrawal_detail', pk=pk)
+    
+#     if request.method == 'POST':
+#         try:
+#             withdrawal.approve(request.user)
+#             messages.success(request,f'Withdrawal of ₦{withdrawal.amount_requested:,.2f} for {withdrawal.member} approved successfully.')
+#             return redirect('partial_withdrawals_list')
+#         except ValueError as e:
+#             messages.error(request, f'Approval failed: {str(e)}')
+#             return redirect('partial_withdrawal_detail', pk=pk)
+#         except Exception as e:
+#             messages.error(request, f'An error occurred: {str(e)}')
+#             return redirect('partial_withdrawal_detail', pk=pk)
+#     from decimal import Decimal
+# from django.db.models import Sum
+
 @login_required
 def partial_withdrawal_approve(request, pk):
-    """Approve a withdrawal request"""
     withdrawal = get_object_or_404(PartialWithdrawal, pk=pk)
-    
-    # Check if already processed
+
     if withdrawal.status != 'Pending':
         messages.warning(request, f'This withdrawal has already been {withdrawal.status.lower()}.')
         return redirect('partial_withdrawal_detail', pk=pk)
-    
+
     if request.method == 'POST':
         try:
+            # 🔥 Recalculate total savings BEFORE approval
+            total_savings = Savings.objects.filter(member=withdrawal.member).aggregate(
+                total=Sum('month_saving')
+            )['total'] or Decimal('0.00')
+
+            # 🚫 BLOCK if amount >= total savings
+            if withdrawal.amount_requested >= total_savings:
+                messages.error(
+                    request,
+                    f'Approval failed: Withdrawal amount must be LESS than total savings (₦{total_savings:,.2f}).'
+                )
+                return redirect('partial_withdrawal_detail', pk=pk)
+
+            # ✅ Continue approval if valid
             withdrawal.approve(request.user)
-            messages.success(request,f'Withdrawal of ₦{withdrawal.amount_requested:,.2f} for {withdrawal.member} approved successfully.')
+
+            messages.success(
+                request,
+                f'Withdrawal of ₦{withdrawal.amount_requested:,.2f} for {withdrawal.member} approved successfully.'
+            )
             return redirect('partial_withdrawals_list')
+
         except ValueError as e:
             messages.error(request, f'Approval failed: {str(e)}')
             return redirect('partial_withdrawal_detail', pk=pk)
+
         except Exception as e:
             messages.error(request, f'An error occurred: {str(e)}')
-            return redirect('partial_withdrawal_detail', pk=pk)
-        
+            return redirect('partial_withdrawal_detail', pk=pk)    
     # GET request - show approval confirmation
     
     total_savings = Savings.objects.filter(member=withdrawal.member).aggregate(
@@ -673,48 +707,128 @@ def guest_request_consumable(request):
 def member_active_requests(request):
     ippis = request.GET.get("ippis", "").strip()
     member = None
-    active_loans = []
-    active_consumables = []
-    active_project_finances = []
-    pending_withdrawals = []
-    can_withdraw = False
+
+    # defaults
+    active_loans = LoanRequest.objects.none()
+    active_consumables = ConsumableRequest.objects.none()
+    active_project_finances = ProjectFinanceRequest.objects.none()
+    withdrawals = Withdrawal.objects.none()
+
+    loan_total = loan_paid = loan_balance = 0
+    consumable_total = consumable_paid = consumable_balance = 0
+    project_total = project_paid = project_balance = 0
+    withdrawal_total = 0
+    grand_total = grand_paid = grand_balance = 0
+    has_active = False
 
     if ippis:
         try:
             member = Member.objects.get(ippis=ippis)
 
-            # Active Loan Requests
-            active_loans = LoanRequest.objects.filter(
-                member=member,
-                status="Approved"
+            # ── Loans ──────────────────────────────────────────────
+            active_loans = (
+                LoanRequest.objects
+                .filter(member=member, status="approved")
+                .annotate(
+                    total_paid=Coalesce(
+                        Sum('repaybacks__amount_paid'),
+                        Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))
+                    ),
+                    repayment_count=Count('repaybacks'),
+                    last_payment_date=Max('repaybacks__repayment_date'),
+                )
             )
 
-            # Active Consumable Requests
-            active_consumables = ConsumableRequest.objects.filter(
-                user=member.member,   # 👈 Member → User
-                status="Itempicked"
-            )
-            # Active Project Finance Requests
-            active_project_finances = ProjectFinanceRequest.objects.filter(
-                application__member=member,
-                status="Approved"
+            loan_total = active_loans.aggregate(t=Sum("amount"))["t"] or 0
+            loan_paid  = active_loans.aggregate(p=Sum("total_paid"))["p"] or 0
+            loan_balance = loan_total - loan_paid
+
+            # ── Consumables ────────────────────────────────────────
+            details_total_sq = (
+                ConsumableRequestDetail.objects
+                .filter(request=OuterRef("pk"))
+                .values("request")
+                .annotate(
+                    total=Sum(
+                        ExpressionWrapper(
+                            F("quantity") * F("item_price"),
+                            output_field=DecimalField(max_digits=14, decimal_places=2)
+                        )
+                    )
+                )
+                .values("total")
             )
 
-            # Pending Withdrawal Requests
-            pending_withdrawals = Withdrawal.objects.filter(
-                member=member,
-                status="Pending"
+            repayment_total_sq = (
+                PaybackConsumable.objects
+                .filter(consumable_request=OuterRef("pk"))
+                .values("consumable_request")
+                .annotate(
+                    total=Sum(
+                        "amount_paid",
+                        output_field=DecimalField(max_digits=14, decimal_places=2)
+                    )
+                )
+                .values("total")
             )
 
-            # If no active requests → allow new withdrawal approval
-            if (
-                not active_loans.exists()
-                and not active_consumables.exists()
-                and not active_project_finances.exists()
-            ):
-                can_withdraw = True
+            active_consumables = (
+                ConsumableRequest.objects
+                .filter(user=member.member, status="Itempicked")
+                .annotate(
+                    total_amount_agg=Coalesce(
+                        Subquery(details_total_sq),
+                        Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))
+                    ),
+                    total_paid_agg=Coalesce(
+                        Subquery(repayment_total_sq),
+                        Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))
+                    ),
+                )
+                .annotate(
+                    balance_agg=ExpressionWrapper(
+                        F("total_amount_agg") - F("total_paid_agg"),
+                        output_field=DecimalField(max_digits=14, decimal_places=2)
+                    )
+                )
+            )
 
-            # ✅ Only show success if a member is found
+            consumable_total   = active_consumables.aggregate(t=Sum("total_amount_agg"))["t"] or 0
+            consumable_paid    = active_consumables.aggregate(p=Sum("total_paid_agg"))["p"] or 0
+            consumable_balance = active_consumables.aggregate(b=Sum("balance_agg"))["b"] or 0
+
+            # ── Project Finance ────────────────────────────────────
+            active_project_finances = (
+                ProjectFinanceRequest.objects
+                .filter(application__member=member, status="Approved")
+                .annotate(
+                    balance=ExpressionWrapper(
+                        F("requested_amount") - F("total_repayment_amount"),
+                        output_field=DecimalField(max_digits=12, decimal_places=2)
+                    )
+                )
+            )
+
+            project_total   = active_project_finances.aggregate(t=Sum("requested_amount"))["t"] or 0
+            project_paid    = active_project_finances.aggregate(p=Sum("total_repayment_amount"))["p"] or 0
+            project_balance = project_total - project_paid
+
+            # ── Withdrawals ────────────────────────────────────────
+            withdrawals      = Withdrawal.objects.filter(member=member, status__in=["Pending", "Approved"])
+            withdrawal_total = withdrawals.aggregate(t=Sum("total_withdrawn"))["t"] or 0
+
+            # ── Totals ─────────────────────────────────────────────
+            grand_total   = loan_total + consumable_total + project_total
+            grand_paid    = loan_paid  + consumable_paid  + project_paid
+            grand_balance = grand_total - grand_paid
+
+            has_active = (
+                active_loans.exists()
+                or active_consumables.exists()
+                or active_project_finances.exists()
+                or withdrawals.exists()
+            )
+
             messages.success(request, f"Active requests for {member} displayed below.")
 
         except Member.DoesNotExist:
@@ -727,96 +841,29 @@ def member_active_requests(request):
         "active_loans": active_loans,
         "active_consumables": active_consumables,
         "active_project_finances": active_project_finances,
-        "pending_withdrawals": pending_withdrawals,
-        "can_withdraw": can_withdraw,
+        "withdrawals": withdrawals,
+
+        "loan_total": loan_total,
+        "loan_paid": loan_paid,
+        "loan_balance": loan_balance,
+
+        "consumable_total": consumable_total,
+        "consumable_paid": consumable_paid,
+        "consumable_balance": consumable_balance,
+
+        "project_total": project_total,
+        "project_paid": project_paid,
+        "project_balance": project_balance,
+
+        "withdrawal_total": withdrawal_total,
+
+        "grand_total": grand_total,
+        "grand_paid": grand_paid,
+        "grand_balance": grand_balance,
+
+        "has_active": has_active,
     })
 
-
-# @transaction.atomic
-# @login_required
-# @group_required(['admin'])
-# def upload_opening_balances(request):
-#     if request.method == "POST" and request.FILES.get("file"):
-#         file = request.FILES["file"]
-#         wb = openpyxl.load_workbook(file)
-#         ws = wb.active
-
-#         created, updated, skipped = 0, 0, 0
-#         opening_date = "2025-11-25"  # fixed opening balance date
-
-#         for row in ws.iter_rows(min_row=2, values_only=True):
-#             ippis, savings_total, loanable_total, investment_total = row
-
-#             if not ippis:
-#                 continue
-
-#             try:
-#                 member = Member.objects.get(ippis=str(ippis).strip())
-
-#                 # update member's total savings directly
-#                 member.total_savings = Decimal(savings_total or 0)
-#                 member.save(update_fields=["total_savings"])
-
-#                 # --- Savings ---
-#                 if savings_total:
-#                     savings_obj, created_flag = Savings.objects.update_or_create(
-#                         member=member,
-#                         month=opening_date,
-#                         defaults={
-#                             "month_saving": Decimal(savings_total or 0),
-#                             "original_amount": Decimal(savings_total or 0),
-#                         },
-#                     )
-#                     if created_flag:
-#                         created += 1
-#                     else:
-#                         updated += 1
-
-#                 # --- Loanable ---
-#                 loanable_obj, created_flag = Loanable.objects.update_or_create(
-#                     member=member,
-#                     month=opening_date,
-#                     defaults={
-#                         "amount": Decimal(loanable_total or 0),
-#                         "total_amount": Decimal(loanable_total or 0),
-#                     },
-#                 )
-#                 if created_flag:
-#                     created += 1
-#                 else:
-#                     updated += 1
-
-#                 # --- Investment ---
-#                 investment_obj, created_flag = Investment.objects.update_or_create(
-#                     member=member,
-#                     month=opening_date,
-#                     defaults={
-#                         "amount": Decimal(investment_total or 0),
-#                         "total_amount": Decimal(investment_total or 0),
-#                     },
-#                 )
-#                 if created_flag:
-#                     created += 1
-#                 else:
-#                     updated += 1
-
-#             except Member.DoesNotExist:
-#                 skipped += 1
-#                 messages.warning(request, f"⚠️ Member with IPPIS {ippis} not found, skipped")
-
-#         messages.success(
-#             request,
-#             f" Opening balances processed! {created} created, {updated} updated, {skipped} skipped."
-#         )
-#         return redirect("upload_opening_balances")
-
-#     return render(request, "main/upload_opening_balances.html")
-
-# from decimal import Decimal
-# import openpyxl
-# from django.contrib import messages
-# from django.shortcuts import render, redirect
-# from .models import Member, Savings, Loanable, Investment
 
 @transaction.atomic
 @login_required
@@ -961,130 +1008,90 @@ def loan_totals(request):
     }
     return render(request, "main/loan_totals.html", context)
 
-# ===inline  Dividend Distribution Form === #
-class ProfitForm(forms.Form):
-    start_date = forms.DateField(
-        label="Savings Start Date",
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        required=True
-    )
-    end_date = forms.DateField(
-        label="Savings End Date",
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        required=True
-    )
-    profit = forms.DecimalField(
-        label="Enter Profit",
-        decimal_places=2,
-        max_digits=15,
-        required=False
-    )
-    distribution_date = forms.DateField(
-        label="Distribution Date",
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        required=False
-    )
 
-
-#=== Dividend Distribution Form End === #
+from datetime import date
+from decimal import Decimal
 
 @login_required
 @group_required(['admin'])
 def dividend_report(request):
-    form = ProfitForm(request.POST or None)
-    shares = None
-    total_savings = Decimal("0.00")
-    total_shares = Decimal("0.00")
-    unit_profit = None
-    profit = None
-    members = []
-    show_profit_section = False
     start_date = None
     end_date = None
+    show_profit_section = False
+    profit = None
+    unit_profit = None
+    members = []
+    total_savings = Decimal("0.00")
+    total_shares = Decimal("0.00")
+    errors = {}
 
-    # ✅ Get last recorded unit profit (if any)
     last_dividend = Dividend.objects.order_by('-created_at').first()
     if last_dividend:
         unit_profit = last_dividend.unit_profit
 
-    # ✅ Default: show all members and their savings
-    savings_sum = (
-        Savings.objects.filter(member=OuterRef("pk"))
-        .values("member")
-        .annotate(total=Sum("month_saving", output_field=DecimalField()))
-        .values("total")
-    )
+    def get_members_queryset(start, end):
+        """Reusable savings filter — change 'month' to your actual field name"""
+        savings_sum = (
+            Savings.objects.filter(
+                member=OuterRef("pk"),
+                month__gte=start,   # ✅ use ONE consistent field everywhere
+                month__lte=end,
+            )
+            .values("member")
+            .annotate(total=Sum("month_saving", output_field=DecimalField()))
+            .values("total")
+        )
+        return (
+            Member.objects.annotate(
+                period_savings=Subquery(savings_sum, output_field=DecimalField())
+            ).filter(period_savings__gt=0)
+        )
 
-    members = Member.objects.annotate(
-        period_savings=Subquery(savings_sum, output_field=DecimalField())
-    )
-
-    total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
-    total_shares = total_savings / Decimal("1000") if total_savings > 0 else 0
-
-    # ✅ Step 1: Filter by date
+    # ✅ FILTER POST
     if request.method == "POST" and "filter" in request.POST:
-        if form.is_valid():
-            start_date = form.cleaned_data["start_date"]
-            end_date = form.cleaned_data["end_date"]
-
-            savings_sum = (
-                Savings.objects.filter(
-                    member=OuterRef("pk"),
-                    date_created__range=(start_date, end_date)
-                )
-                .values("member")
-                .annotate(total=Sum("month_saving", output_field=DecimalField()))
-                .values("total")
+        start_str = request.POST.get("start_date")
+        end_str = request.POST.get("end_date")
+        try:
+            start_date = date.fromisoformat(start_str)
+            end_date = date.fromisoformat(end_str)
+            return redirect(
+                f"{request.path}?start_date={start_date}&end_date={end_date}&filtered=1"
             )
+        except (ValueError, TypeError):
+            errors["date"] = "Invalid date range provided."
 
-            members = (
-                Member.objects.annotate(
-                    period_savings=Subquery(savings_sum, output_field=DecimalField())
-                )
-                .filter(period_savings__gt=0)
-            )
-
-            total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
-            total_shares = total_savings / Decimal("1000") if total_savings > 0 else 0
-            show_profit_section = True
-
-    # ✅ Step 2: Distribute profit (add to existing)
+    # ✅ DISTRIBUTE POST
     elif request.method == "POST" and "distribute" in request.POST:
-        if form.is_valid():
-            start_date = form.cleaned_data["start_date"]
-            end_date = form.cleaned_data["end_date"]
-            profit = form.cleaned_data["profit"]
-            distribution_date = form.cleaned_data["distribution_date"]
+        start_str = request.POST.get("start_date")
+        end_str = request.POST.get("end_date")
+        profit_str = request.POST.get("profit")
+        distribution_date_str = request.POST.get("distribution_date")
 
-            savings_sum = (
-                Savings.objects.filter(
-                    member=OuterRef("pk"),
-                    date_created__range=(start_date, end_date)
-                )
-                .values("member")
-                .annotate(total=Sum("month_saving", output_field=DecimalField()))
-                .values("total")
-            )
+        try:
+            start_date = date.fromisoformat(start_str)
+            end_date = date.fromisoformat(end_str)
+        except (ValueError, TypeError):
+            errors["date"] = "Invalid date range."
 
-            members = (
-                Member.objects.annotate(
-                    period_savings=Subquery(savings_sum, output_field=DecimalField())
-                )
-                .filter(period_savings__gt=0)
-            )
+        try:
+            profit = Decimal(profit_str) if profit_str else None
+        except Exception:
+            errors["profit"] = "Invalid profit value."
 
+        try:
+            distribution_date = date.fromisoformat(distribution_date_str) if distribution_date_str else None
+        except (ValueError, TypeError):
+            errors["distribution_date"] = "Invalid distribution date."
+            distribution_date = None
+
+        if not errors and start_date and end_date:
+            members = get_members_queryset(start_date, end_date)
             total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
-            total_shares = total_savings / Decimal("1000") if total_savings > 0 else 0
+            total_shares = total_savings / Decimal("1000") if total_savings > 0 else Decimal("0.00")
 
             if profit and distribution_date and total_shares > 0:
                 new_unit_profit = profit / total_shares
-
-                # ✅ Add new unit profit to previous one
-                if unit_profit:
-                    unit_profit += new_unit_profit
-                else:
-                    unit_profit = new_unit_profit
+                unit_profit = (unit_profit + new_unit_profit) if unit_profit else new_unit_profit
 
                 with transaction.atomic():
                     dividends_to_create = []
@@ -1093,7 +1100,7 @@ def dividend_report(request):
                     for member in members:
                         member_savings = member.period_savings or Decimal("0.00")
                         member_shares = member_savings / Decimal("1000")
-                        dividend_amount = member_shares * new_unit_profit  # new profit only
+                        dividend_amount = member_shares * new_unit_profit
 
                         dividends_to_create.append(
                             Dividend(
@@ -1105,10 +1112,7 @@ def dividend_report(request):
                                 created_by=request.user,
                             )
                         )
-
-                        if member.total_profit is None:
-                            member.total_profit = Decimal("0.00")
-                        member.total_profit += dividend_amount
+                        member.total_profit = (member.total_profit or Decimal("0.00")) + dividend_amount
                         members_to_update.append(member)
 
                     Dividend.objects.bulk_create(dividends_to_create)
@@ -1116,15 +1120,44 @@ def dividend_report(request):
 
                 return redirect("distribute_dividends")
 
-            show_profit_section = True
+        show_profit_section = True
 
-    # ✅ Step 3: Prepare data for template
+    # ✅ GET with filter params
+    elif request.method == "GET":
+        start_str = request.GET.get("start_date")
+        end_str = request.GET.get("end_date")
+
+        if start_str and end_str:
+            try:
+                start_date = date.fromisoformat(start_str)
+                end_date = date.fromisoformat(end_str)
+                show_profit_section = bool(request.GET.get("filtered"))
+                members = get_members_queryset(start_date, end_date)
+                total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
+                total_shares = total_savings / Decimal("1000") if total_savings > 0 else Decimal("0.00")
+            except (ValueError, TypeError):
+                errors["date"] = "Invalid date parameters in URL."
+
+    # ✅ Default: all members, no filter
+    if not members and not start_date:
+        savings_sum = (
+            Savings.objects.filter(member=OuterRef("pk"))
+            .values("member")
+            .annotate(total=Sum("month_saving", output_field=DecimalField()))
+            .values("total")
+        )
+        members = Member.objects.annotate(
+            period_savings=Subquery(savings_sum, output_field=DecimalField())
+        )
+        total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
+        total_shares = total_savings / Decimal("1000") if total_savings > 0 else Decimal("0.00")
+
+    # ✅ Enrich members
     enriched_members = []
     for idx, m in enumerate(members, start=1):
         savings = m.period_savings or Decimal("0.00")
         share = savings / Decimal("1000")
         current_dividend = share * (unit_profit or Decimal("0.00"))
-
         enriched_members.append({
             "sn": idx,
             "name": str(m),
@@ -1141,7 +1174,6 @@ def dividend_report(request):
     shares = paginator.get_page(page_number)
 
     context = {
-        "form": form,
         "shares": shares,
         "total_savings": total_savings,
         "total_shares": total_shares,
@@ -1150,10 +1182,229 @@ def dividend_report(request):
         "show_profit_section": show_profit_section,
         "start_date": start_date,
         "end_date": end_date,
+        "errors": errors,
     }
 
     return render(request, "main/dividends_report.html", context)
 
+
+# # ===inline  Dividend Distribution Form === #
+# class ProfitForm(forms.Form):
+#     start_date = forms.DateField(
+#         label="Savings Start Date",
+#         widget=forms.DateInput(attrs={'type': 'date'}),
+#         required=True
+#     )
+#     end_date = forms.DateField(
+#         label="Savings End Date",
+#         widget=forms.DateInput(attrs={'type': 'date'}),
+#         required=True
+#     )
+#     profit = forms.DecimalField(
+#         label="Enter Profit",
+#         decimal_places=2,
+#         max_digits=15,
+#         required=False
+#     )
+#     distribution_date = forms.DateField(
+#         label="Distribution Date",
+#         widget=forms.DateInput(attrs={'type': 'date'}),
+#         required=False
+#     )
+# #=== Dividend Distribution Form End === #
+
+
+# @login_required
+# @group_required(['admin'])
+# def dividend_report(request):
+#     # ✅ FIX 1: Read filter params from GET so pagination preserves them
+#     start_date = None
+#     end_date = None
+#     show_profit_section = False
+#     profit = None
+#     unit_profit = None
+#     members = []
+#     total_savings = Decimal("0.00")
+#     total_shares = Decimal("0.00")
+
+#     # ✅ Get last recorded unit profit (if any)
+#     last_dividend = Dividend.objects.order_by('-created_at').first()
+#     if last_dividend:
+#         unit_profit = last_dividend.unit_profit
+
+#     # ✅ FIX 2: Persist filter via GET params after POST redirect
+#     if request.method == "POST" and "filter" in request.POST:
+#         form = ProfitForm(request.POST)
+#         if form.is_valid():
+#             start_date = form.cleaned_data["start_date"]
+#             end_date = form.cleaned_data["end_date"]
+#             # Redirect to GET so pagination works
+#             return redirect(
+#                 f"{request.path}?start_date={start_date}&end_date={end_date}&filtered=1"
+#             )
+
+#     elif request.method == "POST" and "distribute" in request.POST:
+#         form = ProfitForm(request.POST)
+#         if form.is_valid():
+#             start_date = form.cleaned_data["start_date"]
+#             end_date = form.cleaned_data["end_date"]
+#             profit = form.cleaned_data["profit"]
+#             distribution_date = form.cleaned_data["distribution_date"]
+
+#             # ✅ FIX 3: Use __date lookup to include full end_date day
+#             savings_sum = (
+#                 Savings.objects.filter(
+#                     member=OuterRef("pk"),
+#                     date_created__date__gte=start_date,
+#                     date_created__date__lte=end_date,  # ← FIX: includes full end day
+#                 )
+#                 .values("member")
+#                 .annotate(total=Sum("month_saving", output_field=DecimalField()))
+#                 .values("total")
+#             )
+
+#             members = (
+#                 Member.objects.annotate(
+#                     period_savings=Subquery(savings_sum, output_field=DecimalField())
+#                 )
+#                 .filter(period_savings__gt=0)
+#             )
+
+#             total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
+#             total_shares = total_savings / Decimal("1000") if total_savings > 0 else Decimal("0.00")
+
+#             if profit and distribution_date and total_shares > 0:
+#                 new_unit_profit = profit / total_shares
+
+#                 if unit_profit:
+#                     unit_profit += new_unit_profit
+#                 else:
+#                     unit_profit = new_unit_profit
+
+#                 with transaction.atomic():
+#                     dividends_to_create = []
+#                     members_to_update = []
+
+#                     for member in members:
+#                         member_savings = member.period_savings or Decimal("0.00")
+#                         member_shares = member_savings / Decimal("1000")
+#                         dividend_amount = member_shares * new_unit_profit
+
+#                         dividends_to_create.append(
+#                             Dividend(
+#                                 member=member,
+#                                 profit=profit,
+#                                 unit_profit=new_unit_profit,
+#                                 dividend_amount=dividend_amount,
+#                                 distribution_date=distribution_date,
+#                                 created_by=request.user,
+#                             )
+#                         )
+
+#                         if member.total_profit is None:
+#                             member.total_profit = Decimal("0.00")
+#                         member.total_profit += dividend_amount
+#                         members_to_update.append(member)
+
+#                     Dividend.objects.bulk_create(dividends_to_create)
+#                     Member.objects.bulk_update(members_to_update, ["total_profit"])
+
+#                 return redirect("distribute_dividends")
+
+#             show_profit_section = True
+
+#     else:
+#         form = ProfitForm()
+
+#     # ✅ FIX 4: On GET, read filter params from query string (supports pagination)
+#     if request.method == "GET":
+#         start_date_str = request.GET.get("start_date")
+#         end_date_str = request.GET.get("end_date")
+#         filtered = request.GET.get("filtered")
+
+#         if start_date_str and end_date_str:
+#             try:
+#                 from datetime import date
+#                 start_date = date.fromisoformat(start_date_str)
+#                 end_date = date.fromisoformat(end_date_str)
+#                 show_profit_section = bool(filtered)
+
+#                 savings_sum = (
+#                     Savings.objects.filter(
+#                         member=OuterRef("pk"),
+#                         date_created__date__gte=start_date,
+#                         date_created__date__lte=end_date,
+#                     )
+#                     .values("member")
+#                     .annotate(total=Sum("month_saving", output_field=DecimalField()))
+#                     .values("total")
+#                 )
+
+#                 members = (
+#                     Member.objects.annotate(
+#                         period_savings=Subquery(savings_sum, output_field=DecimalField())
+#                     )
+#                     .filter(period_savings__gt=0)
+#                 )
+
+#                 total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
+#                 total_shares = total_savings / Decimal("1000") if total_savings > 0 else Decimal("0.00")
+
+#                 # Pre-fill form with GET params
+#                 form = ProfitForm(initial={"start_date": start_date, "end_date": end_date})
+
+#             except ValueError:
+#                 pass
+
+#     # ✅ Default: show all members if no filter applied
+#     if not members and not start_date:
+#         savings_sum = (
+#             Savings.objects.filter(member=OuterRef("pk"))
+#             .values("member")
+#             .annotate(total=Sum("month_saving", output_field=DecimalField()))
+#             .values("total")
+#         )
+#         members = Member.objects.annotate(
+#             period_savings=Subquery(savings_sum, output_field=DecimalField())
+#         )
+#         total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
+#         total_shares = total_savings / Decimal("1000") if total_savings > 0 else Decimal("0.00")
+
+#     # ✅ Step 3: Prepare enriched data for template
+#     enriched_members = []
+#     for idx, m in enumerate(members, start=1):
+#         savings = m.period_savings or Decimal("0.00")
+#         share = savings / Decimal("1000")
+#         current_dividend = share * (unit_profit or Decimal("0.00"))
+
+#         enriched_members.append({
+#             "sn": idx,
+#             "name": str(m),
+#             "ippis": getattr(m, "ippis", ""),
+#             "savings": savings,
+#             "share": share,
+#             "unit_profit": unit_profit or Decimal("0.00"),
+#             "dividend_amount": current_dividend,
+#             "total_profit": m.total_profit or Decimal("0.00"),
+#         })
+
+#     paginator = Paginator(enriched_members, 80)
+#     page_number = request.GET.get("page", 1)
+#     shares = paginator.get_page(page_number)
+
+#     context = {
+#         "form": form,
+#         "shares": shares,
+#         "total_savings": total_savings,
+#         "total_shares": total_shares,
+#         "unit_profit": unit_profit,
+#         "profit": profit,
+#         "show_profit_section": show_profit_section,
+#         "start_date": start_date,
+#         "end_date": end_date,
+#     }
+
+#     return render(request, "main/dividends_report.html", context)
 
 @login_required
 @group_required(['admin'])
@@ -1290,9 +1541,17 @@ def member_active_summary(request, pk):
     member = get_object_or_404(Member, pk=pk)
 
     # 🟦 Active Loan Requests
-    active_loans = LoanRequest.objects.filter( member=member, status="Approved"
-    ).annotate(
-        total_paid=Sum('repaybacks__amount_paid')
+    active_loans = (
+        LoanRequest.objects
+        .filter(member=member, status="approved")
+        .annotate(
+            total_paid=Coalesce(
+                Sum('repaybacks__amount_paid'),
+                Value(0, output_field=DecimalField(max_digits=14, decimal_places=2))  # ✅ fix
+            ),
+            repayment_count=Count('repaybacks'),
+            last_payment_date=Max('repaybacks__repayment_date')
+        )
     )
   
     loan_total = active_loans.aggregate(total=Sum("amount"))["total"] or 0

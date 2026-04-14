@@ -1,0 +1,23 @@
+<!-- projectfinance/templates/projectfinance/upload_payments.html -->
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Upload Payments via Excel</h2>
+    <p>Please ensure your Excel file (.xlsx) has the following columns in order: <strong>request_id, month, amount_paid</strong></p>
+    
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Upload File</button>
+    </form>
+</div>
+{% endblock %}

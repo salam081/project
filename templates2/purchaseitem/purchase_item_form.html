@@ -1,0 +1,51 @@
+
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white text-center">
+                    <h1 class="h3 mb-0">{{ title }}</h1>
+                </div>
+                <div class="card-body">
+                    {# Django messages for success or error feedback #}
+                   
+
+                    <form method="post" action="{% url 'consumable_purchase_request_create' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_item" class="form-label">Item to Purchase <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="id_item" name="item" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_purpose" class="form-label">Purpose <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="id_purpose" name="purpose" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_amount_requested" class="form-label">Amount Requested  <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="id_amount_requested" name="amount_requested" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_remarks" class="form-label">Remarks (Optional)</label>
+                            <textarea class="form-control" id="id_remarks" name="remarks" rows="2"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Request
+                            </button>
+                            <a href="{% url 'consumable_purchase_request_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

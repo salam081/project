@@ -1,0 +1,73 @@
+{% extends 'base/base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h1 class="card-title mb-0">
+                    <i class="fas fa-file-alt me-2"></i>Project Finance Applications
+                </h1>
+            </div>
+            <div class="card-body">
+                {% if applications %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-nowrap">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-nowrap">Member Name</th>
+                                    <th>Application Preview</th>
+                                    <th class="text-nowrap">Date Submitted</th>
+                                    <th class="text-nowrap">Status</th>
+                                    <th class="text-nowrap">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for application in applications %}
+                                <tr>
+                                    <td class="text-nowrap">
+                                        <strong class="text-primary">
+                                            <i class="fas fa-user me-1"></i>
+                                            {{ application.member.member.first_name }} {{ application.member.member.last_name }}
+                                        </strong>
+                                    </td>
+                                    <td class="text-truncate" style="max-width: 0;">
+                                        <span title="{{ application.application_letter|truncatewords:15 }}">
+                                            {{ application.application_letter|truncatewords:8 }}
+                                        </span>
+                                    </td>
+                                    <td class="text-nowrap">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar-alt me-1"></i>
+                                            {{ application.created_at|date:"M d, Y" }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {{application.status}}
+                                        {% comment %} {% if application.status == 'Reviewed' %}
+                                        <span class="badge bg-success">Reviewed</span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        {% endif %} {% endcomment %}
+                                    </td>
+                                    <td class="text-nowrap">
+                                        <a href="{% url 'application_detail' application.id %}" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>View Full
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted fs-5">No applications found.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

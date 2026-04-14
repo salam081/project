@@ -1,0 +1,71 @@
+{% extends 'base/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Consumable Purchase Dashboard</h2>
+
+    <!-- Summary Cards -->
+    <div class="row text-center mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3">
+                <h6>Total Requests</h6>
+                <h4>{{ total_requests }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3">
+                <h6>Pending</h6>
+                <h4>{{ pending_requests }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3">
+                <h6>Approved</h6>
+                <h4>{{ approved_requests }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm p-3">
+                <h6>Accounted</h6>
+                <h4>{{ accounted_requests }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Summary -->
+    <div class="card shadow-sm p-3 mb-4">
+        <h5>Financial Summary</h5>
+        <p><strong>Total Requested:</strong> ₦{{ total_requested|floatformat:2 }}</p>
+        <p><strong>Total Spent:</strong> ₦{{ total_spent|floatformat:2 }}</p>
+        <p><strong>Balance Remaining:</strong> ₦{{ balance_remaining|floatformat:2 }}</p>
+    </div>
+
+    <!-- Recent Requests -->
+    <div class="card shadow-sm p-3">
+        <h5>Recent Requests</h5>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Requested By</th>
+                    <th>Item</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in recent_requests %}
+                <tr>
+                    <td>{{ req.requested_by }}</td>
+                    <td>{{ req.item }}</td>
+                    <td>₦{{ req.amount_requested|floatformat:2 }}</td>
+                    <td>{{ req.status }}</td>
+                    <td>{{ req.date_requested }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5">No recent requests found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

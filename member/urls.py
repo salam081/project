@@ -6,10 +6,16 @@ from .import views
 urlpatterns = [
     path('member_dashboard/',views.member_dashboard,name="member_dashboard"),
     path('member_savings/',views.member_savings,name="member_savings"),
-    path('member_special_savings/',views.member_special_savings,name="member_special_savings"),
-    path('member_target_savings/',views.member_target_savings,name="member_target_savings"),
     path('ajax/load-bank-code/', views.ajax_load_bank_code, name='ajax_load_bank_code'),
 
+    path('member_special_savings/',views.member_special_savings,name="member_special_savings"),
+    path('request-special-savings-withdrawal/',views.request_special_savings_withdrawal,name="request_special_savings_withdrawal"),
+    path('special_savings_withdrawals/',views.my_special_savings_withdrawals,name="my_special_savings_withdrawals"),
+    
+    path('member_target_savings/',views.member_target_savings,name="member_target_savings"),
+    path('target_savings_withdrawal/request/',views.request_target_savings_withdrawal,name="request_target_savings_withdrawal"),
+    path('target_savings_withdrawal/',views.my_target_savings_withdrawals,name="my_target_savings_withdrawals"),
+    
     path('loan_request/',views.loan_request_view,name="loan_request"),
     path('guarantor/<int:pk>/', views.show_guarantor_approval, name='guarantor_approval_page'),
     path('guarantor/confirm/<int:pk>/', views.confirm_guarantor_approval, name='confirm_guarantor_approval'),

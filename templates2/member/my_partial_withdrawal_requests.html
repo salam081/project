@@ -1,0 +1,81 @@
+
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-light text-dark d-flex justify-content-between align-items-center">
+            <h6><i class="bi bi-list-ul"></i> My Partial Withdrawal Requests</h6>
+            <a href="{% url 'create_partial_withdrawal_request' %}" class="btn btn-success btn-sm text-white">
+                <i class="bi bi-plus-circle"></i> New Request
+            </a>
+        </div>
+        <div class="card-body">
+            <!-- Display Messages -->
+           
+
+            {% if withdrawals %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date Requested</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date Processed</th>
+                            <th>Processed By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for withdrawal in withdrawals %}
+                        <tr>
+                            <td>{{ withdrawal.date_requested|date:"M d, Y h:i A" }}</td>
+                            <td><strong>₦{{ withdrawal.amount_requested|floatformat:2 }}</strong></td>
+                            <td>
+                                {% if withdrawal.status == 'Pending' %}
+                                    <span class="status-badge bg-warning text-dark">Pending</span>
+                                {% elif withdrawal.status == 'Approved' %}
+                                    <span class="status-badge bg-success">Approved</span>
+                                {% else %}
+                                    <span class="status-badge bg-danger">Declined</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if withdrawal.date_approved %}
+                                    {{ withdrawal.date_approved|date:"M d, Y h:i A" }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if withdrawal.approved_by %}
+                                    {{ withdrawal.approved_by.first_name }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if withdrawal.decline_reason %}
+                        <tr>
+                            <td colspan="5" class="bg-light">
+                                <small><strong>Decline Reason:</strong> {{ withdrawal.decline_reason }}</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center">
+                <i class="bi bi-info-circle"></i> You haven't made any withdrawal requests yet.
+                <br>
+                <a href="{% url 'create_partial_withdrawal_request' %}" class="btn btn-primary mt-3">
+                    Make Your First Request
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,390 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% load static %}
+{% block content %}
+<style>
+    .card-stats {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .payment-status {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-weight: 500;
+    }
+    .payment-status.success { 
+        background-color: #d4edda; 
+        color: #155724; 
+        border: 1px solid #c3e6cb;
+    }
+    .payment-status.warning { 
+        background-color: #fff3cd; 
+        color: #856404; 
+        border: 1px solid #ffeaa7;
+    }
+    .payment-status.danger { 
+        background-color: #f8d7da; 
+        color: #721c24; 
+        border: 1px solid #f5c6cb;
+    }
+    .progress-custom {
+        height: 8px;
+        border-radius: 4px;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    .filter-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #007bff;
+    }
+    .debug-info {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 20px;
+        font-size: 0.9em;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-6 mb-0">
+                <i class="fas fa-chart-line me-2"></i>Loan Payment Tracking
+            </h1>
+            <p class="text-muted">Monitor and track loan repayments across all members</p>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+         <div class="col-md-3 mb-3">
+            <div class="stat-card shadow">
+                <div class="stat-content text-center">
+                    <h6 class="mb-1 text-primary">{{ summary_stats.total_loans|default:0 }}</h6>
+                    <p class="mb-0 fw-bold">Number Of Requests </p>
+                </div>
+            </div>
+        </div> 
+        <div class="col-md-3 mb-3">
+            <div class="stat-card shadow ">
+                <div class="stat-content ">
+                    <h6 class="mb-1 text-info">₦{{ summary_stats.total_approved_amount|floatformat:2|intcomma|default:"0.00" }}</h6>
+                    <p class="mb-0 fw-bold">Total Approved </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card shadow">
+                <div class="stat-content ">
+                    <h6 class="mb-1 text-success">₦{{ summary_stats.total_amount_paid|floatformat:2|intcomma|default:"0.00" }}</h6>
+                    <p class="mb-0 fw-bold">Total Paid</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card  shadow">
+                <div class="stat-content ">
+                    <h6 class="mb-1 text-danger">₦{{ summary_stats.total_outstanding|floatformat:2|intcomma|default:"0.00" }}</h6>
+                    <p class="mb-0 fw-bold">Outstanding Balance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card filter-card">
+
+                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+
+                <div class="card-body">
+                    <form method="GET" action="{% url 'loan_payment_tracking' %}" class="row g-3">
+                        <!-- Year Filter -->
+                        <div class="col-md-2">
+                            <label class="form-label">Year</label>
+                            <select name="year" class="form-select" id="year-filter">
+                                <option value="">All Years</option>
+                                {% for year in years %}
+                                    <option value="{{ year }}" 
+                                        {% if selected_year|stringformat:"s" == year|stringformat:"s" %}selected{% endif %}>
+                                        {{ year }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Loan Type Filter -->
+                        <div class="col-md-2">
+                            <label class="form-label">Loan Type</label>
+                            <select name="loan_type" class="form-select" id="type-filter">
+                                <option value="">All Types</option>
+                                {% for loan_type in loan_types %}
+                                    <option value="{{ loan_type }}" 
+                                        {% if selected_type == loan_type %}selected{% endif %}>
+                                        {{ loan_type }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Status Filter -->
+                        <div class="col-md-2">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select" id="status-filter">
+                                <option value="">All Status</option>
+                                {% for status_value, status_label in loan_statuses %}
+                                    <option value="{{ status_value }}" 
+                                        {% if selected_status == status_value %}selected{% endif %}>
+                                        {{ status_label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Member Search -->
+                        <div class="col-md-3">
+                            <label class="form-label">Member Name/IPPIS</label>
+                            <input type="text" name="member" class="form-control" value="{{ selected_member|default:'' }}" 
+                                   placeholder="Search member or IPPIS..."id="member-filter">
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search me-1"></i>Filter
+                                </button>
+                                <a href="{% url 'loan_payment_tracking' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>Clear
+                                </a>
+                                
+                            </div>
+                            <a href="?download=excel" class="btn btn-success mb-3 mt-2 text-white"><i class="bi bi-file-earmark-excel"></i> Download Excel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Info -->
+    {% if page_obj %}
+    <div class="row mb-3">
+        <div class="col-4">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Showing {{ page_obj.object_list|length }} of {{ page_obj.paginator.count }} loans
+                {% if selected_year or selected_type or selected_status or selected_member %}
+                    with applied filters
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Loans Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-table me-2"></i>Payment Status</h5>
+                    <small class="text-muted">
+                        {% if page_obj %}{{ page_obj.paginator.count }} total loans{% endif %}
+                    </small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Member</th>
+                                    {% comment %} <th class="text-nowrap text-truncate" style="max-width: 270px;">Loan Type</th> {% endcomment %}
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Approved Amount</th>
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Amount Paid</th>
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Balance</th>
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Progress</th>
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Payments</th>
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Last Payment</th>
+                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if page_obj %}
+                                    {% for loan_data in page_obj %}
+                                    <tr>
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                                            <div>
+                                                <strong>
+                                                    {{ loan_data.loan.member.member.first_name|default:"" }} 
+                                                    {{ loan_data.loan.member.member.last_name|default:"" }}
+                                                </strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    IPPIS: {{ loan_data.loan.member.ippis|default:"N/A" }}
+                                                </small>
+                                            </div>
+                                        </td>
+                                        {% comment %} <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                                            <span class="badge bg-secondary">
+                                                {{ loan_data.loan.loan_type.name|default:"N/A" }}
+                                            </span>
+                                        </td> {% endcomment %}
+                                        <td><strong class="text-success">₦{{ loan_data.approved_amount|floatformat:2 }}</strong></td>
+                                        <td><strong class="text-info">₦{{ loan_data.total_paid|floatformat:2 }}</strong></td>
+                                        <td><strong class="text-warning">₦{{ loan_data.balance_remaining|floatformat:2 }}</strong></td>
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress progress-custom me-2" style="width: 60px;">
+                                                    <div class="progress-bar 
+                                                        {% if loan_data.payment_percentage >= 100 %}bg-success
+                                                        {% elif loan_data.payment_percentage >= 50 %}bg-warning
+                                                        {% else %}bg-danger{% endif %}" 
+                                                        style="width: {{ loan_data.payment_percentage|default:0 }}%">
+                                                    </div>
+                                                </div>
+                                                <small>{{ loan_data.payment_percentage|default:0 }}%</small>
+                                            </div>
+                                        </td>
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                                            <span class="badge bg-primary">{{ loan_data.payment_count|default:0 }} payments</span>
+                                        </td>
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;">
+                                            {% if loan_data.last_payment %}
+                                                <div>
+                                                    <strong>₦{{ loan_data.last_payment.amount_paid|floatformat:2 }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ loan_data.last_payment.repayment_date }}</small>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">No payments</span>
+                                            {% endif %}
+                                        </td>
+                                        <td  class="text-nowrap text-truncate" style="max-width: 270px;">
+                                            <span class="payment-status {{ loan_data.status_class|default:'secondary' }}">
+                                                {{ loan_data.payment_status|default:"Unknown" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-nowrap text-truncate" style="max-width: 270px;" >
+                                            <a href="{% url 'loan_payment_detail' loan_data.loan.id %}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="10" class="text-center py-4">
+                                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">No loans found matching your criteria.</p>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj and page_obj.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_type %}&loan_type={{ selected_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_member %}&member={{ selected_member }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_type %}&loan_type={{ selected_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_member %}&member={{ selected_member }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_type %}&loan_type={{ selected_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_member %}&member={{ selected_member }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_type %}&loan_type={{ selected_type }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_member %}&member={{ selected_member }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Payments Section -->
+    {% comment %} <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Recent Payments</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Member</th>
+                                    <th>Amount</th>
+                                    <th>Remaining Balance</th>
+                                    <th>Comment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in recent_payments %}
+                                <tr>
+                                    <td>{{ payment.repayment_date }}</td>
+                                    <td>
+                                        {{ payment.loan_request.member.member.first_name|default:"" }} 
+                                        {{ payment.loan_request.member.member.last_name|default:"" }}
+                                    </td>
+                                    <td><strong class="text-success">₦{{ payment.amount_paid|floatformat:2 }}</strong></td>
+                                    <td><strong class="text-warning">₦{{ payment.balance_remaining|floatformat:2 }}</strong></td>
+                                    <td>{{ payment.comment|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No recent payments found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> {% endcomment %}
+</div>
+
+<!-- JavaScript for debugging -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Debug: Log current filter values
+    console.log("Current Filters:");
+    console.log("Year:", "{{ selected_year }}");
+    console.log("Loan Type:", "{{ selected_type }}");
+    console.log("Status:", "{{ selected_status }}");
+    console.log("Member:", "{{ selected_member }}");
+});
+</script>
+
+{% endblock %}

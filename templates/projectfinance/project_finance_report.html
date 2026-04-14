@@ -113,7 +113,7 @@
                     </div>
                     <div class="col-md-4 d-flex align-items-end gap-2">
                         <button type="submit" name="generate" value="true" class="btn btn-success">Generate</button>
-                        <a href="{% url 'project_finance_report' %}" class="btn btn-secondary">Clear</a>
+                        <a href="{% url 'project_finance_report' %}" class="btn btn-secondary text-white">Clear</a>
                     </div>
                 </div>
             </form>
@@ -286,7 +286,7 @@
             <h6>📥 Export Report</h6>
             <p>Download this report in different formats for sharing or archival</p>
             <br>
-            <a href="{% url 'project_finance_report_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+            <a href="{% url 'project_finance_report_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success text-white">
                 📊 Export as Excel
             </a>
         </div>

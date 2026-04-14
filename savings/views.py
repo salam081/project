@@ -553,148 +553,7 @@ def edit_saving(request, saving_id):
 
 
 
-# def list_savings(request):
-#     groups = UserGroup.objects.all()
-#     selected_month = request.GET.get("month")
-#     search_name = request.GET.get("name", "").strip()
-#     search_ippis = request.GET.get("ippis", "").strip()
-#     search_group = request.GET.get("group", "").strip()
-#     date_from = request.GET.get("date_from")
-#     date_to = request.GET.get("date_to")
-#     per_page = request.GET.get("per_page", "25")
 
-#     # Validate per_page value
-#     try:
-#         per_page = int(per_page)
-#         if per_page not in [10, 25, 50, 100]:
-#             per_page = 25
-#     except (ValueError, TypeError):
-#         per_page = 25
-
-#     # Base queryset with optimized select_related
-#     savings = Savings.objects.select_related("member__member")
-   
-#     # Parse month filter
-#     month_filter = {}
-#     if selected_month:
-#         try:
-#             year, month_num = selected_month.split("-")
-#             month_filter = {"month__year": year, "month__month": month_num}
-#             savings = savings.filter(**month_filter)
-#         except (ValueError, IndexError):
-#             pass
-
-#     #  Apply date range filter
-#     if date_from and date_to:
-#         try:
-#             start_date = parse_date(date_from)
-#             end_date = parse_date(date_to)
-#             if start_date and end_date:
-#                 savings = savings.filter(month__range=[start_date, end_date])
-#         except:
-#             pass
-#     elif date_from:
-#         try:
-#             start_date = parse_date(date_from)
-#             if start_date:
-#                 savings = savings.filter(month__gte=start_date)
-#         except:
-#             pass
-#     elif date_to:
-#         try:
-#             end_date = parse_date(date_to)
-#             if end_date:
-#                 savings = savings.filter(month__lte=end_date)
-#         except:
-#             pass
-
-#     # Filter by member name
-#     if search_name:
-#         savings = savings.filter(
-#             Q(member__member__first_name__icontains=search_name) |
-#             Q(member__member__last_name__icontains=search_name)
-#         )
-
-#     # Filter by IPPIS
-#     if search_ippis:
-#         savings = savings.filter(member__ippis__icontains=search_ippis)
-
-#     # Filter by IPPIS
-#     if search_group.isdigit():
-#         savings = savings.filter(member__member__group_id=search_group)
-#         # savings = savings.filter(member__member__group__title__icontains=search_group)
-
-#     # Order results by user's first name
-#     savings = savings.order_by("-id", "member__member__first_name")
-
-#     # Pagination
-#     paginator = Paginator(savings, per_page)
-#     page_number = request.GET.get("page")
-#     page_obj = paginator.get_page(page_number)
-
-#     # Get member IDs from current page only
-#     current_page_member_ids = [saving.member_id for saving in page_obj.object_list]
-
-#     # Build dictionaries for loanable & investment amounts
-#     loanable_dict = {}
-#     investment_dict = {}
-
-#     if current_page_member_ids:
-#         loanable_filter = {"member_id__in": current_page_member_ids}
-#         investment_filter = {"member_id__in": current_page_member_ids}
-
-#         # Add month or date range filters to Loanable & Investment queries
-#         if month_filter:
-#             loanable_filter.update(month_filter)
-#             investment_filter.update(month_filter)
-#         elif date_from and date_to:
-#             loanable_filter["month__range"] = [start_date, end_date]
-#             investment_filter["month__range"] = [start_date, end_date]
-#         elif date_from:
-#             loanable_filter["month__gte"] = start_date
-#             investment_filter["month__gte"] = start_date
-#         elif date_to:
-#             loanable_filter["month__lte"] = end_date
-#             investment_filter["month__lte"] = end_date
-
-#         loanables = Loanable.objects.filter(**loanable_filter).values("member_id", "amount", "month")
-#         for loanable in loanables:
-#             key = (loanable["member_id"], loanable["month"])
-#             loanable_dict[key] = loanable["amount"]
-
-#         investments = Investment.objects.filter(**investment_filter).values("member_id", "amount", "month")
-#         for investment in investments:
-#             key = (investment["member_id"], investment["month"])
-#             investment_dict[key] = investment["amount"]
-
-#     # Assign amounts using dictionary lookups
-#     for saving in page_obj.object_list:
-#         lookup_key = (saving.member_id, saving.month)
-#         saving.loanable_amount = loanable_dict.get(lookup_key, Decimal("0.00"))
-#         saving.investment_amount = investment_dict.get(lookup_key, Decimal("0.00"))
-
-#     context = {
-#         "page_obj": page_obj,
-#         'groups':groups,
-#         "selected_month": selected_month,
-#         "search_name": search_name,
-#         "search_ippis": search_ippis,
-#         "search_group":search_group,
-#         "per_page": per_page,
-#         "date_from": date_from,
-#         "date_to": date_to,
-#         "total_records": paginator.count,
-#         "pagination_info": {
-#             "current_page": page_obj.number,
-#             "total_pages": paginator.num_pages,
-#             "has_previous": page_obj.has_previous(),
-#             "has_next": page_obj.has_next(),
-#             "previous_page": page_obj.previous_page_number() if page_obj.has_previous() else None,
-#             "next_page": page_obj.next_page_number() if page_obj.has_next() else None,
-#         },
-#     }
-
-#     return render(request, "saving/list_savings.html", context)
 @login_required
 @group_required(['admin','staff'])
 def list_savings(request):
@@ -1164,52 +1023,51 @@ def delete_monthly_savings(request):
             "investment_list": investment_list,"interest_list": interest_list,"selected_month": selected_month,})
 
 
+
 @login_required
 @group_required(['admin','staff'])
 def report_view(request):
-    """
-    Generates a financial report with filtering and export capabilities.
-    The view is optimized to reduce the number of database queries and includes pagination.
-    """
-    start_date_str = request.GET.get('start_date')
-    end_date_str = request.GET.get('end_date')
+    start_month_str = request.GET.get('start_month')  # e.g. "2026-01"
+    end_month_str = request.GET.get('end_month')       # e.g. "2026-03"
     export_format = request.GET.get('format')
 
     start_date = None
     end_date = None
-    per_page = 100  # Number of records to display per page
+    per_page = 100
 
-    # Date parsing and validation
-    if start_date_str and end_date_str:
+    # ✅ Parse month inputs and convert to first/last day of month
+    if start_month_str and end_month_str:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            start_date = datetime.strptime(start_month_str, '%Y-%m').date().replace(day=1)
+            
+            # Get last day of end month
+            end_parsed = datetime.strptime(end_month_str, '%Y-%m')
+            last_day = calendar.monthrange(end_parsed.year, end_parsed.month)[1]
+            end_date = end_parsed.date().replace(day=last_day)
 
-            # Ensure end_date is not before start_date
+            # Swap if end is before start
             if end_date < start_date:
                 start_date, end_date = end_date, start_date
+
         except (ValueError, TypeError):
-            messages.error(request, "Invalid date format. Please use YYYY-MM-DD.")
+            messages.error(request, "Invalid month format. Please use YYYY-MM.")
             return redirect(request.path)
-    
-    # 1. Base querysets with optimization using select_related()
-    # This prevents the N+1 query problem by pre-fetching related member data.
+
+    # 1. Base querysets
     savings_queryset = Savings.objects.select_related('member__member')
     interest_queryset = Interest.objects.select_related('member__member')
     loanable_queryset = Loanable.objects.select_related('member__member')
     investment_queryset = Investment.objects.select_related('member__member')
 
-    # 2. Apply date filters to the querysets if they exist
+    # 2. Apply month filters
     if start_date and end_date:
         savings_queryset = savings_queryset.filter(month__range=[start_date, end_date])
         interest_queryset = interest_queryset.filter(month__range=[start_date, end_date])
         loanable_queryset = loanable_queryset.filter(month__range=[start_date, end_date])
         investment_queryset = investment_queryset.filter(month__range=[start_date, end_date])
 
-    # 3. Handle Excel export request
+    # 3. Handle Excel export
     if export_format == 'excel':
-        # Fetch data for Excel export. Use .values() for efficiency
-        # and to rename the fields for cleaner DataFrame columns.
         savings_data = list(savings_queryset.order_by('month').values(
             'month', 'month_saving', 'member__member__first_name', 'member__member__last_name', 'member__ippis'
         ))
@@ -1222,8 +1080,7 @@ def report_view(request):
         investment_data = list(investment_queryset.order_by('month').values(
             'month', 'amount', 'member__member__first_name', 'member__member__last_name', 'member__ippis'
         ))
-        
-        # Create DataFrames from the fetched data
+
         df_savings = pd.DataFrame(savings_data).rename(columns={
             'member__member__first_name': 'Member First Name',
             'member__member__last_name': 'Member Last Name',
@@ -1247,10 +1104,9 @@ def report_view(request):
             'member__ippis': 'IPPIS',
         })
 
-        # Create the HTTP response for the download
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = 'attachment; filename=financial_report.xlsx'
-        
+
         with pd.ExcelWriter(response, engine='openpyxl') as writer:
             if not df_savings.empty:
                 df_savings.to_excel(writer, sheet_name='Savings', index=False)
@@ -1260,48 +1116,41 @@ def report_view(request):
                 df_loanable.to_excel(writer, sheet_name='Loanable', index=False)
             if not df_investment.empty:
                 df_investment.to_excel(writer, sheet_name='Investment', index=False)
-        
+
         return response
 
-    # 4. Calculate totals for HTML view
+    # 4. Calculate totals
     total_savings = savings_queryset.aggregate(Sum('month_saving'))['month_saving__sum'] or 0
     total_interest = interest_queryset.aggregate(Sum('amount_deducted'))['amount_deducted__sum'] or 0
     total_loanable = loanable_queryset.aggregate(Sum('amount'))['amount__sum'] or 0
     total_investment = investment_queryset.aggregate(Sum('amount'))['amount__sum'] or 0
 
-    # 5. Apply pagination to the filtered querysets
+    # 5. Pagination
     savings_paginator = Paginator(savings_queryset.order_by('month'), per_page)
     interest_paginator = Paginator(interest_queryset.order_by('month'), per_page)
     loanable_paginator = Paginator(loanable_queryset.order_by('month'), per_page)
     investment_paginator = Paginator(investment_queryset.order_by('month'), per_page)
 
-    # Get the current page number from the request
-    savings_page_number = request.GET.get('savings_page', 1)
-    interest_page_number = request.GET.get('interest_page', 1)
-    loanable_page_number = request.GET.get('loanable_page', 1)
-    investment_page_number = request.GET.get('investment_page', 1)
-
-    # Get the Page object for each category
-    savings_details = savings_paginator.get_page(savings_page_number)
-    interest_details = interest_paginator.get_page(interest_page_number)
-    loanable_details = loanable_paginator.get_page(loanable_page_number)
-    investment_details = investment_paginator.get_page(investment_page_number)
+    savings_details = savings_paginator.get_page(request.GET.get('savings_page', 1))
+    interest_details = interest_paginator.get_page(request.GET.get('interest_page', 1))
+    loanable_details = loanable_paginator.get_page(request.GET.get('loanable_page', 1))
+    investment_details = investment_paginator.get_page(request.GET.get('investment_page', 1))
 
     context = {
         'total_savings': total_savings,
         'total_interest': total_interest,
         'total_loanable': total_loanable,
         'total_investment': total_investment,
-        'start_date': start_date,
-        'end_date': end_date,
+        'start_month': start_month_str,  
+        'end_month': end_month_str,        
+        'start_date': start_date,         
+        'end_date': end_date,              
         'savings_details': savings_details,
         'interest_details': interest_details,
         'loanable_details': loanable_details,
         'investment_details': investment_details,
     }
     return render(request, 'saving/report.html', context)
-
-
 
 # =============member and non member ===============
 @login_required

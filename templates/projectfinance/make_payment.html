@@ -1,6 +1,6 @@
 {% extends "base/base.html" %}
 {% block content %}
-<div class="content-card mt-4">
+<div class="container mt-3">
     <h3>💰 Make Payment for {{ finance_request.application.member.member.first_name }} {{ finance_request.application.member.member.last_name }}</h3>
     <p><strong>Product:</strong> {{ finance_request.product }}</p>
     <p><strong>Repayment Amount:</strong> ₦{{ finance_request.balance_remaining }}</p>
@@ -18,11 +18,11 @@
             {{ form.month }}
         </div>
         <button type="submit" class="btn btn-success">💸 Submit Payment</button>
-        <a href="" class="btn btn-secondary">Cancel</a>
+       
     </form>
 
     <hr>
-    <h4>📜 Previous Payments</h4>
+    <h6>📜 Previous Payments</h6>
     {% if payments %}
         <table class="table table-bordered">
             <thead>

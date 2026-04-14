@@ -16,4 +16,12 @@ urlpatterns = [
    path('target_savings_list/',  views.target_savings_list, name='target_savings_list'),
    path('target-monthly-detail/<int:year>/<int:month>/', views.monthly_target_savings_detail, name='target_monthly_detail'),
    path('delete-target-monthly/<int:year>/<int:month>/', views.delete_monthly_target_savings, name='delete_target_monthly'),
+   
+   
+   path("special-savings_withdrawals/",views.admin_special_savings_withdrawals, name="admin_special_savings_withdrawals",),
+   path("review-special-savings-withdrawal/<int:pk>/",views.review_special_savings_withdrawal, name="review_special_savings_withdrawal",),
+    
+    
+    path("target-savings_withdrawals/",views.admin_target_savings_withdrawals, name="admin_target_savings_withdrawals",),
+    path("target-savings/withdrawals/<int:pk>/",views.review_target_savings_withdrawal,name="review_target_savings_withdrawal",),
 ]

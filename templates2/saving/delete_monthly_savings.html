@@ -1,0 +1,246 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+{% block content %}
+
+<div class="container mt-4">
+    <h3 class="mb-3">Delete Monthly Savings</h3>
+
+    <form method="POST" class="mb-4">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-5  ">
+                <label for="month">Select Month:</label>
+                <input type="month" name="month" class="form-control shadow  " id="month" value="{{ selected_month }}" required>
+            </div>
+            <div class="col-md-5 mt-4">
+                <button type="submit" class="btn btn-primary">Preview Records</button>
+            </div>
+        </div>
+    </form>
+
+    {% if savings_list or loanable_list or investment_list or interest_list %}
+        <hr>
+        <h5>Preview Records for <strong>{{ selected_month }}</strong></h5>
+
+        <ul class="nav nav-tabs gap-5" id="myTab" role="tablist">
+            {% if savings_list %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="savings-tab" data-bs-toggle="tab" data-bs-target="#savings" type="button" role="tab" aria-controls="savings" aria-selected="true">Savings</button>
+                </li>
+            {% endif %}
+            {% if loanable_list %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if not savings_list %}active{% endif %}" id="loanable-tab" data-bs-toggle="tab" data-bs-target="#loanable" type="button" role="tab" aria-controls="loanable" aria-selected="false">Loanable</button>
+                </li>
+            {% endif %}
+            {% if investment_list %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if not savings_list and not loanable_list %}active{% endif %}" id="investment-tab" data-bs-toggle="tab" data-bs-target="#investment" type="button" role="tab" aria-controls="investment" aria-selected="false">Investment</button>
+                </li>
+            {% endif %}
+            {% if interest_list %}
+                <li class="nav-item " role="presentation">
+                    <button class="nav-link {% if not savings_list and not loanable_list and not investment_list %}active{% endif %}" id="interest-tab" data-bs-toggle="tab" data-bs-target="#interest" type="button" role="tab" aria-controls="interest" aria-selected="false">Subscription Deductions</button>
+                </li>
+            {% endif %}
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            {% if savings_list %}
+                <div class="tab-pane fade show active" id="savings" role="tabpanel" aria-labelledby="savings-tab">
+                    <br>
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>IPPIS</th>
+                                <th>Month Saving</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in savings_list %}
+                                <tr>
+                                    <td>{{ s.member.member.get_full_name }}</td>
+                                    <td>{{ s.member.ippis }}</td>
+                                    <td>₦{{ s.month_saving|floatformat:2|intcomma }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if savings_list.has_other_pages %}
+                        <ul class="pagination justify-content-center">
+                            {% if savings_list.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?savings_page={{ savings_list.previous_page_number }}&month={{ selected_month }}#savings">Previous</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                            {% endif %}
+                            {% for i in savings_list.paginator.page_range %}
+                                {% if savings_list.number == i %}
+                                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                {% else %}
+                                    <li class="page-item"><a class="page-link" href="?savings_page={{ i }}&month={{ selected_month }}#savings">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if savings_list.has_next %}
+                                <li class="page-item"><a class="page-link" href="?savings_page={{ savings_list.next_page_number }}&month={{ selected_month }}#savings">Next</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if loanable_list %}
+                <div class="tab-pane fade {% if not savings_list %}show active{% endif %}" id="loanable" role="tabpanel" aria-labelledby="loanable-tab">
+                    <br>
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>IPPIS</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in loanable_list %}
+                                <tr>
+                                    <td>{{ l.member.member.get_full_name }}</td>
+                                    <td>{{ l.member.ippis }}</td>
+                                    <td>₦{{ l.amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if loanable_list.has_other_pages %}
+                        <ul class="pagination justify-content-center">
+                            {% if loanable_list.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?loanable_page={{ loanable_list.previous_page_number }}&month={{ selected_month }}#loanable">Previous</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                            {% endif %}
+                            {% for i in loanable_list.paginator.page_range %}
+                                {% if loanable_list.number == i %}
+                                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                {% else %}
+                                    <li class="page-item"><a class="page-link" href="?loanable_page={{ i }}&month={{ selected_month }}#loanable">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if loanable_list.has_next %}
+                                <li class="page-item"><a class="page-link" href="?loanable_page={{ loanable_list.next_page_number }}&month={{ selected_month }}#loanable">Next</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if investment_list %}
+                <div class="tab-pane fade {% if not savings_list and not loanable_list %}show active{% endif %}" id="investment" role="tabpanel" aria-labelledby="investment-tab">
+                    <br>
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>IPPIS</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in investment_list %}
+                                <tr>
+                                    <td>{{ i.member.member.get_full_name }}</td>
+                                    <td>{{ i.member.ippis }}</td>
+                                    <td>₦{{ i.amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if investment_list.has_other_pages %}
+                        <ul class="pagination justify-content-center">
+                            {% if investment_list.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?investment_page={{ investment_list.previous_page_number }}&month={{ selected_month }}#investment">Previous</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                            {% endif %}
+                            {% for i in investment_list.paginator.page_range %}
+                                {% if investment_list.number == i %}
+                                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                {% else %}
+                                    <li class="page-item"><a class="page-link" href="?investment_page={{ i }}&month={{ selected_month }}#investment">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if investment_list.has_next %}
+                                <li class="page-item"><a class="page-link" href="?investment_page={{ investment_list.next_page_number }}&month={{ selected_month }}#investment">Next</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if interest_list %}
+                <div class="tab-pane fade {% if not savings_list and not loanable_list and not investment_list %}show active{% endif %}" id="interest" role="tabpanel" aria-labelledby="interest-tab">
+                    <br>
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>IPPIS</th>
+                                <th>Deducted</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in interest_list %}
+                                <tr>
+                                    <td>{{ i.member.member.get_full_name }}</td>
+                                    <td>{{ i.member.ippis }}</td>
+                                    <td>₦{{ i.amount_deducted|floatformat:2|intcomma }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if interest_list.has_other_pages %}
+                        <ul class="pagination justify-content-center">
+                            {% if interest_list.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?interest_page={{ interest_list.previous_page_number }}&month={{ selected_month }}#interest">Previous</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                            {% endif %}
+                            {% for i in interest_list.paginator.page_range %}
+                                {% if interest_list.number == i %}
+                                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                {% else %}
+                                    <li class="page-item"><a class="page-link" href="?interest_page={{ i }}&month={{ selected_month }}#interest">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if interest_list.has_next %}
+                                <li class="page-item"><a class="page-link" href="?interest_page={{ interest_list.next_page_number }}&month={{ selected_month }}#interest">Next</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <form method="POST" class="mt-3 d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="month" value="{{ selected_month }}">
+            <input type="hidden" name="download_excel" value="yes">
+            <button type="submit" class="btn btn-success btn-lg">Download Excel</button>
+        </form>
+
+        <form method="POST" class="mt-3 d-inline" onsubmit="return confirm('Are you sure? This action cannot be undone!')">
+            {% csrf_token %}
+            <input type="hidden" name="month" value="{{ selected_month }}">
+            <input type="hidden" name="confirm_delete" value="yes">
+            <button type="submit" class="btn btn-danger btn-lg">Confirm Delete All Records</button>
+        </form>
+    {% endif %}
+</div>
+
+{% endblock %}

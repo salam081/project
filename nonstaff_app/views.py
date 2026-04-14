@@ -175,17 +175,15 @@ def non_staff_member_dashboard(request):
 
     return render(request, "guest/non_staff_member_dashboard.html", context)
 
-
+@login_required
 def non_staff_members_list(request):
     # Fetch all Members whose related User belongs to the "non-member" group
     non_members = Member.objects.filter(member__group__title="non staff member")
     
-    context = {
-        "non_members": non_members
-    }
+    context = {"non_members": non_members}
     return render(request, "guest/non_members_list.html", context)
 
-
+@login_required
 def non_staff_member_savings(request, id):
     # Get the Member object for this non-member
     member = get_object_or_404(Member, id=id, member__group__title="non staff member")

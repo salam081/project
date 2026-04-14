@@ -1,0 +1,72 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Edit Consumable Request{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <h2>Edit Consumable Request #{{ request_obj.id }}</h2>
+    <p><strong>Requested By:</strong> {{ request_obj.user.username }}</p>
+    <p><strong>Request Date:</strong> {{ request_obj.date_created|date:"F j, Y" }}</p>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <hr>
+
+    <h3>Request Details</h3>
+
+    {% if details %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Consumable Item</th>
+                        <th>Quantity</th>
+                        <th>Item Price</th>
+                        <th>Loan Term (months)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for detail in details %}
+                    <tr>
+                        <td>{{ detail.item.title }}</td>
+                        <form method="post" action="{% url 'admin_edit_consumable_request' request_obj.id %}">
+                            {% csrf_token %}
+                            <td>
+                                <div class="form-group">
+                                    <input type="number" name="quantity" class="form-control" value="{{ detail.quantity }}" min="1">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <input type="number" name="item_price" class="form-control" value="{{ detail.item_price|floatformat:2 }}" step="0.01" min="0">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-group">
+                                    <input type="number" name="loan_term_months" class="form-control" value="{{ detail.loan_term_months }}" min="1">
+                                </div>
+                            </td>
+                            <td>
+                                <input type="hidden" name="detail_id" value="{{ detail.id }}">
+                                <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                            </td>
+                        </form>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No details found for this request.</p>
+    {% endif %}
+
+    <a href="{% url 'admin_consumables_list' %}" class="btn btn-secondary mt-3">Back to Request List</a>
+</div>
+{% endblock %}

@@ -551,6 +551,13 @@
                             </div>
                         </div>
                     </div>
+                     <div class="mb-3 text-end">
+                        <a href="{% url 'export_loan_schedule' loan_request.id %}" 
+                        class="btn btn-success btn-sm">
+                            <i class="bi bi-file-earmark-excel me-1"></i>
+                            Export Schedule
+                        </a>
+                    </div>
                 </div>
                 {% endif %}
 
@@ -625,9 +632,12 @@
                                         </a></li>
                                     </ul>
                                 </div>
+                                
                             </div>
                         </div>
-                        {% endfor %}
+                         
+                     {% endfor %}
+                    
                     </div>
                 </div>
                 {% endif %}

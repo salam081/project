@@ -23,8 +23,19 @@ from .constants import AVAILABLE_PAGES
 # Create your views here.
 
 
+def login_required_redirect(request):
+    messages.warning(request, "Your session has expired. Login to continue..")
+    return redirect('home')
 
+def home(request):
+    now = timezone.now()
+    popup = (
+        Popup.objects.filter(is_active=True, start_date__lte=now, end_date__gte=now).first()
+        or Popup.objects.filter(is_active=True).order_by('-start_date').first()
+    )
+    news_updates = NewsUpdate.objects.all()
 
+    return render(request, 'main/home.html', {"popup": popup,'news_updates':news_updates})
 
 
 
@@ -404,13 +415,14 @@ def login_view(request):
                     return redirect('complete_profile')
                 return redirect('member_dashboard')
             
+          
             
             elif user.group and user.group.title.lower() == 'non staff member':
                 # if not is_profile_complete(user):
                 #     return redirect("complete_profile")
                 return redirect("non_staff_dashboard")
 
-            elif user.group and user.group.title.lower() == 'staff':
+            elif user.group and user.group.title.lower() in ('staff', 'loan committee'):
                 return redirect('staff_dashboard')
 
             else:
@@ -541,7 +553,7 @@ def activate_users(request):
     return redirect('all_members')
 
 @login_required
-@group_required(['admin', 'staff', 'members', 'non staff member'])
+@group_required(['admin', 'staff', 'members', 'non staff member','loan committee'])
 def changePassword(request):
     if request.method == 'POST':
         old_password = request.POST.get('old_password')

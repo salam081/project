@@ -1,0 +1,132 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load humanize %}
+{% block title %}Decline Withdrawal{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <a href="{% url 'partial_withdrawal_detail' withdrawal.pk %}" class="btn btn-secondary mb-3 text-white">← Back</a>
+            <h6>Decline Withdrawal Request</h6>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <!-- Request Summary -->
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0">Withdrawal to be Declined</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Member:</dt>
+                        <dd class="col-sm-8">{{ withdrawal.member.member.first_name }} {{ withdrawal.member.member.last_name }}</dd>
+
+                        <dt class="col-sm-4">IPPIS No:</dt>
+                        <dd class="col-sm-8">{{ withdrawal.member.ippis }}</dd>
+
+                        <dt class="col-sm-4">Amount Requested:</dt>
+                        <dd class="col-sm-8"><strong>₦{{ withdrawal.amount_requested|floatformat:2|intcomma }}</strong></dd>
+
+                        <dt class="col-sm-4">Date Requested:</dt>
+                        <dd class="col-sm-8">{{ withdrawal.date_requested|date:"F d, Y H:i" }}</dd>
+
+                        <dt class="col-sm-4">Member's Reason:</dt>
+                        <dd class="col-sm-8">{{ withdrawal.reason|default:"No reason provided" }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Decline Form -->
+            <div class="card border-danger">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Provide Decline Reason</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Note:</strong> Please provide a clear reason for declining this withdrawal request. The member may see this reason.
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="decline_reason" class="form-label">Reason for Declining <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="decline_reason" name="decline_reason" 
+                                      rows="5" required 
+                                      placeholder="Enter the reason for declining this withdrawal request..."></textarea>
+                            <div class="form-text">
+                                Common reasons: Insufficient funds, incomplete documentation, policy violation, etc.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Quick Reasons (click to insert):</strong>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick="insertReason('Insufficient funds in account')">
+                                    Insufficient Funds
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick="insertReason('Required documentation not provided')">
+                                    Missing Documentation
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick="insertReason('Withdrawal exceeds allowable limit for this period')">
+                                    Exceeds Limit
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick="insertReason('Account has pending loan obligations')">
+                                    Pending Obligations
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick="insertReason('Does not meet minimum balance requirement')">
+                                    Minimum Balance
+                                </button>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Warning:</strong> This action will mark the withdrawal request as declined and notify the member. This action cannot be undone.
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmDecline" required>
+                            <label class="form-check-label" for="confirmDecline">
+                                I confirm that I have reviewed this request and authorize its decline.
+                            </label>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="bi bi-x-circle"></i> Decline Withdrawal
+                            </button>
+                            <a href="{% url 'partial_withdrawal_detail' withdrawal.pk %}" class="btn btn-secondary btn-lg text-white">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function insertReason(reason) {
+        const textarea = document.getElementById('decline_reason');
+        const currentValue = textarea.value.trim();
+        
+        if (currentValue) {
+            textarea.value = currentValue + '\n\n' + reason;
+        } else {
+            textarea.value = reason;
+        }
+        
+        textarea.focus();
+    }
+</script>
+{% endblock %}

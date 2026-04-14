@@ -1,151 +1,107 @@
 {% extends 'base/base.html' %}
-{% load static %}
 {% load humanize %}
-{% block title %}Withdrawal Request Details{% endblock %}
+
+{% block title %}Withdrawal Details{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row mb-4">
-        <div class="col">
-            <a href="{% url 'partial_withdrawals_list' %}" class="btn btn-secondary mb-3 text-white">← Back to List</a>
-            <h2>Withdrawal Request Details</h2>
-        </div>
-    </div>
-       {% if withdrawal.status == 'Pending' %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">Actions</h6>
+<div class="container mt-4">
+
+    <h6 class="mb-4">Withdrawal Details</h6>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <!-- 🔹 Member Info -->
+            <h6>Member Information</h6>
+            <hr>
+            <p><strong>Name:</strong> {{ withdrawal.member.member.first_name }} {{ withdrawal.member.member.last_name }}</p>
+            <p><strong>IPPIS:</strong> {{ withdrawal.member.ippis }}</p>
+
+            <!-- 🔹 Withdrawal Info -->
+            <h6 class="mt-4">Withdrawal Information</h6>
+            <hr>
+
+            <p>
+                <strong>Amount Requested:</strong>
+                <span class="fw-bold text-primary">₦{{ withdrawal.amount_requested|intcomma }}</span>
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+                {% if withdrawal.status == "Pending" %}
+                    <span class="status-badge bg-warning text-dark">Pending</span>
+                {% elif withdrawal.status == "Approved" %}
+                    <span class="status-badge bg-success">Approved</span>
+                {% elif withdrawal.status == "Declined" %}
+                    <span class="status-badge bg-danger">Declined</span>
+                {% endif %}
+            </p>
+
+            <p><strong>Date Requested:</strong> {{ withdrawal.date_requested|date:"M d, Y H:i" }}</p>
+
+            {% if withdrawal.status == "Approved" %}
+                <p><strong>Approved By:</strong> {{ withdrawal.approved_by }}</p>
+                <p><strong>Date Approved:</strong> {{ withdrawal.updated_at|date:"M d, Y H:i" }}</p>
+            {% endif %}
+
+            {% if withdrawal.status == "Declined" %}
+                <p><strong>Declined Reason:</strong></p>
+                <div class="alert alert-danger">
+                    {{ withdrawal.decline_reason }}
                 </div>
-                <div class="card-body">
-                    <div class="d-flex gap-2">
-                        <a href="{% url 'partial_withdrawal_approve' withdrawal.pk %}" class="btn btn-success text-white">
-                            <i class="bi bi-check-circle"></i> Approve Withdrawal
-                        </a>
-                        <a href="{% url 'partial_withdrawal_decline' withdrawal.pk %}" class="btn btn-danger text-white">
-                            <i class="bi bi-x-circle"></i> Decline Withdrawal
-                        </a>
+            {% endif %}
+
+            <!-- 🔹 Balances -->
+            <h6 class="mt-4">Member Balances</h6>
+            <hr>
+
+            <div class="row g-2">
+                <div class="col-12 col-md-4">
+                    <div class="p-3 border rounded bg-light">
+                        <small>Total Savings</small><br>
+                        <strong>₦{{ total_savings|intcomma }}</strong>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="p-3 border rounded bg-light">
+                        <small>Total Loanable</small><br>
+                        <strong>₦{{ total_loanable|intcomma }}</strong>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="p-3 border rounded bg-light">
+                        <small>Total Investment</small><br>
+                        <strong>₦{{ total_investment|intcomma }}</strong>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    {% endif %}
-    <div class="row">
-        <!-- Withdrawal Information -->
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0">Request Information</h6>
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-5">Status:</dt>
-                        <dd class="col-sm-7">
-                            {% if withdrawal.status == 'Pending' %}
-                            <span class="status-badge bg-warning">Pending</span>
-                            {% elif withdrawal.status == 'Approved' %}
-                            <span class="status-badge bg-success">Approved</span>
-                            {% elif withdrawal.status == 'Declined' %}
-                            <span class="status-badge bg-danger">Declined</span>
-                            {% endif %}
-                        </dd>
 
-                        <dt class="col-sm-5">Amount Requested:</dt>
-                        <dd class="col-sm-7"><strong>₦{{ withdrawal.amount_requested|floatformat:2|intcomma }}</strong></dd>
+            <!-- 🔥 Actions -->
+            <div class="mt-4 d-flex flex-column flex-md-row gap-2">
 
-                        <dt class="col-sm-5">Date Requested:</dt>
-                        <dd class="col-sm-7">{{ withdrawal.date_requested|date:"F d, Y H:i" }}</dd>
+                {% if withdrawal.status == "Pending" %}
+                    <a href="{% url 'partial_withdrawal_approve' withdrawal.pk %}"
+                       class="btn btn-success w-100 w-md-auto text-white">
+                        Approve
+                    </a>
 
-                        <dt class="col-sm-5">Reason:</dt>
-                        <dd class="col-sm-7">{{ withdrawal.reason|default:"No reason provided" }}</dd>
+                    <a href="{% url 'partial_withdrawal_decline' withdrawal.pk %}"
+                       class="btn btn-danger w-100 w-md-auto text-white">
+                        Decline
+                    </a>
+                {% endif %}
 
-                        {% if withdrawal.status != 'Pending' %}
-                        <hr>
-                        <dt class="col-sm-5">Processed By:</dt>
-                        <dd class="col-sm-7">{{ withdrawal.approved_by.username }}</dd>
+                <a href="{% url 'partial_withdrawals_list' %}"
+                   class="btn btn-secondary w-100 w-md-auto text-white">
+                    Back
+                </a>
 
-                        <dt class="col-sm-5">Date Processed:</dt>
-                        <dd class="col-sm-7">{{ withdrawal.date_approved|date:"F d, Y H:i" }}</dd>
-
-                        {% if withdrawal.status == 'Approved' %}
-                        <dt class="col-sm-5">Withdrawn Amount:</dt>
-                        <dd class="col-sm-7">₦{{ withdrawal.withdrawn_amount|floatformat:2|intcomma }}</dd>
-
-                        <dt class="col-sm-5">From Loanable:</dt>
-                        <dd class="col-sm-7">₦{{ withdrawal.withdrawn_from_loanable|floatformat:2|intcomma }}</dd>
-
-                        <dt class="col-sm-5">From Investment:</dt>
-                        <dd class="col-sm-7">₦{{ withdrawal.withdrawn_from_investment|floatformat:2|intcomma }}</dd>
-                        {% endif %}
-
-                        {% if withdrawal.status == 'Declined' %}
-                        <dt class="col-sm-5">Decline Reason:</dt>
-                        <dd class="col-sm-7">{{ withdrawal.decline_reason }}</dd>
-                        {% endif %}
-                        {% endif %}
-                    </dl>
-                </div>
-            </div>
-        </div>
-
-        <!-- Member Information -->
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0">Member Information</h6>
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-5">Name:</dt>
-                        <dd class="col-sm-7">{{ withdrawal.member.member.first_name }} {{ withdrawal.member.member.last_name }}</dd>
-
-                        <dt class="col-sm-5">IPPIS No:</dt>
-                        <dd class="col-sm-7">{{ withdrawal.member.ippis }}</dd>
-
-                        <dt class="col-sm-5">Phone:</dt>
-                        <dd class="col-sm-7">{{ withdrawal.member.phone|default:"N/A" }}</dd>
-
-                        <dt class="col-sm-5">Email:</dt>
-                        <dd class="col-sm-7">{{ withdrawal.member.email|default:"N/A" }}</dd>
-                    </dl>
-                </div>
             </div>
 
-            <!-- Current Balances -->
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">Current Account Balances</h6>
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-6">Total Savings:</dt>
-                        <dd class="col-sm-6 text-end"><strong>₦{{ total_savings|floatformat:2|intcomma }}</strong></dd>
-
-                        <dt class="col-sm-6">Loanable Account:</dt>
-                        <dd class="col-sm-6 text-end">₦{{ total_loanable|floatformat:2|intcomma }}</dd>
-
-                        <dt class="col-sm-6">Investment Account:</dt>
-                        <dd class="col-sm-6 text-end">₦{{ total_investment|floatformat:2|intcomma }}</dd>
-                    </dl>
-
-                    {% if withdrawal.status == 'Pending' %}
-                    <hr>
-                    <div class="alert alert-info mb-0">
-                        {% if withdrawal.amount_requested <= total_savings %}
-                        <i class="bi bi-check-circle"></i> Sufficient funds available for this withdrawal.
-                        {% else %}
-                        <i class="bi bi-exclamation-triangle"></i> Insufficient funds. Required: ₦{{ withdrawal.amount_requested|floatformat:2|intcomma }}
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Action Buttons -->
-  
 </div>
 {% endblock %}

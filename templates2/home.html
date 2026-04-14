@@ -1,0 +1,312 @@
+{% extends 'base/base.html' %}
+
+{% load static %}
+
+{% block title %}Dashboard - Admin Panel{% endblock %}
+
+{% block content %}
+<!-- Dashboard Section -->
+<div id="dashboard" class="content-section active">
+    <div class="content-card">
+        <h1>Dashboard Overview</h1>
+        <p>Welcome to your admin dashboard. Here's a quick overview of your system.</p>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-primary">
+                <i class="bi bi-folder"></i>
+            </div>
+            <div class="stat-content">
+                <h3>150</h3>
+                <p>Total Cases</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-success">
+                <i class="bi bi-people"></i>
+            </div>
+            <div class="stat-content">
+                <h3>1,250</h3>
+                <p>Active Members</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <h3>25</h3>
+                <p>Pending Cases</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon bg-danger">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <div class="stat-content">
+                <h3>95%</h3>
+                <p>Success Rate</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="content-card">
+        <h3>Recent Activity</h3>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>User</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><i class="bi bi-folder-plus me-2"></i>New case created</td>
+                        <td>John Doe</td>
+                        <td>2 minutes ago</td>
+                        <td><span class="status-badge status-active">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td><i class="bi bi-person-plus me-2"></i>Member added</td>
+                        <td>Jane Smith</td>
+                        <td>15 minutes ago</td>
+                        <td><span class="status-badge status-completed">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td><i class="bi bi-file-earmark me-2"></i>Report generated</td>
+                        <td>System</td>
+                        <td>1 hour ago</td>
+                        <td><span class="status-badge status-pending">Pending</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- All Cases Section -->
+<div id="all-cases" class="content-section">
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>All Cases</h1>
+            <button class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Add New Case
+            </button>
+        </div>
+        <p>Manage and view all cases in the system.</p>
+        
+        <!-- Search and Filter -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Search cases...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-funnel me-2"></i>Filter
+                </button>
+            </div>
+        </div>
+        
+        <!-- Cases Table -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Case ID</th>
+                        <th>Title</th>
+                        <th>Client</th>
+                        <th>Status</th>
+                        <th>Date Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>#001</td>
+                        <td>Contract Dispute</td>
+                        <td>ABC Corp</td>
+                        <td><span class="status-badge status-active">Active</span></td>
+                        <td>2024-01-15</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- Add more rows as needed -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Contested Cases Section -->
+<div id="contested" class="content-section">
+    <div class="content-card">
+        <h1>Contested Cases</h1>
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            These cases require immediate attention
+        </div>
+        <p>View and manage contested cases requiring attention.</p>
+    </div>
+</div>
+
+<!-- All Members Section -->
+<div id="all-members" class="content-section">
+    <div class="content-card">
+        <h1>All Members</h1>
+        <p>View and manage all system members.</p>
+        
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="card card-custom">
+                    <div class="card-body text-center">
+                        <i class="bi bi-person-circle text-primary" style="font-size: 3rem;"></i>
+                        <h5 class="card-title mt-2">John Doe</h5>
+                        <p class="text-muted">Administrator</p>
+                        <button class="btn btn-outline-primary btn-sm">View Profile</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Add more member cards -->
+        </div>
+    </div>
+</div>
+
+<!-- Add Member Section -->
+<div id="add-member" class="content-section">
+    <div class="content-card">
+        <h1>Add New Member</h1>
+        <p>Add a new member to the system.</p>
+        
+        <form>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="firstName" class="form-label">First Name</label>
+                    <input type="text" class="form-control" id="firstName" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="lastName" class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="lastName" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" required>
+            </div>
+            <div class="mb-3">
+                <label for="role" class="form-label">Role</label>
+                <select class="form-select" id="role" required>
+                    <option value="">Select Role</option>
+                    <option value="admin">Administrator</option>
+                    <option value="member">Member</option>
+                    <option value="viewer">Viewer</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-person-plus me-2"></i>Add Member
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Users Section -->
+<div id="users" class="content-section">
+    <div class="content-card">
+        <h1>Users</h1>
+        <p>Manage system users and permissions.</p>
+    </div>
+</div>
+
+<!-- Reports Section -->
+<div id="reports" class="content-section">
+    <div class="content-card">
+        <h1>Reports</h1>
+        <p>Generate and view system reports.</p>
+        
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="card card-custom">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-graph-up text-primary me-2"></i>
+                            Monthly Report
+                        </h5>
+                        <p class="card-text">Generate monthly activity report</p>
+                        <button class="btn btn-primary">Generate</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Add more report cards -->
+        </div>
+    </div>
+</div>
+
+<!-- Settings Section -->
+<div id="settings" class="content-section">
+    <div class="content-card">
+        <h1>Settings</h1>
+        <p>Configure system settings and preferences.</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-section">
+                    <h4 class="section-title">General Settings</h4>
+                    <div class="mb-3">
+                        <label for="siteName" class="form-label">Site Name</label>
+                        <input type="text" class="form-control" id="siteName" value="Admin Dashboard">
+                    </div>
+                    <div class="mb-3">
+                        <label for="siteDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="siteDescription" rows="3">Admin dashboard for case management</textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-section">
+                    <h4 class="section-title">Notification Settings</h4>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                        <label class="form-check-label" for="emailNotifications">
+                            Email Notifications
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="pushNotifications">
+                        <label class="form-check-label" for="pushNotifications">
+                            Push Notifications
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="btn btn-success">
+            <i class="bi bi-check-circle me-2"></i>Save Settings
+        </button>
+    </div>
+</div>
+{% endblock %}

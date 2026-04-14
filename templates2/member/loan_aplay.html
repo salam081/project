@@ -1,0 +1,145 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="col-md-12">
+    <div class="content-card shadow col-md-12">
+        {% if settings %}
+        <h4 class="text-center text-primary mb-4">Request Loan Form</h4>
+
+        <!-- ✅ Show Member Loanable Balance -->
+        <div class="alert alert-info text-center fw-bold">
+            Your Current Loanable Balance: 
+            <span class="text-success">₦{{ loanable|floatformat:2 }}</span>
+        </div>
+
+        <!-- ✅ Show Eligible Amount Dynamically -->
+        <div id="eligible_amount_container" class="alert alert-warning text-center fw-bold" style="display: none;">
+            Maximum You Can Request for <span id="loan_type_name"></span>: 
+            <span id="eligible_amount" class="text-danger"></span>
+        </div>
+
+        <form id="loanRequestForm" method="POST" enctype="multipart/form-data" action="{% url 'loan_request' %}">
+            {% csrf_token %}
+
+            <!-- Loan Type & Amount -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="loan_type" class="form-label">Loan Type <span class="text-danger">*</span></label>
+                    <select class="form-select" id="loan_type" name="loan_type" required>
+                        <option value="" disabled selected>Choose a loan type</option>
+                        {% for loan_type in loan_types %}
+                        <option value="{{ loan_type.id }}" 
+                                data-max="{{ loan_type.max_amount }}" 
+                                data-name="{{ loan_type.name }}">
+                            {{ loan_type.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="amount" class="form-label">Loan Amount (₦) <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" id="amount" name="amount" placeholder="Enter amount" required min="0">
+                </div>
+            </div>
+
+            <!-- Term & Account -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="loan_term_months" class="form-label">Loan Term (Months) <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" id="loan_term_months" name="loan_term_months" placeholder="e.g. 6" required min="1">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="account_number" class="form-label">Account Number <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="account_number" name="account_number" placeholder="Enter account number" required>
+                </div>
+            </div>
+
+            <!-- Bank Name & Code -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="bank_name" class="form-label">Payment Bank <span class="text-danger">*</span></label>
+                    <select id="bank_name" name="bank_name" class="form-select" required>
+                        <option value="" disabled selected>Select Bank</option>
+                        {% for bank in bank_names %}
+                        <option value="{{ bank.id }}">{{ bank.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="bank_code" class="form-label">Bank Code <span class="text-danger">*</span></label>
+                    <input type="text" id="bank_code" name="bank_code" class="form-control" readonly required>
+                </div>
+
+                <!-- Payslip Upload -->
+                <div class="col-md-6 mb-3">
+                    <label for="file_one" class="form-label">Upload Payslip <span class="text-danger">*</span></label>
+                    <input type="file" class="form-control" id="file_one" name="file_one" required>
+                </div>
+
+                <!-- Guarantor IPPIS -->
+                <div class="col-md-6 mb-3">
+                    <label for="guarantor_ippis" class="form-label">Guarantor IPPIS <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="guarantor_ippis" name="guarantor_ippis" placeholder="Enter guarantor IPPIS" required>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-flex">
+                <button type="submit" class="btn btn-primary">Submit Request</button>
+            </div>
+        </form>
+        {% else %}
+        <h3 class="text-center text-primary">Loan Portal Not Available</h3>
+        {% endif %}
+    </div>
+</div>
+
+<script src="/static/js/jquery.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    // ✅ Fetch bank code dynamically
+    $('#bank_name').change(function () {
+        const bankId = $(this).val();
+        if (bankId) {
+            $.ajax({
+                url: "{% url 'ajax_load_bank_code' %}",
+                data: { 'bank_id': bankId },
+                success: function (data) {
+                    $('#bank_code').val(data.code || '');
+                }
+            });
+        } else {
+            $('#bank_code').val('');
+        }
+    });
+
+    // ✅ Show eligible loan amount & auto-fill loan field
+    $('#loan_type').change(function () {
+        const loanType = $(this).find(':selected');
+        const loanName = loanType.data('name');
+        const maxAmount = parseFloat(loanType.data('max')) || 0;
+        const totalLoanable = parseFloat("{{ loanable }}");
+
+        let eligibleAmount = 0;
+        if (loanName.toLowerCase().includes('short term')) {
+            eligibleAmount = totalLoanable / 2;
+            if (eligibleAmount > maxAmount) eligibleAmount = maxAmount;
+        } else if (loanName.toLowerCase().includes('long term')) {
+            eligibleAmount = totalLoanable * 2;
+            if (maxAmount > 0 && eligibleAmount > maxAmount) eligibleAmount = maxAmount;
+        }
+
+        $('#eligible_amount_container').show();
+        $('#loan_type_name').text(loanName);
+        $('#eligible_amount').text(`₦${eligibleAmount.toLocaleString()}`);
+
+        // ✅ Auto-fill loan amount field
+        $('#amount').val(eligibleAmount);
+    });
+</script>
+
+{% endblock %}

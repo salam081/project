@@ -1,0 +1,40 @@
+{% extends "base/base.html" %}
+{% block content %}
+<h4 class="mb-3">Selling Price Adjustments List</h4>
+<div class="container shadow-lg p-4 p-md-5 my-2">
+  <div class="table-responsive">
+  <table class="table table-striped">
+    <thead class="table-info">
+      <tr>
+        <th>S/N</th>
+        <th>Item</th>
+        <th class="text-nowrap text-truncate" style="max-width: 270px;">Old Price</th>
+        <th class="text-nowrap text-truncate" style="max-width: 270px;">New Price</th>
+        <th>Reason</th>
+        <th class="text-nowrap text-truncate" style="max-width: 150px;">Adjusted By</th>
+        <th>Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for adj in adjustments %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ adj.selling_plan.purchased_item.item_name }}</td>
+        <td class="text-nowrap text-truncate" style="max-width: 270px;">₦{{ adj.old_price }}</td>
+        <td class="text-nowrap text-truncate" style="max-width: 270px;">₦{{ adj.new_price }}</td>
+        <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ adj.reason|default:"-" }}</td>
+        <td class="text-nowrap text-truncate" style="max-width: 150px;">{{ adj.adjusted_by }}</td>
+        <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ adj.date_adjusted|date:"d M, Y H:i" }}</td>
+        <td><a href="{% url 'adjustment_detail' adj.id %}" class="btn btn-sm btn-outline-primary">View</a></td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center">No adjustments found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+{% endblock %}

@@ -71,7 +71,7 @@
             <td>₦{{ loan.amount }}</td>
             <td>
                 <div class="d-flex">
-                <a href="{% url 'confirm_guarantor_approval' loan.id %}" class="btn btn-sm btn-primary">
+                <a href="{% url 'confirm_guarantor_approval' loan.id %}" class="btn btn-sm btn-primary text-white">
                             Accept as Guarantor
                         </a>
                     {% comment %} <a href="{% url 'guarantor_approval_page' loan.id %}" class="btn btn-sm btn-primary ">
@@ -165,27 +165,27 @@
     <!-- Recent Activity -->
      {% if approved_consumable %}
     <div class="content-card">
-        <h3>My Consumable Requests</h3>
+        <h3>Active Consumable </h3>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
-                    <th>Date</th>
+                    {% comment %} <th>Date</th> {% endcomment %}
                     <!-- <th>Items</th> -->
-                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Approved Amount</th>
-                    <th>Paid</th>
-                    <th>Balance</th>
+                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Items Amount</th>
                     <th class="text-nowrap text-truncate" style="max-width: 270px;">Monthly Payment</th>
+                    <th>Amount Paid</th>
+                    <th>Remaining Balance</th>
                 </tr>
                 </thead>
                 <tbody>
                     {% for item in approved_consumable %}
                 <tr>
-                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ item.consumable.date_created|date:"M d, Y" }}</td>
+                    {% comment %} <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ item.consumable.date_created|date:"M d, Y" }}</td> {% endcomment %}
                     <td>₦{{ item.approved_amount|floatformat:0|intcomma }}</td>
+                    <td>₦{{ item.monthly_payment|floatformat:0|intcomma }}</td>
                     <td>₦{{ item.total_paid|floatformat:0|intcomma }}</td>
                     <td>₦{{ item.balance|floatformat:0|intcomma }}</td>
-                    <td>₦{{ item.monthly_payment|floatformat:0|intcomma }}</td>
                 </tr>
                 {% endfor %}
                 </tbody>

@@ -7,6 +7,7 @@ admin.site.register(FinancialSummary)
 admin.site.register(Withdrawal)
 admin.site.register(PartialWithdrawal)
 admin.site.register(Dividend)
+admin.site.register(NewsUpdate)
 
 
 

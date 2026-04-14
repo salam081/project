@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% comment %} <meta name="viewport" content="width=device-width, initial-scale=1"> {% endcomment %}
+    <title>{% block title %}Base Templatet{% endblock %}</title>
+   
+
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'admin/css/base.css' %}">
+    
+    <link rel="stylesheet" href="{% static 'css/bootstrap-icons.css' %}">
+   
+
+</head>
+<body>
+    {% include 'include/navbar.html' %}
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    {% include 'include/sidebar.html' %}
+    
+    <!-- Main Content -->
+     
+    <main class="main-content" id="mainContent">
+        
+        <div class="container-fluid py-3">
+         {% if messages %}
+            {% for message in messages %}
+              <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show py-3" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+            {% block content %}
+            
+            {% endblock %}
+        </div>
+    </main>
+
+    <!-- Input Popup Modal -->
+<div class="modal fade" id="inputPopupModal" tabindex="-1" aria-labelledby="inputPopupModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="get" action="{% url 'search_member' %}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="inputPopupModalLabel">Search Member</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" name="search_term" class="form-control" placeholder="Enter name or ID..." required>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+   <script src="{% static 'js/bootstrap.bundle.min.js'%}"></script>
+   <script src="{% static 'js/script.js' %}"></script>
+ <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Set year if element exists
+    const yearElement = document.getElementById('year');
+    if (yearElement) {
+      yearElement.textContent = new Date().getFullYear();
+    }
+
+    // Debug: how many alerts are present
+    console.log("alerts found:", document.querySelectorAll('.alert').length);
+
+    // Auto-dismiss alerts after 3 seconds
+    setTimeout(function () {
+      const alerts = document.querySelectorAll('.alert');
+      alerts.forEach(function (alert) {
+        const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+        bsAlert.close();
+      });
+    }, 320000);
+  });
+</script>
+   
+</body>
+</html>

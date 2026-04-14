@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Admin Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  {% comment %} <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous"> {% endcomment %}
+ {% comment %} <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD" crossorigin="anonymous"> {% endcomment %}
+ <link rel="stylesheet" href="/static/css/font-awesome">
+ <link rel="stylesheet" href="/static/css/bootstrap-icons.css">
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+
+</head>
+<body>
+    {% include 'include/navbar.html' %}
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    {% include 'include/sidebar.html' %}
+    
+    <!-- Main Content -->
+     
+    <main class="main-content" id="mainContent">
+        
+        <div class="container-fluid py-3">
+              {% if messages %}
+            {% for message in messages %}
+            {% if forloop.first %}
+            {% if message.tags == 'error' %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {% else %}
+                <div class="alert alert-{{ message.tags }} py-3 alert-dismissible fade show" role="alert">
+                    {% endif %}
+                    {% endif %}
+                    {{ message }}{% if not forloop.last %} • {% endif %}
+                    {% if forloop.last %}
+                    <button type="button" class="btn-close mb-6" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+            {% block content %}
+            <!-- Your dashboard content goes here -->
+            {% endblock %}
+        </div>
+    </main>
+
+    <!-- Input Popup Modal -->
+<div class="modal fade" id="inputPopupModal" tabindex="-1" aria-labelledby="inputPopupModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="get" action="{% url 'search_member' %}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="inputPopupModalLabel">Search Member</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" name="search_term" class="form-control" placeholder="Enter name or ID..." required>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+   {% comment %} <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script> {% endcomment %}
+   <script src="/static/js/bootstrap.bundle.min.js"></script>
+   <script src="/static/js/script.js"></script>
+
+
+
+   
+</body>
+</html>

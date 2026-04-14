@@ -1,0 +1,112 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}{{ title }} #{{ plan.pk }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header  text-dark text-center">
+                    <h1 class="h3 mb-0">{{ title }} #{{ plan.pk }}</h1>
+                </div>
+                <div class="card-body">
+                  
+
+                    <div class="alert alert-info" role="alert">
+                        You are editing the selling plan for item: <strong>{{ plan.purchased_item.item_name }}</strong>.
+                    </div>
+
+                    <form method="post" action="{% url 'selling_plan_edit' pk=plan.pk %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_selling_price_per_unit" class="form-label">Selling Price Per Unit (₦) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="id_selling_price_per_unit" name="selling_price_per_unit" value="{{ plan.selling_price_per_unit }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_quantity" class="form-label">Quantity to Sell <span class="text-danger">*</span></label>
+                            <input type="number" min="1" max="{{ plan.purchased_item.quantity }}" class="form-control" id="id_quantity" name="quantity" value="{{ plan.quantity }}" required>
+                            <div class="form-text">Must not exceed the purchased quantity of {{ plan.purchased_item.quantity }}.</div>
+                        </div>
+
+                        {# The section for the calculator #}
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title mb-0">Total Selling Price:</h5>
+                                <h4 class="card-text text-success" id="total-selling-price">₦0.00</h4>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="id_include_expenditure" name="include_expenditure" {% if plan.include_expenditure %}checked{% endif %}>
+                            <label class="form-check-label" for="id_include_expenditure">Include other expenditure in cost calculation</label>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="id_available" name="available" {% if plan.available %}checked{% endif %}>
+                            <label class="form-check-label" for="id_available">Available for sale</label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_notes" class="form-label">Notes (Optional)</label>
+                            <textarea class="form-control" id="id_notes" name="notes" rows="3">{{ plan.notes|default:"" }}</textarea>
+                        </div>
+
+                        {# Adjustment reason field, as used in your view logic #}
+                        <hr>
+                        <div class="mb-3">
+                            <label for="id_adjustment_reason" class="form-label">Reason for Price Adjustment</label>
+                            <textarea class="form-control" id="id_adjustment_reason" name="adjustment_reason" rows="2" placeholder="Required if changing the Selling Price"></textarea>
+                            <div class="form-text">This will be logged if you change the Selling Price Per Unit field.</div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-warning btn-lg text-dark">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                            <a href="{% url 'selling_plan_detail' pk=plan.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const priceInput = document.getElementById('id_selling_price_per_unit');
+        const quantityInput = document.getElementById('id_quantity');
+        const expenditureCheckbox = document.getElementById('id_include_expenditure');
+        const totalDisplay = document.getElementById('total-selling-price');
+
+        // Pass the expenditure value from Django to JavaScript
+        const expenditureAmount = parseFloat("{{ plan.purchased_item.expenditure_amount }}") || 0;
+
+        function calculateTotal() {
+            const price = parseFloat(priceInput.value) || 0;
+            const quantity = parseInt(quantityInput.value) || 0;
+            let total = price * quantity;
+
+            if (expenditureCheckbox.checked) {
+                total += expenditureAmount;
+            }
+
+            totalDisplay.textContent = '$' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        priceInput.addEventListener('input', calculateTotal);
+        quantityInput.addEventListener('input', calculateTotal);
+        expenditureCheckbox.addEventListener('change', calculateTotal);
+
+        // Initial calculation on page load in case fields are pre-filled
+        calculateTotal();
+    });
+</script>
+{% endblock %}
+
+
+

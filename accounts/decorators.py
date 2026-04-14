@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponseForbidden,HttpResponse
+from django.contrib import messages
 from functools import wraps
 def group_required(required_groups):
     def decorator(view_func):
@@ -17,6 +18,8 @@ def group_required(required_groups):
                 return view_func(request, *args, **kwargs)
             
             # 4. Otherwise, show login page
+            
+            messages.error(request, "You do not have permission to access this page. Login again and continue.")
             return render(request, "accounts/login.html")
         return wrapped_view
     return decorator

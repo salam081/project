@@ -1,0 +1,48 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="content-card p-4">
+    <h4 class="mb-3">Create Popup Message</h4>
+
+
+    <form method="post" action="">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Title</label>
+                <input type="text" class="form-control" name="title" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Message</label>
+                <textarea class="form-control" name="message" rows="3" required></textarea>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>URL Link (optional)</label>
+                <input type="url" class="form-control" name="link_url" placeholder="https://example.com">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Active</label><br>
+                <input type="checkbox" name="is_active"> Enable popup
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Start Date</label>
+                <input type="datetime-local" class="form-control" name="start_date">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>End Date</label>
+                <input type="datetime-local" class="form-control" name="end_date">
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-success">Create Popup</button>
+        </div>
+    </form>
+</div>
+{% endblock content %}

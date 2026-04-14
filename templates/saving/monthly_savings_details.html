@@ -7,7 +7,7 @@
     <h3>Monthly Savings Details — {{ month|date:"F Y" }}</h3>
     <div class="row">
   <div class="col-md-3 mt-2">
-    <div class="card shadow text-success fw-bold text-center">
+    <div class="card shadow text-dark text-center">
       <div class="card-body">
         <p class="card-title"> Total Savings</p>
         <h6 class="card-text ">{{ total_uploaded|floatformat:2|intcomma }}</h6>
@@ -15,7 +15,7 @@
     </div>
   </div>
   <div class="col-md-3 mt-2">
-    <div class="card shadow text-primary fw-bold text-center">
+    <div class="card shadow text-dark text-center">
       <div class="card-body">
         <p class="card-title">Total Subscription</p>
         <h6 class="card-text ">{{ total_interest|floatformat:2|intcomma }}</h6>
@@ -23,7 +23,7 @@
     </div>
   </div>
   <div class="col-md-3 mt-2">
-    <div class="card shadow text-info fw-bold text-center">
+    <div class="card shadow text-dark text-center">
       <div class="card-body">
         <p class="card-title">Total Investment</p>
         <h6 class="card-text ">{{ total_investment|floatformat:2|intcomma }}</h6>
@@ -31,7 +31,7 @@
     </div>
   </div>
   <div class="col-md-3 mt-2">
-    <div class="card shadow text-warning fw-bold  text-center">
+    <div class="card shadow text-dark text-center">
       <div class="card-body">
         <p class="card-title">Total Loanable</p>
         <h6 class="card-text ">{{ total_loanable|floatformat:2|intcomma }}</h6>
@@ -53,7 +53,7 @@
                     <th class="text-start">Subscription (₦)</th>
                     <th class="text-start">Investment (₦)</th>
                     <th class="text-start">Loanable (₦)</th>
-                     {% comment %} <th>Action</th>  {% endcomment %}
+                    {% comment %} <th>Action</th> {% endcomment %}
                 </tr>
             </thead>
             <tbody>

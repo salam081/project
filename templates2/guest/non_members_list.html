@@ -1,0 +1,35 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="content-card">
+    <div class="table-responsive">
+        <h2>Non Staff Member List</h2>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>S/N</th>
+              <th>Full name</th>
+              <th>Unique Number</th>
+              <th>Group</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for member in non_members %}
+<tr>
+  <td>{{forloop.counter}}</td>
+  <td>{{ member.member.first_name }} {{ member.member.last_name }} {{ member.member.other_name }} </td>
+  <td>{{ member.ippis}} </td>
+  <td>{{ member.member.group.title }} </td>
+  <td>
+    <a href="{% url 'non_staff_member_savings' member.id %}">View Savings</a>
+  </td>
+</tr>
+{% endfor %}
+          </tbody>
+        </table>
+
+    </div>
+</div>
+{% endblock %}

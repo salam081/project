@@ -1,0 +1,120 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="container  shadow">
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+            <h2 class="mb-1">
+                <i class="fas fa-hand-holding-usd me-2"></i>My Consumable Requests🧺
+            </h2>
+            <p class="text-dark mb-0">Track and manage your Consumable requests</p>
+            </div>
+
+            <a href="{% url 'request_consumable' %}" class="btn btn-primary d-flex align-items-center text-white">
+            <i class="fas fa-plus me-2"></i>Make New Request
+            </a>
+        </div>
+       
+
+
+  
+
+    {% if consumable_data %}
+    
+        <div class="table-responsive">
+            <table class="table table-hover align-middle custom-table mt-3">
+                <thead class="table-info">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Full Name</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Approved (₦)</th>
+                        <th scope="col">Paid (₦)</th>
+                        <th scope="col">Balance (₦)</th>
+                        <th scope="col">Monthly (₦)</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data in consumable_data %}
+                    <tr>
+                        <td class="text-muted">{{ forloop.counter }}</td>
+                        <td>{{ data.consumable.user.get_full_name|default:data.consumable.user.username }}</td>
+                        <td>{{ data.consumable.date_created|date:"M d, Y" }}</td>
+                        <td class="text-success fw-bold">₦{{ data.approved_amount|floatformat:2 }}</td>
+                        <td class="text-primary">₦{{ data.total_paid|floatformat:2 }}</td>
+                        <td class="text-danger fw-bold">₦{{ data.balance|floatformat:2 }}</td>
+                        <td>₦{{ data.monthly_payment|floatformat:2 }}</td>
+                        <td>
+                            <div class="d-flex flex-column flex-md-row gap-2">
+                                <a href="{% url 'request_detail' data.consumable.id %}"
+                                    class="btn btn-outline-info btn-sm">View</a>
+                                    {% if data.consumable.status == 'Pending' or data.consumable.status == 'Approved' %}
+                                   <a href="{% url 'edit_consumable_request' data.consumable.id %}"
+                                    class="btn btn-warning btn-sm">Edit</a>
+                                    {% endif %}
+                                {% if data.consumable.status == 'Pending' %}
+                                <a href="{% url 'cancel_consumable_request' data.consumable.id %}"
+                                    class="btn btn-outline-danger btn-sm">Cancel</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    
+    {% else %}
+   
+      <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-clipboard-list fa-5x text-muted"></i>
+                </div>
+                <h6 class="text-muted">No Consumable Requests Yet</h6>
+                <p class="text-muted mb-4">You haven't made any Consumable requests yet.</p>
+                <a href="{% url 'request_consumable' %}" class="btn btn-primary text-white">
+                    <i class="fas fa-plus me-2"></i>Create Your First Consumable Request
+                </a>
+            </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    /* ... (Your existing CSS) ... */
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .page-title {
+            font-size: 1.5rem;
+        }
+
+        .btn-create-request {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+        }
+
+        .content-card {
+            padding: 1rem;
+        }
+
+        /* Adjusted for smaller screens */
+        .custom-table th,
+        .custom-table td {
+            font-size: 0.8rem;
+            white-space: nowrap; /* Prevents text from wrapping */
+        }
+        
+        .d-flex.flex-column.flex-md-row.gap-2 {
+            flex-direction: column !important; /* Forces buttons to stack */
+        }
+
+        .btn-sm {
+            width: 100%; /* Makes buttons full-width */
+        }
+    }
+</style>
+{% endblock %}

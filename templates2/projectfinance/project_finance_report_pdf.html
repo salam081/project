@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Project Finance Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 10px;
+                color: #666;
+            }
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.3;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .date-range {
+            color: #666;
+            font-size: 12px;
+            margin: 5px 0;
+        }
+        
+        .summary-section {
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            margin-top: 25px;
+            font-weight: bold;
+        }
+        
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .summary-table td {
+            padding: 8px 12px;
+            border: 1px solid #bdc3c7;
+        }
+        
+        .summary-table td.label {
+            background-color: #ecf0f1;
+            font-weight: bold;
+            width: 60%;
+        }
+        
+        .summary-table td.value {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            background-color: white;
+        }
+        
+        .stats-grid {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .stats-row {
+            display: table-row;
+        }
+        
+        .stats-cell {
+            display: table-cell;
+            padding: 8px 12px;
+            border: 1px solid #bdc3c7;
+            text-align: center;
+            background-color: #f8f9fa;
+        }
+        
+        .stats-cell.number {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            background-color: white;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 10px;
+        }
+        
+        .data-table th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 8px 6px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 9px;
+            text-transform: uppercase;
+        }
+        
+        .data-table td {
+            padding: 6px;
+            border-bottom: 1px solid #ecf0f1;
+            vertical-align: top;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .amount {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        .positive {
+            color: #27ae60;
+        }
+        
+        .negative {
+            color: #e74c3c;
+        }
+        
+        .neutral {
+            color: #7f8c8d;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .highlight-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .profit-summary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 1px solid #dee2e6;
+        }
+        
+        .footer-info {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 9px;
+            color: #7f8c8d;
+            padding: 10px 0;
+            border-top: 1px solid #ecf0f1;
+        }
+        
+        /* Compact table for more data */
+        .compact-table {
+            font-size: 9px;
+        }
+        
+        .compact-table th,
+        .compact-table td {
+            padding: 4px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-active {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Project Finance Report</h1>
+        <div class="subtitle">Financial Analysis & Performance Summary</div>
+        <div class="date-range">
+            <strong>Report Period:</strong>
+            {% if start_date or end_date %}
+                {{ start_date|default:"Beginning" }} to {{ end_date|default:"Present" }}
+            {% else %}
+                All Time Report
+            {% endif %}
+        </div>
+        <div class="date-range">
+            <strong>Generated:</strong> {{ report.generated_at|date:"F j, Y \a\t H:i" }}
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section-title">📊 Executive Summary</div>
+    <div class="profit-summary">
+        <table class="summary-table">
+            <tr>
+                <td class="label">💰 Total Expenditure (Disbursed)</td>
+                <td class="value">₦{{ report.summary.total_expenditure|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <td class="label">💵 Total Income (Received)</td>
+                <td class="value positive">₦{{ report.summary.total_income|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <td class="label">📈 Expected Total Income</td>
+                <td class="value">₦{{ report.summary.expected_total_income|floatformat:2 }}</td>
+            </tr>
+            <tr style="border-top: 2px solid #3498db;">
+                <td class="label">🎯 Current Profit</td>
+                <td class="value {% if report.summary.current_profit >= 0 %}positive{% else %}negative{% endif %}">
+                    ₦{{ report.summary.current_profit|floatformat:2 }}
+                </td>
+            </tr>
+            <tr>
+                <td class="label">🔮 Expected Profit</td>
+                <td class="value {% if report.summary.expected_profit >= 0 %}positive{% else %}negative{% endif %}">
+                    ₦{{ report.summary.expected_profit|floatformat:2 }}
+                </td>
+            </tr>
+            <tr>
+                <td class="label">⏳ Outstanding Amount</td>
+                <td class="value neutral">₦{{ report.summary.outstanding_amount|floatformat:2 }}</td>
+            </tr>
+            <tr style="border-top: 1px solid #bdc3c7;">
+                <td class="label">📊 Current Profit Margin</td>
+                <td class="value">{{ report.summary.profit_margin_current|floatformat:2 }}%</td>
+            </tr>
+            <tr>
+                <td class="label">📈 Expected Profit Margin</td>
+                <td class="value">{{ report.summary.profit_margin_expected|floatformat:2 }}%</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="section-title">📈 Key Performance Indicators</div>
+    <div class="stats-grid">
+        <div class="stats-row">
+            <div class="stats-cell">
+                <strong>Total Requests</strong><br>
+                <span class="stats-cell number">{{ report.statistics.total_requests }}</span>
+            </div>
+            <div class="stats-cell">
+                <strong>Active Requests</strong><br>
+                <span class="stats-cell number">{{ report.statistics.active_requests }}</span>
+            </div>
+            <div class="stats-cell">
+                <strong>Completed</strong><br>
+                <span class="stats-cell number">{{ report.statistics.completed_requests }}</span>
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stats-cell">
+                <strong>Total Payments</strong><br>
+                <span class="stats-cell number">{{ report.statistics.total_payments_made }}</span>
+            </div>
+            <div class="stats-cell">
+                <strong>Unique Members</strong><br>
+                <span class="stats-cell number">{{ report.statistics.unique_members }}</span>
+            </div>
+            <div class="stats-cell">
+                <strong>Avg Request</strong><br>
+                <span class="stats-cell number">₦{{ report.statistics.average_request_amount|floatformat:0 }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if report.member_profits %}
+    <!-- Performance Highlights -->
+    <div class="highlight-box">
+        <strong>🏆 Top Performers:</strong><br>
+        <strong>Most Profitable:</strong> {{ report.member_profits.0.member_name }} 
+        (₦{{ report.member_profits.0.expected_profit|floatformat:0 }} expected profit)<br>
+        <strong>Highest Volume:</strong> 
+        {% for member in report.member_profits %}
+            {% if forloop.first %}{{ member.member_name }} ({{ member.total_requests }} requests){% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Member Analysis -->
+    <div class="page-break"></div>
+    <div class="section-title">👥 Individual Member Analysis</div>
+    
+    <table class="data-table compact-table">
+        <thead>
+            <tr>
+                <th style="width: 18%;">Member Name</th>
+                <th style="width: 11%;">Expenditure</th>
+                <th style="width: 11%;">Income</th>
+                <th style="width: 11%;">Expected</th>
+                <th style="width: 11%;">Current Profit</th>
+                <th style="width: 11%;">Expected Profit</th>
+                <th style="width: 11%;">Outstanding</th>
+                <th style="width: 8%;">Requests</th>
+                <th style="width: 8%;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in report.member_profits %}
+            <tr>
+                <td><strong>{{ member.member_name }}</strong></td>
+                <td class="amount">₦{{ member.expenditure|floatformat:0 }}</td>
+                <td class="amount positive">₦{{ member.income_received|floatformat:0 }}</td>
+                <td class="amount">₦{{ member.expected_income|floatformat:0 }}</td>
+                <td class="amount {% if member.current_profit >= 0 %}positive{% else %}negative{% endif %}">
+                    ₦{{ member.current_profit|floatformat:0 }}
+                </td>
+                <td class="amount {% if member.expected_profit >= 0 %}positive{% else %}negative{% endif %}">
+                    ₦{{ member.expected_profit|floatformat:0 }}
+                </td>
+                <td class="amount neutral">₦{{ member.outstanding_amount|floatformat:0 }}</td>
+                <td style="text-align: center;">{{ member.total_requests }}</td>
+                <td style="text-align: center;">
+                    {% if member.active_requests > 0 %}
+                        <div class="status-indicator status-active">{{ member.active_requests }}A</div>
+                    {% endif %}
+                    {% if member.completed_requests > 0 %}
+                        <div class="status-indicator status-completed">{{ member.completed_requests }}C</div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Summary Analysis -->
+    <div class="section-title">🔍 Analysis Summary</div>
+    <div class="highlight-box">
+        <strong>Portfolio Health:</strong><br>
+        • <strong>Collection Rate:</strong> 
+        • <strong>Active Portfolio:</strong> {{ report.statistics.active_requests }} ongoing requests<br>
+        • <strong>Risk Assessment:</strong> 
+        ₦{{ report.summary.outstanding_amount|floatformat:0 }} still outstanding<br>
+        • <strong>Member Engagement:</strong> 
+        {{ report.statistics.unique_members }} active members in portfolio
+    </div>
+    {% else %}
+    <div class="section-title">📋 Member Data</div>
+    <div class="highlight-box">
+        <strong>No member data available for the selected reporting period.</strong><br>
+        This could indicate:
+        <ul>
+            <li>No approved/completed requests in this timeframe</li>
+            <li>All requests are still pending approval</li>
+            <li>Date filter may be too restrictive</li>
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="footer-info">
+        Project Finance Report | Generated {{ report.generated_at|date:"Y-m-d H:i" }} | 
+        Confidential Business Information
+    </div>
+</body>
+</html>

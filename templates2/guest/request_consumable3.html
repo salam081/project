@@ -1,0 +1,472 @@
+{% extends 'base/guest_base.html' %}
+
+{% load static %}
+
+{% block title %}Request Consumable - Guest{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-header">
+                <h1 class="page-title">Request Consumable Items</h1>
+                {% if not guest_identified %}
+                <p class="text-muted">Please identify yourself to proceed with your consumable request</p>
+                {% else %}
+                <p class="text-muted">Select your fee payment record to proceed with consumable request</p>
+                {% endif %}
+            </div>
+
+            <!-- Display Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if not guest_identified %}
+            <!-- Guest Identification Form -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-check"></i> Identify Yourself
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Instructions:</strong> Enter the same details you used when paying the form fee to access your payment records.
+                            </div>
+                            
+                            <form method="POST">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="guest_phone">Phone Number *</label>
+                                            <input type="tel" id="guest_phone" name="guest_phone" 
+                                                   class="form-control" placeholder="Enter Phone" required>
+                                            <small class="form-text text-muted">
+                                                Enter the same phone number you used when paying the form fee
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="guest_ippis">IPPIS (Optional)</label>
+                                            <input type="number" id="guest_ippis" name="guest_ippis" 
+                                                   class="form-control" placeholder="Enter your IPPIS">
+                                            <small class="form-text text-muted">
+                                                If you provided IPPIS during fee payment, enter it here
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <button type="submit" name="identify_guest" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-search"></i> Find My Fee Payments
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="fas fa-question-circle"></i> Need to pay form fee?</h6>
+                    <p class="card-text">If you haven't paid the consumable form fee yet, you need to do that first before requesting items.</p>
+                   
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Main Request Form (when guest is identified) -->
+            {% if guest_payments %}
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Step 1: Select Fee Payment Record -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-receipt"></i> Step 1: Select Your Fee Payment
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="fee_payment_id">Your available fee payments:</label>
+                            <select id="fee_payment_id" name="fee_payment_id" class="form-control" required>
+                                <option value="">Select your payment record...</option>
+                                {% for payment in guest_payments %}
+                                    <option value="{{ payment.id }}" data-consumable-type="{{ payment.consumable_type.name }}">
+                                        {{ payment.guest_request.guest_name }} - {{ payment.consumable_type.name }} - 
+                                        ₦{{ payment.form_fee|floatformat:2 }} (Paid on {{ payment.created_at|date:"M d, Y" }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Select the fee payment record for the consumable type you want to request.
+                            </small>
+                        </div>
+                        
+                        <!-- Display selected payment info -->
+                        <div id="selected_payment_info" class="alert alert-info" style="display: none;">
+                            <h6><i class="fas fa-info-circle"></i> Selected Payment Details:</h6>
+                            <div id="payment_details"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Loan Terms -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-alt"></i> Step 2: Loan Terms
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="loan_term_months">Loan Term (Months) *</label>
+                                    <select id="loan_term_months" name="loan_term_months" class="form-control" required>
+                                        <option value="">Select loan term...</option>
+                                        <option value="3">3 Months</option>
+                                        <option value="6">6 Months</option>
+                                        <option value="9">9 Months</option>
+                                        <option value="12">12 Months</option>
+                                        <option value="18">18 Months</option>
+                                        <option value="24">24 Months</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="file_payslpt">Upload Payslip</label>
+                                    <input type="file" id="file_payslpt" name="file_payslpt" 
+                                           class="form-control-file" accept="image/*,.pdf">
+                                    <small class="form-text text-muted">
+                                        Upload your recent payslip (optional but recommended)
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Select Items -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-shopping-cart"></i> Step 3: Select Items
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if selling_plans %}
+                        <div class="row">
+                            {% for plan in selling_plans %}
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card h-100 item-card border">
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input item-checkbox" 
+                                                   id="item_{{ plan.id }}" name="selected_items" value="{{ plan.id }}">
+                                            <label class="form-check-label" for="item_{{ plan.id }}">
+                                                <strong>{{ plan.purchased_item.item_name }}</strong>
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="item-details">
+                                            <p class="text-muted mb-1">
+                                                <small><i class="fas fa-box"></i> Available: {{ plan.quantity }} units</small>
+                                            </p>
+                                            <p class="text-success font-weight-bold mb-2">
+                                                <i class="fas fa-tag"></i> ₦{{ plan.selling_price_per_unit|floatformat:2 }} per unit
+                                            </p>
+                                            
+                                            <div class="quantity-controls" style="display: none;">
+                                                <label for="quantity_{{ plan.id }}" class="small">Quantity:</label>
+                                                <input type="number" id="quantity_{{ plan.id }}" 
+                                                       name="quantity_{{ plan.id }}" class="form-control form-control-sm" 
+                                                       min="1" max="{{ plan.quantity }}" value="1">
+                                                <div class="mt-2">
+                                                    <small class="text-info font-weight-bold">
+                                                        <i class="fas fa-calculator"></i> Total: ₦<span class="item-total" data-price="{{ plan.selling_price_per_unit }}">{{ plan.selling_price_per_unit|floatformat:2 }}</span>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Order Summary -->
+                        <div class="card bg-light mt-4">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-clipboard-list"></i> Order Summary</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h6 class="text-muted">Selected Items</h6>
+                                            <h4 class="text-primary"><span id="selected_count">0</span></h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h6 class="text-muted">Total Amount</h6>
+                                            <h4 class="text-success">₦<span id="grand_total">0.00</span></h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h6 class="text-muted">Loan Term</h6>
+                                            <h4 class="text-info"><span id="loan_term_display">Not selected</span></h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h6 class="text-muted">Monthly Payment</h6>
+                                            <h4 class="text-warning">₦<span id="monthly_payment">0.00</span></h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Items Available</h5>
+                            <p class="text-muted">Currently, there are no consumable items available for request.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                {% if selling_plans %}
+                <div class="text-center mb-4">
+                    <button type="submit" name="submit_request" class="btn btn-primary btn-lg">
+                        <i class="fas fa-paper-plane"></i> Submit Request
+                    </button>
+                    <div class="mt-2">
+                        <small class="text-muted">Make sure all information is correct before submitting</small>
+                    </div>
+                </div>
+                {% endif %}
+            </form>
+
+            {% else %}
+            <!-- No fee payments available for this guest -->
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <h4 class="text-muted">No Fee Payments Found</h4>
+                    <p class="text-muted">No fee payments were found for the provided details. Please ensure you have paid the consumable form fee with the same information.</p>
+                    <div class="mt-3">
+                        <a href="{% url 'consumable_fee' %}" class="btn btn-primary me-2">
+                            <i class="fas fa-money-bill-wave"></i> Pay Form Fee
+                        </a>
+                        <button class="btn btn-secondary" onclick="window.location.reload()">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% endif %} <!-- End guest_identified check -->
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus on phone input for guest identification
+    const phoneInput = document.getElementById('guest_phone');
+    if (phoneInput) {
+        phoneInput.focus();
+    }
+
+    // Handle fee payment selection
+    const feePaymentSelect = document.getElementById('fee_payment_id');
+    const paymentInfo = document.getElementById('selected_payment_info');
+    const paymentDetails = document.getElementById('payment_details');
+
+    if (feePaymentSelect) {
+        feePaymentSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                const consumableType = selectedOption.getAttribute('data-consumable-type');
+                paymentDetails.innerHTML = `
+                    <strong>Consumable Type:</strong> ${consumableType}<br>
+                    <strong>Payment Details:</strong> ${selectedOption.text}
+                `;
+                paymentInfo.style.display = 'block';
+            } else {
+                paymentInfo.style.display = 'none';
+            }
+        });
+    }
+
+    // Handle item selection and quantity
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+    const quantityInputs = document.querySelectorAll('input[name^="quantity_"]');
+    const loanTermSelect = document.getElementById('loan_term_months');
+
+    // Show/hide quantity controls when items are selected
+    itemCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const card = this.closest('.item-card');
+            const quantityControls = card.querySelector('.quantity-controls');
+            
+            if (this.checked) {
+                quantityControls.style.display = 'block';
+                card.classList.add('border-primary');
+            } else {
+                quantityControls.style.display = 'none';
+                card.classList.remove('border-primary');
+            }
+            
+            updateOrderSummary();
+        });
+    });
+
+    // Handle quantity changes
+    quantityInputs.forEach(function(input) {
+        input.addEventListener('input', function() {
+            const card = this.closest('.item-card');
+            const totalSpan = card.querySelector('.item-total');
+            const price = parseFloat(totalSpan.getAttribute('data-price'));
+            const quantity = parseInt(this.value) || 0;
+            
+            totalSpan.textContent = (price * quantity).toFixed(2);
+            updateOrderSummary();
+        });
+    });
+
+    // Handle loan term changes
+    if (loanTermSelect) {
+        loanTermSelect.addEventListener('change', updateOrderSummary);
+    }
+
+    function updateOrderSummary() {
+        let selectedCount = 0;
+        let grandTotal = 0;
+
+        itemCheckboxes.forEach(function(checkbox) {
+            if (checkbox.checked) {
+                selectedCount++;
+                const card = checkbox.closest('.item-card');
+                const quantityInput = card.querySelector('input[name^="quantity_"]');
+                const price = parseFloat(card.querySelector('.item-total').getAttribute('data-price'));
+                const quantity = parseInt(quantityInput.value) || 0;
+                
+                grandTotal += price * quantity;
+            }
+        });
+
+        document.getElementById('selected_count').textContent = selectedCount;
+        document.getElementById('grand_total').textContent = grandTotal.toFixed(2);
+
+        // Update loan term display and monthly payment
+        const loanTermValue = loanTermSelect ? loanTermSelect.value : '';
+        const loanTermText = loanTermSelect && loanTermValue ? 
+            loanTermSelect.options[loanTermSelect.selectedIndex].text : 'Not selected';
+        
+        document.getElementById('loan_term_display').textContent = loanTermText;
+        
+        const monthlyPayment = loanTermValue && grandTotal > 0 ? 
+            (grandTotal / parseInt(loanTermValue)).toFixed(2) : '0.00';
+        document.getElementById('monthly_payment').textContent = monthlyPayment;
+    }
+
+    // Phone number validation for guest identification
+    const guestIdentifyForm = document.querySelector('form button[name="identify_guest"]');
+    if (guestIdentifyForm) {
+        guestIdentifyForm.closest('form').addEventListener('submit', function(e) {
+            const phone = document.getElementById('guest_phone').value.trim();
+            
+            // Basic Nigerian phone number validation
+            const phoneRegex = /^(\+234|234|0)?[789][01]\d{8}$/;
+            if (!phoneRegex.test(phone.replace(/\s+/g, ''))) {
+                e.preventDefault();
+                alert('Please enter a valid Nigerian phone number');
+                return false;
+            }
+        });
+    }
+
+    // Form validation before submit
+    const submitForm = document.querySelector('form button[name="submit_request"]');
+    if (submitForm) {
+        submitForm.closest('form').addEventListener('submit', function(e) {
+            const feePayment = document.getElementById('fee_payment_id')?.value;
+            const loanTerm = document.getElementById('loan_term_months')?.value;
+            const selectedItems = document.querySelectorAll('.item-checkbox:checked');
+
+            if (!feePayment) {
+                e.preventDefault();
+                alert('Please select your fee payment record.');
+                return false;
+            }
+
+            if (!loanTerm) {
+                e.preventDefault();
+                alert('Please select a loan term.');
+                return false;
+            }
+
+            if (selectedItems.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one item.');
+                return false;
+            }
+
+            // Validate quantities
+            let validQuantities = true;
+            selectedItems.forEach(function(checkbox) {
+                const card = checkbox.closest('.item-card');
+                const quantityInput = card.querySelector('input[name^="quantity_"]');
+                const quantity = parseInt(quantityInput.value) || 0;
+                const maxQuantity = parseInt(quantityInput.max);
+                
+                if (quantity <= 0 || quantity > maxQuantity) {
+                    validQuantities = false;
+                }
+            });
+
+            if (!validQuantities) {
+                e.preventDefault();
+                alert('Please enter valid quantities for selected items.');
+                return false;
+            }
+
+            // Confirmation
+            const grandTotal = document.getElementById('grand_total').textContent;
+            const confirmMsg = `Are you sure you want to submit this request?\n\nItems: ${selectedItems.length}\nTotal: ₦${grandTotal}\nLoan Term: ${loanTerm} months`;
+            if (!confirm(confirmMsg)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

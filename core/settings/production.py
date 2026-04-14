@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'member',
     'nonstaff_app',
     'savings',
+    'special_savings',
     'PurchasedItems',
     'report',
     'projectfinance',
@@ -102,6 +103,16 @@ WSGI_APPLICATION = 'core.wsgi.application'
 #     }
 # }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': "demoTmcs",
+#         'USER': "tmcsapp",
+#         'PASSWORD': "@Tmcs.234",
+#         'HOST': "localhost",
+#         'PORT': "3306",
+#     }
+# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',

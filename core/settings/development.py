@@ -46,16 +46,23 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'accounts.User'
 
+ROOT_URLCONF = 'core.urls'
+
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE = 1000  # 1000 seconds
+SESSION_COOKIE_AGE = 900  #15 minutes
 SESSION_SAVE_EVERY_REQUEST = True
 
-# Redirect unauthenticated users
-LOGIN_URL = '/login/'        # or the name of your login route
-LOGIN_REDIRECT_URL = '/dashboard/'  # where to go after login
-LOGOUT_REDIRECT_URL = '/login/'  # where to go after logout
+# LOGIN_URL = '/'   
+LOGIN_URL = '/login-redirect/'# redirect unauthenticated users to home
+LOGIN_REDIRECT_URL = '/'        # after login
+LOGOUT_REDIRECT_URL = '/'       # after logout
 
 
+# # opional, as this will log you out when browser is closed
+# SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# SESSION_COOKIE_AGE = 90                   # 0r 5 * 60, same thing
+# # Will prrevent from logging you out after 300 seconds
+# SESSION_SAVE_EVERY_REQUEST = True
 
 MIDDLEWARE = [
     

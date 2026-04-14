@@ -1,0 +1,204 @@
+{% extends "base/base.html" %}
+
+
+{% block content %}
+<div class="content-card justify-content-center align-items-center">
+
+        <div class="row">
+            <div class="col-12">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0">
+                        <i class="fas fa-boxes me-2"></i>
+                        Manage Consumable Types
+                    </h4>
+        
+                </div>
+             <!-- Add New Form -->
+                    <div class="col-lg-12 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-plus-circle me-2"></i>
+                                    Add New Consumable Type
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    
+                                    <div class="mb-3">
+                                        <label for="name" class="form-label"> <i class="fas fa-tag me-1"></i> Name * </label>
+                                        <input type="text" class="form-control" id="name" name="name"  placeholder="Consumable Type Name" required maxlength="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="request_fee" class="form-label"> <i class="fas fa-tag me-1"></i> Request Fee * </label>
+                                        <input type="text" class="form-control" id="request_fee" name="request_fee"  placeholder="Consumable Type Request Fee" required maxlength="100">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">
+                                            <i class="fas fa-align-left me-1"></i>
+                                            Description
+                                        </label>
+                                        <textarea class="form-control" id="description" name="description" 
+                                                  placeholder="Description" rows="3"></textarea>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-save me-2"></i>
+                                        Add Consumable Type
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                <div class="row">
+                  
+                    <!-- Existing Types List -->
+                    <div class="col-lg-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-list me-2"></i>
+                                    Existing Consumable Types
+                                    <span class="badge bg-light text-dark ms-2">{{ consumable_types.count }}</span>
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                {% if consumable_types %}
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table">
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Form Fee</th>
+                                                    <th>Status</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for consumable_type in consumable_types %}
+                                                    <tr>
+                                                        <td class="text-nowrap" style="min-width: 120px;">
+                                                            <strong>{{ consumable_type.name }}</strong>
+                                                        </td>
+                                                        <td>
+                                                            <strong>{{consumable_type.request_fee}}</strong>
+                                                        </td>
+                                                        {% comment %} <td>
+                                                            <span class="text-muted">
+                                                                {% if consumable_type.description %}
+                                                                    {{ consumable_type.description|truncatechars:50 }}
+                                                                {% else %}
+                                                                    <em>No description</em>
+                                                                {% endif %}
+                                                            </span>
+                                                        </td> {% endcomment %}
+                                                       
+                                                        
+                                                        <td class="text-nowrap" style="min-width: 120px;">
+                                                            {% if consumable_type.available %}
+                                                                <span class="status-badge bg-success">
+                                                                    <i class="fas fa-check-circle me-1"></i>Available
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="status-badge bg-danger">
+                                                                    <i class="fas fa-times-circle me-1"></i>Unavailable
+                                                                </span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-nowrap" style="min-width: 120px;">
+                                                            <!-- Edit Button -->
+                                                            <button type="button" class="btn btn-outline-primary btn-sm me-1" 
+                                                                    data-bs-toggle="collapse" 
+                                                                    data-bs-target="#edit-{{ consumable_type.id }}" 
+                                                                    aria-expanded="false">
+                                                                <i class="fas fa-edit"></i> Edit
+                                                            </button>
+                                                            
+                                                            <!-- Toggle Status Form -->
+                                                            <form method="post" class="d-inline">
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="consumable_type_id" value="{{ consumable_type.id }}">
+                                                                <input type="hidden" name="action" value="toggle">
+                                                                <button type="submit" 
+                                                                        class="btn btn-outline-{% if consumable_type.available %}warning{% else %}success{% endif %} btn-sm" 
+                                                                        title="{% if consumable_type.available %}Disable{% else %}Enable{% endif %}">
+                                                                    <i class="fas fa-{% if consumable_type.available %}pause{% else %}play{% endif %}"></i>
+                                                                    {% if consumable_type.available %}Disable{% else %}Enable{% endif %}
+                                                                </button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                    
+                                                    <!-- Collapsible Edit Form -->
+                                                     <!-- Collapsible Edit Form -->
+                                                    <tr>
+                                                        <td colspan="6" class="p-0">
+                                                            <div class="collapse" id="edit-{{ consumable_type.id }}">
+                                                                <div class="card card-body bg-light">
+                                                                    <form method="post">
+                                                                        {% csrf_token %}
+                                                                        <input type="hidden" name="consumable_type_id" value="{{ consumable_type.id }}">
+                                                                        <input type="hidden" name="action" value="edit">
+
+                                                                        <div class="row g-3">
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label">Name *</label>
+                                                                                <input type="text" class="form-control" name="name" 
+                                                                                    value="{{ consumable_type.name }}" required>
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label">Request Fee *</label>
+                                                                                <input type="text" class="form-control" name="request_fee" 
+                                                                                    value="{{ consumable_type.request_fee }}" required>
+                                                                            </div>
+
+                                                                            <div class="col-12">
+                                                                                <label class="form-label">Description</label>
+                                                                                <textarea class="form-control" name="description" rows="3">
+                                                                                    {{ consumable_type.description }}
+                                                                                </textarea>
+                                                                            </div>
+
+                                                                            <div class="col-md-12 mt-3">
+                                                                                <div class="d-flex gap-2">
+                                                                                    <button type="submit" class="btn btn-success">
+                                                                                        <i class="fas fa-save me-1"></i> Save Changes
+                                                                                    </button>
+                                                                                    <button type="button" class="btn btn-secondary" 
+                                                                                            data-bs-toggle="collapse" 
+                                                                                            data-bs-target="#edit-{{ consumable_type.id }}">
+                                                                                        <i class="fas fa-times me-1"></i> Cancel
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
+                                        <h5 class="text-muted">No consumable types found</h5>
+                                        <p class="text-muted">Create your first consumable type using the form on the left.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock  %}
+    

@@ -7,9 +7,9 @@
 <div class="col-md-12">
     <div class="container shadow col-md-12">
         {% if settings %}
-        <h6 class="text-center  mb-4">Make Loan Request</h6>
+        <h4 class="text-center  mb-4">Make Loan Request</h4>
 
-        <div class="alert-info text-center fw-bold">
+        <div class=" alert-info text-center fw-bold">
             Your Current Loanable Balance: 
             <span class="text-success">₦{{ loanable|floatformat:2 }}</span>
         </div>
@@ -23,7 +23,7 @@
             <div class="row">
                <div class="col-md-6 mb-3">
                     <label for="loan_type" class="form-label">Loan Type <span class="text-danger">*</span></label>
-                    <select class="form-select" id="loan_type" name="loan_type" required >
+                    <select class="form-select" id="loan_type" name="loan_type" required>
                         <option value="" disabled selected>Choose a loan type</option>
                         {% for loan_type in loan_types %}
                         <option value="{{ loan_type.id }}" 
@@ -67,9 +67,17 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-6 mb-3">
+                {% comment %} <div class="col-md-6 mb-3">
                     <label for="bank_code" class="form-label">Bank Code <span class="text-danger">*</span></label>
                     <input type="text" id="bank_code" name="bank_code" class="form-control" readonly required>
+                </div> {% endcomment %}
+                <div class="col-md-6 mb-3">
+                   <!-- visible (for user) -->
+                 <label for="bank_code" class="form-label">Bank Code <span class="text-danger">*</span></label>   
+                <input type="text" id="bank_code_display" class="form-control" readonly>
+
+                <!-- hidden (for backend) -->
+                <input type="hidden" id="bank_code" name="bank_code">
                 </div>
 
                 <!-- Payslip Upload -->
@@ -112,7 +120,9 @@
                 url: "{% url 'ajax_load_bank_code' %}",
                 data: { 'bank_id': bankId },
                 success: function (data) {
-                    $('#bank_code').val(data.code || '');
+                    $('#bank_code_display').val(data.code || '');  // show user
+                    $('#bank_code').val(data.id || '');
+                    
                 }
             });
         } else {
@@ -162,17 +172,35 @@ $('#loan_type').change(function () {
 });
 
     // ✅ Auto-calculate Monthly Payment
-    function calculateMonthlyPayment() {
-        const amount = parseFloat($('#amount').val()) || 0;
-        const term = parseInt($('#loan_term_months').val()) || 0;
 
-        if (amount > 0 && term > 0) {
-            const monthly = amount / term;
-            $('#monthly_payment').val(`₦${monthly.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
-        } else {
-            $('#monthly_payment').val('');
-        }
+    function calculateMonthlyPayment() {
+    const amount = parseFloat($('#amount').val()) || 0;
+    const term = parseInt($('#loan_term_months').val()) || 0;
+
+    if (amount > 0 && term > 0) {
+
+        // Base monthly (rounded to 2dp)
+        let baseMonthly = Math.floor((amount / term) * 100) / 100;
+
+        // Calculate total of base payments
+        let totalBase = baseMonthly * term;
+
+        // Difference (remaining kobo)
+        let difference = +(amount - totalBase).toFixed(2);
+
+        // Add difference to last payment
+        let lastPayment = (baseMonthly + difference).toFixed(2);
+
+        // Show normal monthly + hint about last payment
+        $('#monthly_payment').val(
+            `₦${baseMonthly.toLocaleString(undefined, { minimumFractionDigits: 2 })} (last: ₦${Number(lastPayment).toLocaleString(undefined, { minimumFractionDigits: 2 })})`
+        );
+
+    } else {
+        $('#monthly_payment').val('');
     }
+}
+   
 
     $('#amount, #loan_term_months').on('input', calculateMonthlyPayment);
 </script>

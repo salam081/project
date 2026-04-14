@@ -299,12 +299,13 @@
         <form method="post" enctype="multipart/form-data" id="editConsumableForm">
             {% csrf_token %}
             <div class="row">
-                <div class=" col-md-4 ">
+                <div class="form-group col-md-4">
                     <label for="id_consumable_type">Consumable Type</label>
-                    <select name="consumable_type" id="id_consumable_type" class="form-select" required>
+                    <select name="consumable_type" id="id_consumable_type" required>
                         <option value="">Select a consumable type...</option>
                         {% for type in consumable_types %}
-                            <option value="{{ type.id }}" {% if type.id == consumable_request.consumable_type.id %}selected{% endif %}>
+                            <option value="{{ type.id }}" 
+                                {% if type.id == consumable_request.consumable_type.id %}selected{% endif %}>
                                 {{ type.name }}
                             </option>
                         {% endfor %}
@@ -313,7 +314,14 @@
 
                 <div class="form-group col-md-4">
                     <label for="id_loan_term_months">Duration (in Months)</label>
-                    <input type="number" name="loan_term_months" id="id_loan_term_months" placeholder="e.g., 1–6" min="1" max="6" value="{{ existing_details.first.loan_term_months }}"required>
+                    <input type="number" 
+                           name="loan_term_months" 
+                           id="id_loan_term_months" 
+                           placeholder="e.g., 1–6" 
+                           min="1" 
+                           max="6" 
+                           value="{{ existing_details.first.loan_term_months }}"
+                           required>
                 </div>
 
                 <div class="form-group col-md-4">

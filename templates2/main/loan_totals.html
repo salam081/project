@@ -1,0 +1,67 @@
+{% extends "base/base.html" %}
+{% block content %}
+<div class="content-card">
+    <div class="table-responsive">  
+
+        <!-- Savings, Loanable, Investment, Interest totals -->
+        <h2>Monthly Financial Totals</h2>
+        <table class="table table-bordered">
+    <tr>
+        <th>Month</th>
+        <th>Total Savings (₦)</th>
+        <th>Total Loanable (₦)</th>
+        <th>Total Investment (₦)</th>
+        <th>Total Interest (₦)</th>
+    </tr>
+    {% for month in all_months %}
+    <tr>
+        <td>{{ month|date:"F Y" }}</td>
+        <td>
+            {% for s in savings_by_month %}
+                {% if s.period == month %}{{ s.total_savings|floatformat:2 }}{% endif %}
+            {% endfor %}
+        </td>
+        <td>
+            {% for l in loanable_by_month %}
+                {% if l.period == month %}{{ l.total_loanable|floatformat:2 }}{% endif %}
+            {% endfor %}
+        </td>
+        <td>
+            {% for inv in investment_by_month %}
+                {% if inv.period == month %}{{ inv.total_investment|floatformat:2 }}{% endif %}
+            {% endfor %}
+        </td>
+        <td>
+            {% for i in interest_by_month %}
+                {% if i.period == month %}{{ i.total_interest|floatformat:2 }}{% endif %}
+            {% endfor %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+
+        <hr>
+
+        <!-- Loans by month and type -->
+        <h2>Loans Breakdown by Month & Type</h2>
+        <table class="table table-bordered">
+            <tr>
+                <th>Month</th>
+                <th>Loan Type</th>
+                <th>Total Requested (₦)</th>
+                <th>Total Approved (₦)</th>
+            </tr>
+            {% for loan in loans_by_month %}
+            <tr>
+                <td>{{ loan.period|date:"F Y" }}</td>
+                <td>{{ loan.loan_type__name }}</td>
+                <td>{{ loan.total_requested|floatformat:2 }}</td>
+                <td>{{ loan.total_approved|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+    </div>
+</div>
+{% endblock content %}

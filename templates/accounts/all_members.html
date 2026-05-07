@@ -39,18 +39,18 @@
 
         <!-- Middle Section: Search Form -->
         <form method="get" action="" class="d-flex flex-nowrap gap-2 align-items-center">
-            <input type="text" name="name" value="{{ search_name }}" 
-                   placeholder=" Ippis, name or phone" 
-                   class="form-control form-control-sm" style="min-width: 220px;">
+            <input  type="text" name="name" value="{{ search_name }}" placeholder=" Ippis, name or phone" 
+                   class="form-control form-control-sm" style="min-width: 150px;">
             <button type="submit" class="btn btn-primary btn-sm text-nowrap">
                 <i class="bi bi-search"></i> Search
             </button>
+             <a href="{% url 'all_members' %}" class="btn btn-warning btn-sm text-nowrap text-white">
+            Clear Filter
+        </a>
         </form>
 
         <!-- Right Section: Clear Button -->
-        <a href="{% url 'all_members' %}" class="btn btn-danger btn-sm text-nowrap text-white">
-            Clear Filter
-        </a>
+       
     </div>
 </div>
 
@@ -102,21 +102,29 @@
                         </button>
                     </td>
                     <td>
-                        <a class="btn btn-sm btn-outline-warning" href="{% url 'reset_password' m.member.id %}" title="Reset Password">
+                        <form method="post" action="{% url 'reset_password' m.id %}"
+                            onsubmit="return confirm('Reset password for {{ m.first_name }} {{ m.last_name }} With IPPIS -{{ m.member.ippis }}?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-warning" title="Reset Password">
+                                <i class="bi bi-key"></i> 
+                            </button>
+                        </form>
+                        
+                        {% comment %} <a class="btn btn-sm btn-outline-warning" href="{% url 'reset_password' m.member.id %}" title="Reset Password">
                             <i class="bi bi-key"></i>
-                        </a>
+                        </a> {% endcomment %}
                     </td>
                     <td>
                         {% if not m.is_active %}
                         <form method="post" action="{% url 'activate_users' %}" style="display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="user_ids" value="{{ m.id }}">
-                            <button type="submit" class="btn btn-sm btn-outline-success" title="Activate User">
-                                <i class="bi bi-user-check"></i>
+                            <button type="submit" class="status-badge btn btn-sm btn-danger" title="Activate User">
+                                <i class="bi bi-check"></i>Not Active
                             </button>
                         </form>
                         {% else %}
-                        <span class="badge bg-success" title="User is Active"><i class="fas fa-check-circle"></i> Active</span>
+                        <span class="status-badge bg-success" title="User is Active"><i class="bi bi-check"></i> Active</span>
                         {% endif %}
                     </td>
                     <td>

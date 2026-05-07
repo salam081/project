@@ -27,4 +27,6 @@ urlpatterns = [
     
    
     path('loan/<int:loan_id>/export/', views.export_loan_schedule, name='export_loan_schedule'),
+    
+   
 ]

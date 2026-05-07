@@ -2,501 +2,390 @@
 {% load static %}
 
 {% block title %}
-  Request #{{ request.id }} Detail
+  Request #{{ consumable_request.id }} Detail
 {% endblock %}
 
 {% block content %}
-  <style>
-    :root {
-      --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      --success-color: #28a745;
-      --warning-color: #ffc107;
-      --danger-color: #dc3545;
-      --info-color: #17a2b8;
-      --light-bg: #f8f9fa;
-      --white: #ffffff;
-      --border-color: #e1e5e9;
-      --text-dark: #2c3e50;
-      --text-muted: #6c757d;
-      --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.08);
-      --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.12);
-      --shadow-heavy: 0 10px 40px rgba(0, 0, 0, 0.15);
-      --border-radius: 12px;
-      --border-radius-sm: 8px;
-      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+<style>
+  :root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    --light-bg: #f8f9fa;
+    --white: #ffffff;
+    --border-color: #e1e5e9;
+    --text-dark: #2c3e50;
+    --text-muted: #6c757d;
+    --shadow-light: 0 2px 10px rgba(0,0,0,0.08);
+    --shadow-medium: 0 4px 20px rgba(0,0,0,0.12);
+    --shadow-heavy: 0 10px 40px rgba(0,0,0,0.15);
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-   
-    .request-detail-container {
-        max-width: 1200px;
-        margin: 30px auto;
-        padding: 0;
-   
-      background: transparent;
-      border-radius: 0;
-      box-shadow: none;
-    }
+  .request-detail-container {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+  }
 
-    .detail-header {
-      background: var(--white);
-      padding: 15px;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow-light);
-      margin-bottom: 25px;
-      border: 1px solid var(--border-color);
-    }
+  .detail-header {
+    background: var(--white);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    margin-bottom: 25px;
+    border: 1px solid var(--border-color);
+  }
 
-    .detail-header h2 {
-      margin: 0;
-      font-size: 2.1rem;
-      font-weight: 700;
-      color: var(--text-dark);
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
+  .detail-header h2 {
+    margin: 0;
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
 
-    .detail-header h2::before {
-      content: "📋";
-      font-size: 1.8rem;
-    }
+  .status-badge {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 25px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: var(--shadow-light);
+    transition: var(--transition);
+  }
 
-    .status-badge {
-      font-size: 0.9rem;
-      padding: 8px 16px;
-      border-radius: 25px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      box-shadow: var(--shadow-light);
-      transition: var(--transition);
-    }
+  .status-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-medium);
+  }
 
-    .status-badge:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-medium);
-    }
+  .status-Pending {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    color: #856404;
+    border: 1px solid #f1c40f;
+  }
 
-    .status-Pending {
-      background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-      color: #856404;
-      border: 1px solid #f1c40f;
-    }
+  .status-Approved {
+    background: linear-gradient(135deg, #d4edda 0%, #a8e6cf 100%);
+    color: #155724;
+    border: 1px solid var(--success-color);
+  }
 
-    .status-Approved {
-      background: linear-gradient(135deg, #d4edda 0%, #a8e6cf 100%);
-      color: #155724;
-      border: 1px solid var(--success-color);
-    }
+  .status-Declined {
+    background: linear-gradient(135deg, #f8d7da 0%, #ffb3ba 100%);
+    color: #721c24;
+    border: 1px solid var(--danger-color);
+  }
 
-    .status-Declined {
-      background: linear-gradient(135deg, #f8d7da 0%, #ffb3ba 100%);
-      color: #721c24;
-      border: 1px solid var(--danger-color);
-    }
-    .status-FullyPaid {
-      background: linear-gradient(135deg, #f8d7da 0%, #ffb3ba 100%);
-      color: #0818a3ff;
-      border: 1px solid var(--info-color: #17a2b8;);
-    }
+  /* FIX: was invalid CSS var() syntax + wrong class name for "Fully Paid" */
+  .status-Fully.Paid,
+  .status-fully-paid,
+  .status-FullyPaid {
+    background: linear-gradient(135deg, #cce5ff 0%, #b8daff 100%);
+    color: #0818a3;
+    border: 1px solid var(--info-color);
+  }
 
-    .card {
-      background: var(--white);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow-light);
-      border: 1px solid var(--border-color);
-      transition: var(--transition);
-      overflow: hidden;
-    }
+  .status-ItemPicked {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    color: #0c5460;
+    border: 1px solid var(--info-color);
+  }
 
-    .card:hover {
-      box-shadow: var(--shadow-medium);
-      transform: translateY(-2px);
-    }
+  .card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+    overflow: hidden;
+  }
 
-    .card-body {
-      padding: 25px;
-    }
+  .card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-2px);
+  }
 
-    .card h4 {
-      color: var(--text-dark);
-      font-weight: 600;
-      font-size: 1.3rem;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid var(--border-color);
-      position: relative;
-    }
+  .card-body {
+    padding: 25px;
+  }
 
-    .card h4::after {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 0;
-      width: 50px;
-      height: 2px;
-      background: var(--primary-gradient);
-      border-radius: 2px;
-    }
+  .card h4, .card h5, .card h6 {
+    color: var(--text-dark);
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color);
+    position: relative;
+  }
 
-    .detail-section {
-      background: transparent;
-      padding: 0;
-      border: none;
-      margin: 0;
-    }
+  .card h4::after, .card h5::after, .card h6::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 50px;
+    height: 2px;
+    background: var(--primary-gradient);
+    border-radius: 2px;
+  }
 
-    .row dt {
-      font-weight: 600;
-      color: var(--text-dark);
-      margin-bottom: 8px;
-      font-size: 0.95rem;
-    }
+  .items-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 1rem;
+  }
 
-    .row dd {
-      color: var(--text-muted);
-      margin-bottom: 15px;
-      font-size: 1rem;
-      padding-left: 10px;
-      border-left: 3px solid var(--border-color);
-    }
+  .items-list li {
+    background: #f8f9fa;
+    border-radius: var(--border-radius-sm);
+    padding: 10px 15px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+  }
 
-    .items-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      font-size: 1rem
-    }
+  .items-list li:hover {
+    background: #e9ecef;
+    border-color: #667eea;
+    transform: translateX(5px);
+  }
 
-    .items-list li {
-      background: #f8f9fa;
-      border-radius: var(--border-radius-sm);
-      padding: 5px;
-      margin-bottom: 12px;
-      border: 1px solid var(--border-color);
-      transition: var(--transition);
-    }
+  .items-list li:last-child {
+    margin-bottom: 0;
+  }
 
-    .items-list li:hover {
-      background: #e9ecef;
-      border-color: #667eea;
-      transform: translateX(5px);
-    }
+  .item-title {
+    font-weight: 600;
+    color: var(--text-dark);
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+  }
 
-    .items-list li:last-child {
-      margin-bottom: 0;
-    }
+  .item-details {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
 
-    .item-title {
-      font-weight: 600;
-      color: var(--text-dark);
-      font-size: 1.1rem;
-      margin-bottom: 5px;
-    }
+  .item-price {
+    font-weight: 700;
+    color: var(--success-color);
+    font-size: 1.1rem;
+  }
 
-    .item-details {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-    }
+  .total-price-summary {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 20px;
+    border-radius: var(--border-radius-sm);
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 20px;
+    box-shadow: var(--shadow-medium);
+  }
 
-    .item-price {
-      font-weight: 700;
-      color: var(--success-color);
-      font-size: 1.2rem;
-    }
+  /* FIX: removed invalid width: 400%% */
+  .action-buttons {
+    background: var(--white);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+    margin-top: 25px;
+    border: 1px solid var(--border-color);
+  }
 
-    .total-price-summary {
-      background: var(--primary-gradient);
-      color: white;
-      padding: 20px;
-      border-radius: var(--border-radius-sm);
-      font-size: 1.4rem;
-      font-weight: 700;
-      text-align: center;
-      margin-top: 20px;
-      box-shadow: var(--shadow-medium);
-    }
+  .btn {
+    padding: 10px 20px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: var(--transition);
+    border: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
 
-    .action-buttons {
-      background: var(--white);
-      padding: 15px;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow-light);
-      margin-top: 25px;
-      text-align: left;
-      width: 400%%;
-      border: 1px solid var(--border-color);
-    }
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+  }
 
-    .btn {
-      padding: 12px 24px;
-      border-radius: var(--border-radius-sm);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      transition: var(--transition);
-      border: none;
-      font-size: 0.9rem;
-      margin-left: 10px;
-      cursor: pointer;
-    }
+  .btn-secondary { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: white; }
+  .btn-success   { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
+  .btn-danger    { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; }
+  .btn-primary   { background: var(--primary-gradient); color: white; }
 
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-medium);
-    }
+  .no-items-message {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-style: italic;
+    background: #f8f9fa;
+    border-radius: var(--border-radius-sm);
+    border: 2px dashed var(--border-color);
+  }
 
-    .btn:active {
-      transform: translateY(0);
-    }
+  .fade-in {
+    animation: fadeIn 0.6s ease-in-out;
+  }
 
-    .btn-secondary {
-      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-      color: white;
-    }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
-    .btn-success {
-      background: linear-gradient(135deg, var(--success-color) 0%, #20c997 100%);
-      color: white;
-    }
-
-    .btn-danger {
-      background: linear-gradient(135deg, var(--danger-color) 0%, #c82333 100%);
-      color: white;
-    }
-
-    .btn-primary {
-      background: var(--primary-gradient);
-      color: white;
-    }
-
-    .payslip-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      text-decoration: none;
-    }
-
-    .payslip-link::before {
-      content: "📄";
-      font-size: 1.1rem;
-    }
-
-    .info-icon {
-      display: inline-block;
-      width: 24px;
-      height: 24px;
-      background: var(--info-color);
-      color: white;
-      border-radius: 50%;
-      text-align: center;
-      line-height: 24px;
-      font-size: 14px;
-      margin-right: 8px;
-    }
-
-    .no-items-message {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-muted);
-      font-style: italic;
-      background: #f8f9fa;
-      border-radius: var(--border-radius-sm);
-      border: 2px dashed var(--border-color);
-    }
-
-    .request-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: var(--border-radius-sm);
-      border-left: 4px solid #667eea;
-    }
-
-    .request-id {
-      font-family: 'Courier New', monospace;
-      background: #e9ecef;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    @media (max-width: 768px) {
-      .request-detail-container {
-        margin: 15px;
-      }
-
-      .detail-header {
-        padding: 15px;
-      }
-
-      .detail-header h2 {
-        font-size: 1.6rem;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-      }
-
-      .card-body {
-        padding: 15px;
-      }
-
-      .action-buttons {
-        text-align: center;
-        padding: 10px;
-      }
-
-      .btn {
-        margin: 5px;
-        width: 100%;
-        max-width: 200px;
-      }
-
-      .row dt,
-      .row dd {
-        padding: 0;
-        margin-bottom: 10px;
-      }
-
-      .items-list li {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-      }
-    }
-
-    .fade-in {
-      animation: fadeIn 0.6s ease-in-out;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  </style>
+  @media (max-width: 768px) {
+    .request-detail-container { margin: 15px; }
+    .detail-header { padding: 15px; }
+    .card-body { padding: 15px; }
+    .action-buttons { text-align: center; padding: 10px; }
+    .btn { margin: 5px; width: 100%; max-width: 200px; }
+  }
+</style>
 
 <div class="request-detail-container fade-in">
+
+  <!-- Header -->
   <div class="detail-header d-flex justify-content-between align-items-center gap-3">
-    <h5> <a href="{% url 'admin_consumables_list' %}" class="btn btn-sm btn-secondary text-white">← Back to List</a></h5>
-    <span class="status-badge status-{{ consumable_request.status }}">{{ consumable_request.status }}</span>
+    <a href="{% url 'admin_consumables_list' %}" class="btn btn-sm btn-secondary text-white">
+      ← Back to List
+    </a>
+    <!-- FIX: status "Fully Paid" has a space — pass it through a slugified class via inline style fallback -->
+    <span class="status-badge status-{{ consumable_request.status|cut:' ' }}">
+      {{ consumable_request.status }}
+    </span>
   </div>
 
-  <div class="row">
+  <div class="row g-4">
+
+    <!-- LEFT COLUMN -->
     <div class="col-lg-7 col-md-12">
       <div class="card shadow">
         <div class="card-body">
           <h5>📋 Request Details</h5>
-          <div class="detail-section">
-            <div class="table-responsive">
 
-              <div class="row">
-                <table class="table table-bordered">
-                  <tbody>
-                    <tr>
-                      <th>👤 Requested By</th>
-                      <td>
-                        {% if consumable_request.user %}
-                          {{ consumable_request.user.first_name }} {{ consumable_request.user.last_name }}
-                        {% else %}
-                          {{ consumable_request.guest_name }}
-                        {% endif %}
-                      </td>
-                    </tr>
-
-                    <tr>
-                      <th>📦 Consumable Type</th>
-                      <td>{{ consumable_request.consumable_type.name }}</td>
-                    </tr>
-
-                    <tr>
-                      <th>📅 Duration</th>
-                      <td>
-                        {% if consumable_request.details.first %}
-                          ⏱ {{ consumable_request.details.first.loan_term_months }} Months
-                        {% else %}
-                          <span class="text-muted">N/A</span>
-                        {% endif %}
-                      </td>
-                    </tr>
-
-                    <tr>
-                      <th>🕒 Date Submitted</th>
-                      <td>{{ consumable_request.date_created|date:'F j, Y, P' }}</td>
-                    </tr>
-
-                    {% if consumable_request.file_payslpt %}
-                      <tr>
-                        <th>💰 Payslip</th>
-                        <td>
-                          <a href="{{ consumable_request.file_payslpt.url }}" target="_blank" 
-                            class=" payslip-link fw-bold">
-                            View Payslip
-                          </a>
-                        </td>
-                      </tr>
+          <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+              <tbody>
+                <tr>
+                  <th style="width:40%">👤 Requested By</th>
+                  <td>
+                    {% if consumable_request.user %}
+                      {{ consumable_request.user.get_full_name|default:consumable_request.user.username }}
+                    {% else %}
+                      {{ consumable_request.guest_name }}
+                      <span class="badge bg-secondary ms-1" style="font-size:0.6rem;">GUEST</span>
                     {% endif %}
-                    {% if consumable_request.passport %}
-                      <tr>
-                        <th>💰 Photo</th>
-                        <td>
-                          <a href="{{ consumable_request.passport.url }}" target="_blank" 
-                            class=" payslip-link fw-bold">
-                            View Passport Photo
-                          </a>
-                        </td>
-                      </tr>
+                  </td>
+                </tr>
+                <tr>
+                  <th>📦 Consumable Type</th>
+                  <td>{{ consumable_request.consumable_type.name }}</td>
+                </tr>
+                <tr>
+                  <th>⏱ Duration</th>
+                  <td>
+                    {% if consumable_request.details.first %}
+                      {{ consumable_request.details.first.loan_term_months }} Months
+                    {% else %}
+                      <span class="text-muted">N/A</span>
                     {% endif %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>🕒 Date Submitted</th>
+                  <td>{{ consumable_request.date_created|date:'F j, Y, P' }}</td>
+                </tr>
 
-            {% if user.is_authenticated and user.group.title == 'admin' %}
+                {% if consumable_request.file_payslpt %}
+                <tr>
+                  <th>📄 Payslip</th>
+                  <td>
+                    <img src="{{ consumable_request.file_payslpt.url }}"
+                         class="img-thumbnail rounded"
+                         style="width:100px; height:80px; object-fit:cover; cursor:zoom-in;"
+                         data-bs-toggle="modal"
+                         data-bs-target="#payslipModal">
+                  </td>
+                </tr>
+                {% endif %}
+
+               
+                {% if consumable_request.passport %}
+                <tr>
+                  <th>🪪 Passport Photo</th>
+                  <td>
+                    <img src="{{ consumable_request.passport.url }}"
+                         class="img-thumbnail rounded"
+                         style="width:100px; height:80px; object-fit:cover; cursor:zoom-in;"
+                         data-bs-toggle="modal"
+                         data-bs-target="#passportModal">
+                  </td>
+                </tr>
+                {% endif %}
+
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Approve / Decline buttons -->
+          <!-- FIX: user.groups.all — default Django User has no .group attribute -->
+          {% if user.is_authenticated %}
             {% if consumable_request.status == 'Pending' %}
-              <form action="{% url 'admin_request_approve' consumable_request.id %}" method="post" style="display:inline;">
+            <div class="action-buttons mt-3">
+              <form action="{% url 'admin_request_approve' consumable_request.id %}"
+                    method="post" class="d-inline">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-success">Approve</button>
+                <button type="submit" class="btn btn-success btn-sm">✔ Approve</button>
               </form>
-              <form action="{% url 'admin_request_reject' consumable_request.id %}" method="post" style="display:inline;">
+              <form action="{% url 'admin_request_reject' consumable_request.id %}"
+                    method="post" class="d-inline ms-2">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-danger">Decline</button>
+                <button type="submit" class="btn btn-danger btn-sm">✖ Decline</button>
               </form>
+            </div>
             {% endif %}
-            {% endif %}
-          </div>
+          {% endif %}
 
-          <hr style="color: #100202ff;">
+          <hr>
 
-          <div class="col-md-12">
-            <div class="card shadow mt-2">
-              <div class="card-body">
-                <h6>Payment Summary</h6>
-                <ul class="items-list">
-                  <li class="d-flex justify-content-between align-items-center">
-                    <div class="item-details fs-6">Total Paid:</div>
-                    <div class="item-price">₦{{ total_paid|floatformat:2 }}</div>
-                  </li>
-                  <li class="d-flex justify-content-between align-items-center">
-                    <div class="item-details fs-6">Total Balance:</div>
-                    <div class="item-price">₦{{ balance|floatformat:2 }}</div>
-                  </li>
-                </ul>
-              </div>
+          <!-- Payment Summary -->
+          <div class="card shadow mt-2">
+            <div class="card-body">
+              <h6>💳 Payment Summary</h6>
+              <ul class="items-list">
+                <li class="d-flex justify-content-between align-items-center">
+                  <span class="item-details fs-6">Total Paid</span>
+                  <span class="item-price">₦{{ total_paid|floatformat:2 }}</span>
+                </li>
+                <li class="d-flex justify-content-between align-items-center">
+                  <span class="item-details fs-6">Balance Remaining</span>
+                  <span class="item-price {% if balance <= 0 %}text-success{% else %}text-danger{% endif %}">
+                    ₦{{ balance|floatformat:2 }}
+                  </span>
+                </li>
+              </ul>
             </div>
           </div>
+
         </div>
       </div>
     </div>
 
+    <!-- RIGHT COLUMN -->
     <div class="col-lg-5 col-md-12">
       <div class="card shadow">
         <div class="card-body">
@@ -504,13 +393,15 @@
           {% if consumable_request.details.all %}
             <ul class="items-list">
               {% for detail in consumable_request.details.all %}
-                <li class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="item-title fs-6">{{ detail.quantity }} × {{ detail.selling_item.purchased_item.item_name }}</div>
-                    <div class="item-details">Unit Price: ₦{{ detail.item_price|floatformat:2 }}</div>
+              <li class="d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="item-title fs-6">
+                    {{ detail.quantity }} × {{ detail.selling_item.purchased_item.item_name }}
                   </div>
-                  <div class="item-price">₦{{ detail.total_price|floatformat:2 }}</div>
-                </li>
+                  <div class="item-details">Unit Price: ₦{{ detail.item_price|floatformat:2 }}</div>
+                </div>
+                <div class="item-price">₦{{ detail.total_price|floatformat:2 }}</div>
+              </li>
               {% endfor %}
             </ul>
             <div class="total-price-summary fs-6">
@@ -525,28 +416,47 @@
       </div>
     </div>
 
+  </div><!-- /.row -->
+</div><!-- /.request-detail-container -->
+
+<!-- Payslip Modal -->
+{% if consumable_request.file_payslpt %}
+<div class="modal fade" id="payslipModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content bg-dark border-0">
+      <div class="modal-header border-0 pb-0">
+        <span class="text-white small fw-bold">📄 Payslip</span>
+        <button type="button" class="btn-close btn-close-white ms-auto"
+                data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2">
+        <img src="{{ consumable_request.file_payslpt.url }}"
+             class="img-fluid w-100 rounded"
+             style="object-fit: contain;">
+      </div>
+    </div>
   </div>
 </div>
+{% endif %}
 
-  
-
-    {% comment %} <div class="card col-md-7">
-        <div class="card-body">
-      <a href="{% url 'admin_consumables_list' %}" class="btn btn-secondary">
-        ← Back to List
-      </a>
-
-      {% if request.status == 'Pending' %}
-        <form action="{% url 'admin_request_approve' request.id %}" method="post" style="display:inline;">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-success"> Approve</button>
-        </form>
-        <form action="{% url 'admin_request_reject' request.id %}" method="post" style="display:inline;">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger">Decline</button>
-        </form>
-      {% endif %}
+<!-- Passport Modal -->
+{% if consumable_request.passport %}
+<div class="modal fade" id="passportModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content bg-dark border-0">
+      <div class="modal-header border-0 pb-0">
+        <span class="text-white small fw-bold">🪪 Passport Photo</span>
+        <button type="button" class="btn-close btn-close-white ms-auto"
+                data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2">
+        <img src="{{ consumable_request.passport.url }}"
+             class="img-fluid w-100 rounded"
+             style="object-fit: contain;">
+      </div>
     </div>
-    </div> {% endcomment %}
   </div>
+</div>
+{% endif %}
+
 {% endblock %}

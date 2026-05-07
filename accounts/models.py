@@ -84,14 +84,7 @@ class Member(models.Model):
 
         self.save()
     
-    # Special savings updater
-    # def update_special_savings(self):
-    #     total = self.special_savings.aggregate(total=models.Sum("month_savings"))["total"] or Decimal("0.00")
 
-    #     self.total_special_savings = total
-    #     self.save(update_fields=["total_special_savings"])
-            
- 
     
     def update_special_savings(self):
         from django.db.models import Sum

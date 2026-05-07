@@ -366,13 +366,20 @@ def admin_consumables_list(request):
 
     if status_filter and status_filter != 'all':
         consumables_list = consumables_list.filter(status=status_filter)
-
+    
     if user_filter:
         consumables_list = consumables_list.filter(
             Q(user__username__icontains=user_filter) |
             Q(user__first_name__icontains=user_filter) |
-            Q(user__last_name__icontains=user_filter)
-        )
+            Q(user__last_name__icontains=user_filter) |
+            # Filter for Member IPPIS (linked via User)
+            Q(user__member__ippis__icontains=user_filter) | 
+            # Filter for Guest IPPIS (stored directly on ConsumableRequest)
+            Q(guest_ippis__icontains=user_filter) |
+            # Filter for Guest Name (handy for general search)
+            Q(guest_name__icontains=user_filter)
+        ).distinct() 
+   
 
     if consumable_type_filter and consumable_type_filter != 'all':
         try:
@@ -412,6 +419,33 @@ def admin_consumable_detail(request, request_id):
         'balance': balance
     }
     return render(request, 'consumable/consumables_detail.html', context)
+
+
+
+def guest_requests_list(request):
+    guest_qs = ConsumableRequest.objects.filter(user__isnull=True).exclude(guest_name__isnull=True
+    ).prefetch_related('details__selling_item__purchased_item').order_by('-date_created')
+
+    # Add pagination (20 per page)
+    paginator = Paginator(guest_qs, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {'page_obj': page_obj,}
+    return render(request, 'consumable/guest_requests_list.html', context)
+
+def guest_request_detail(request, pk):
+    # Fetch the specific request or return 404
+    # Prefetch details and the linked selling items for performance
+    consumable_request = get_object_or_404(
+        ConsumableRequest.objects.prefetch_related(
+            'details__selling_item__purchased_item'
+        ), 
+        pk=pk
+    )
+    
+    context = {'req': consumable_request,}
+    return render(request, 'consumable/guest_request_detail.html', context)
 
 @login_required
 @group_required(['admin'])
@@ -740,19 +774,17 @@ def add_single_consumable_payment(request):
 @login_required
 @group_required(['admin'])
 def upload_consumable_payment(request):
-    # 1 — Group by type instead of month
     available_requests = ConsumableRequest.objects.filter(status="Itempicked").select_related(
         "user", "consumable_type"
     )
 
     grouped_by_type = defaultdict(list)
     for req in available_requests:
-        if req.balance > 0:  # uses model method
+        if req.balance > 0:
             grouped_by_type[req.consumable_type].append(req)
 
     grouped_list = sorted(grouped_by_type.items(), key=lambda x: x[0].name)
 
-    # 2 — Handle upload
     if request.method == "POST":
         selected_type_id = request.POST.get("selected_type")
         repayment_date_str = request.POST.get("repayment_date")
@@ -785,12 +817,21 @@ def upload_consumable_payment(request):
             messages.error(request, "Excel must contain 'IPPIS' and 'Amount Paid' columns.")
             return redirect("upload_consumable_payment")
 
-        # Map IPPIS to requests for the selected type
         type_requests = grouped_by_type.get(selected_type, [])
-        ippis_map = {
+
+        # ── Build two lookup maps ─────────────────────────────────────
+        # Map 1: registered members  (user → member.ippis)
+        member_ippis_map = {
             str(req.user.member.ippis): req
             for req in type_requests
-            if hasattr(req.user, "member") and req.user.member.ippis
+            if req.user and hasattr(req.user, "member") and req.user.member.ippis
+        }
+
+        # Map 2: guests  (guest_ippis field, user=None)
+        guest_ippis_map = {
+            str(req.guest_ippis).strip(): req
+            for req in type_requests
+            if not req.user and req.guest_ippis
         }
 
         paybacks_to_create = []
@@ -801,50 +842,72 @@ def upload_consumable_payment(request):
             for _, row in df.iterrows():
                 raw_ippis = row["IPPIS"]
 
-                if pd.isna(raw_ippis):  # skip empty IPPIS
+                if pd.isna(raw_ippis):
                     skipped.append("Empty IPPIS")
                     continue
 
-                if isinstance(raw_ippis, (int, float)):
-                    ippis = str(int(raw_ippis))
-                else:
-                    ippis = str(raw_ippis).strip()
+                ippis = str(int(raw_ippis)) if isinstance(raw_ippis, (int, float)) \
+                        else str(raw_ippis).strip()
 
-                # ✅ Convert amount to Decimal safely
+                # ── Validate amount ───────────────────────────────────
                 try:
                     amount = Decimal(str(row["Amount Paid"]))
                 except Exception:
                     skipped.append(f"{ippis} (invalid amount)")
                     continue
 
-                req = ippis_map.get(ippis)
+                if amount <= 0:
+                    skipped.append(f"{ippis} (amount must be greater than zero)")
+                    continue
+
+                # ── Resolve request: member first, guest fallback ─────
+                req = member_ippis_map.get(ippis)
+                request_source = "member"
+
                 if not req:
-                    skipped.append(ippis)
+                    req = guest_ippis_map.get(ippis)
+                    request_source = "guest"
+
+                if not req:
+                    skipped.append(f"{ippis} (no active request found)")
                     continue
 
-
-                # Skip duplicates
-                if PaybackConsumable.objects.filter(
+                # ── Double payment: same month check ──────────────────
+                already_paid = PaybackConsumable.objects.filter(
                     consumable_request=req,
-                    repayment_date=repayment_date
-                ).exists():
-                    skipped.append(ippis)
+                    repayment_date__year=repayment_date.year,
+                    repayment_date__month=repayment_date.month,
+                ).exists()
+
+                if already_paid:
+                    skipped.append(
+                        f"{ippis} (already paid for "
+                        f"{repayment_date.strftime('%B %Y')}) [{request_source}]"
+                    )
                     continue
 
-                # Calculate balance_remaining before bulk_create
+                # ── Amount exceeds balance check ──────────────────────
                 total_price = Decimal(str(req.calculate_total_price()))
                 total_paid_so_far = Decimal(str(
                     req.repayments.aggregate(total=Sum("amount_paid"))["total"] or 0
                 ))
-                balance = total_price - (total_paid_so_far + amount)
+                balance = total_price - total_paid_so_far
 
+                if amount > balance:
+                    skipped.append(
+                        f"{ippis}: Payment ₦{amount} exceeds balance ₦{balance} "
+                        f"[{request_source}]"
+                    )
+                    continue
+
+                # ✅ All checks passed
                 paybacks_to_create.append(
                     PaybackConsumable(
                         consumable_request=req,
                         amount_paid=amount,
                         repayment_date=repayment_date,
-                        balance_remaining=balance,
-                        created_by=request.user
+                        balance_remaining=balance - amount,  # accurate after deduction
+                        created_by=request.user,
                     )
                 )
                 uploaded += 1
@@ -852,19 +915,146 @@ def upload_consumable_payment(request):
             if paybacks_to_create:
                 PaybackConsumable.objects.bulk_create(paybacks_to_create)
 
-                # ✅ Update statuses after creating repayments
-                request_ids = {repay.consumable_request_id for repay in paybacks_to_create}
+                request_ids = {p.consumable_request_id for p in paybacks_to_create}
                 for req in ConsumableRequest.objects.filter(id__in=request_ids):
                     req.update_status_based_on_balance()
 
         messages.success(request, f"{uploaded} payment(s) uploaded successfully.")
         if skipped:
-            messages.warning(request, f"Skipped IPPIS: {', '.join(skipped)}")
+            for s in skipped:
+                messages.warning(request, f"Skipped: {s}")
 
         return redirect("upload_consumable_payment")
 
     context = {"grouped_list": grouped_list}
     return render(request, "consumable/upload_consumable_payment.html", context)
+
+# def upload_consumable_payment(request):
+#     # 1 — Group by type instead of month
+#     available_requests = ConsumableRequest.objects.filter(status="Itempicked").select_related(
+#         "user", "consumable_type"
+#     )
+
+#     grouped_by_type = defaultdict(list)
+#     for req in available_requests:
+#         if req.balance > 0:  # uses model method
+#             grouped_by_type[req.consumable_type].append(req)
+
+#     grouped_list = sorted(grouped_by_type.items(), key=lambda x: x[0].name)
+
+#     # 2 — Handle upload
+#     if request.method == "POST":
+#         selected_type_id = request.POST.get("selected_type")
+#         repayment_date_str = request.POST.get("repayment_date")
+#         file = request.FILES.get("excel_file")
+
+#         if not selected_type_id or not repayment_date_str or not file:
+#             messages.error(request, "All fields are required.")
+#             return redirect("upload_consumable_payment")
+
+#         try:
+#             selected_type = ConsumableType.objects.get(id=selected_type_id)
+#         except ConsumableType.DoesNotExist:
+#             messages.error(request, "Invalid consumable type.")
+#             return redirect("upload_consumable_payment")
+
+#         try:
+#             repayment_date = datetime.strptime(repayment_date_str, "%Y-%m-%d").date()
+#         except ValueError:
+#             messages.error(request, "Invalid repayment date format.")
+#             return redirect("upload_consumable_payment")
+
+#         try:
+#             df = pd.read_excel(file)
+#         except Exception as e:
+#             messages.error(request, f"Error reading Excel file: {e}")
+#             return redirect("upload_consumable_payment")
+
+#         required_cols = {"IPPIS", "Amount Paid"}
+#         if not required_cols.issubset(df.columns):
+#             messages.error(request, "Excel must contain 'IPPIS' and 'Amount Paid' columns.")
+#             return redirect("upload_consumable_payment")
+
+#         # Map IPPIS to requests for the selected type
+#         type_requests = grouped_by_type.get(selected_type, [])
+#         ippis_map = {
+#             str(req.user.member.ippis): req
+#             for req in type_requests
+#             if hasattr(req.user, "member") and req.user.member.ippis
+#         }
+
+#         paybacks_to_create = []
+#         skipped = []
+#         uploaded = 0
+
+#         with transaction.atomic():
+#             for _, row in df.iterrows():
+#                 raw_ippis = row["IPPIS"]
+
+#                 if pd.isna(raw_ippis):  # skip empty IPPIS
+#                     skipped.append("Empty IPPIS")
+#                     continue
+
+#                 if isinstance(raw_ippis, (int, float)):
+#                     ippis = str(int(raw_ippis))
+#                 else:
+#                     ippis = str(raw_ippis).strip()
+
+#                 # ✅ Convert amount to Decimal safely
+#                 try:
+#                     amount = Decimal(str(row["Amount Paid"]))
+#                 except Exception:
+#                     skipped.append(f"{ippis} (invalid amount)")
+#                     continue
+
+#                 req = ippis_map.get(ippis)
+#                 if not req:
+#                     skipped.append(ippis)
+#                     continue
+
+
+#                 # Skip duplicates
+#                 if PaybackConsumable.objects.filter(
+#                     consumable_request=req,
+#                     repayment_date=repayment_date
+#                 ).exists():
+#                     skipped.append(ippis)
+#                     continue
+
+#                 # Calculate balance_remaining before bulk_create
+#                 total_price = Decimal(str(req.calculate_total_price()))
+#                 total_paid_so_far = Decimal(str(
+#                     req.repayments.aggregate(total=Sum("amount_paid"))["total"] or 0
+#                 ))
+#                 balance = total_price - (total_paid_so_far + amount)
+
+#                 paybacks_to_create.append(
+#                     PaybackConsumable(
+#                         consumable_request=req,
+#                         amount_paid=amount,
+#                         repayment_date=repayment_date,
+#                         balance_remaining=balance,
+#                         created_by=request.user
+#                     )
+#                 )
+#                 uploaded += 1
+
+#             if paybacks_to_create:
+#                 PaybackConsumable.objects.bulk_create(paybacks_to_create)
+
+#                 # ✅ Update statuses after creating repayments
+#                 request_ids = {repay.consumable_request_id for repay in paybacks_to_create}
+#                 for req in ConsumableRequest.objects.filter(id__in=request_ids):
+#                     req.update_status_based_on_balance()
+
+#         messages.success(request, f"{uploaded} payment(s) uploaded successfully.")
+#         if skipped:
+#             messages.warning(request, f"Skipped IPPIS: {', '.join(skipped)}")
+
+#         return redirect("upload_consumable_payment")
+
+#     context = {"grouped_list": grouped_list}
+#     return render(request, "consumable/upload_consumable_payment.html", context)
 
 
 @login_required

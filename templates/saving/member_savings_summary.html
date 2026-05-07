@@ -1,0 +1,366 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+
+<style>
+.table th {
+    background-color: #343a40;
+    color: white; font-weight: 600;
+    border-color: #454d55;
+}
+.table-hover tbody tr:hover {
+     background-color: rgba(0,123,255,.075);
+}
+.badge-info { 
+    background-color: #17a2b8; 
+}
+.text-end { 
+    text-align: right; 
+}
+.pagination .page-link { 
+    color: #007bff; 
+}
+.pagination .page-item.active .page-link { 
+    background-color: #007bff; 
+    border-color: #007bff; 
+}
+.info-box { 
+    border-radius: 8px; 
+}
+tfoot tr td { 
+    font-size: 0.9rem; 
+}
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">
+                        Member Savings Summary
+                        {% if period_label %}<small class="text-muted ms-2">— {{ period_label }}</small>{% endif %}
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-badge badge-info text-white">Total: {{ total_records }} member{{ total_records|pluralize }}</span>
+                        <a href="?name={{ search_name }}&ippis={{ search_ippis }}&group={{ search_group }}&month={{ selected_month }}&date_from={{ date_from }}&date_to={{ date_to }}&export=excel"
+                           class="btn btn-success btn-sm ms-2 text-white">
+                            <i class="bi bi-file-excel"></i> Export Excel
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-body">
+
+                    <!-- Filters -->
+                    <form method="get" class="row g-3 mb-4" id="filterForm">
+                        <div class="col-md-2">
+                            <label class="form-label">Search by Name:</label>
+                            <input type="text" name="name" value="{{ search_name }}" placeholder="First or last name..." class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Search by IPPIS:</label>
+                            <input type="text" name="ippis" value="{{ search_ippis }}" placeholder="IPPIS number..." class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-1">
+                            <label for="group">Group:</label>
+                            <select name="group" id="group" class="form-control form-control-sm">
+                                <option value="">All</option>
+                                {% for g in groups %}
+                                    <option value="{{ g.id }}" {% if g.id|stringformat:"s" == search_group %}selected{% endif %}>
+                                        {{ g.title }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Month filter -->
+                        <div class="col-md-2">
+                            <label class="form-label">Filter by Month:</label>
+                            <input type="month" name="month" value="{{ selected_month }}" class="form-control form-control-sm">
+                        </div>
+                        <!-- ✅ Date range filters -->
+                        <div class="col-md-1">
+                            <label class="form-label">From:</label>
+                            <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">To:</label>
+                            <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">Per page:</label>
+                            <select name="per_page" class="form-control form-control-sm">
+                                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                                <option value="150" {% if per_page == 150 %}selected{% endif %}>150</option>
+                                <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+                                <option value="250" {% if per_page == 250 %}selected{% endif %}>250</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary btn-sm me-2">Filter</button>
+                            <a href="{% url 'member_savings_summary' %}" class="btn btn-secondary btn-sm text-white">Clear</a>
+                        </div>
+                    </form>
+
+                    <!-- ✅ Active filter badge -->
+                    {% if period_label %}
+                    <div class="alert alert-info py-2 mb-3">
+                        <i class="fas fa-filter"></i>
+                        {% if month_label %}
+                            Showing period data for: <strong>{{ month_label }}</strong>
+                        {% else %}
+                            Showing period data for: <strong>{{ date_range_label }}</strong>
+                        {% endif %}
+                        &nbsp;—&nbsp; Month filter takes priority if both are set.
+                    </div>
+                    {% endif %}
+
+                    <!-- Pagination Info -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="text-muted">
+                            Showing
+                            {% if page_obj.object_list %}
+                                {{ page_obj.start_index }} to {{ page_obj.end_index }}
+                            {% else %}
+                                0 to 0
+                            {% endif %}
+                            of {{ total_records }} members
+                        </div>
+                        <small class="text-muted">Page {{ pagination_info.current_page }} of {{ pagination_info.total_pages }}</small>
+                    </div>
+
+                    <!-- All-time Grand Totals Cards -->
+                    <div class="row mb-3">
+                        <div class="col-12 mb-1">
+                            <h6 class="text-muted"><i class="fas fa-infinity"></i> All-Time Totals</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-box bg-success p-2">
+                                <span class="info-box-icon"><i class="fas fa-piggy-bank"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text text-white">Total Savings</span>
+                                    <span class="info-box-number text-white">₦{{ grand_totals.grand_savings|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-box bg-info p-2">
+                                <span class="info-box-icon"><i class="fas fa-hand-holding-usd"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text text-white">Total Loanable</span>
+                                    <span class="info-box-number text-white">₦{{ grand_totals.grand_loanable|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-box bg-warning p-2">
+                                <span class="info-box-icon"><i class="fas fa-chart-line"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text text-white">Total Investment</span>
+                                    <span class="info-box-number text-white">₦{{ grand_totals.grand_investment|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ✅ Period totals cards -->
+                    {% if show_period %}
+                    <div class="row mb-4">
+                        <div class="col-12 mb-1">
+                            <h6 class="text-muted">
+                                <i class="fas fa-calendar-alt"></i> Period Totals
+                                <span class="status-badge badge-secondary ms-1">{{ period_label }}</span>
+                            </h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-box p-2" style="background-color:#1a7a4a;">
+                                <span class="info-box-icon"><i class="fas fa-piggy-bank"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text text-white">Period Savings</span>
+                                    <span class="info-box-number text-white">₦{{ grand_totals.grand_period_savings|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-box p-2" style="background-color:#117a8b;">
+                                <span class="info-box-icon"><i class="fas fa-hand-holding-usd"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text text-white">Period Loanable</span>
+                                    <span class="info-box-number text-white">₦{{ grand_totals.grand_period_loanable|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-box p-2" style="background-color:#c07000;">
+                                <span class="info-box-icon"><i class="fas fa-chart-line"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text text-white">Period Investment</span>
+                                    <span class="info-box-number text-white">₦{{ grand_totals.grand_period_investment|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Table -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>S/N</th>
+                                    <th>Member</th>
+                                    <th>IPPIS</th>
+                                    <th class="text-end text-nowrap" style="min-width:140px;">Total Savings</th>
+                                    <th class="text-end text-nowrap" style="min-width:140px;">Total Loanable</th>
+                                    <th class="text-end text-nowrap" style="min-width:140px;">Total Investment</th>
+                                    {% if show_period %}
+                                    <th class="text-end text-nowrap table-success" style="min-width:160px;">{{ period_label }} Savings</th>
+                                    <th class="text-end text-nowrap table-info" style="min-width:160px;">{{ period_label }} Loanable</th>
+                                    <th class="text-end text-nowrap table-warning" style="min-width:160px;">{{ period_label }} Investment</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for member in page_obj.object_list %}
+                                <tr>
+                                    <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                                    <td class="text-nowrap text-truncate" style="max-width: 270px;">  
+                                    <strong>{{ member.member.first_name }} {{ member.member.last_name }}</strong>  
+                                    </td>
+                                    <td><span class="text-success fw-bold">{{ member.ippis }}</span></td>
+                                    <td class="text-end"><span class="text-success fw-bold">₦{{ member.agg_savings|floatformat:2 }}</span></td>
+                                    <td class="text-end"><span class="text-info fw-bold">₦{{ member.agg_loanable|floatformat:2 }}</span></td>
+                                    <td class="text-end"><span class="text-warning fw-bold">₦{{ member.agg_investment|floatformat:2 }}</span></td>
+                                    {% if show_period %}
+                                    <td class="text-end"><span class="fw-bold" style="color:#1a7a4a;">₦{{ member.period_savings|floatformat:2 }}</span></td>
+                                    <td class="text-end"><span class="fw-bold" style="color:#117a8b;">₦{{ member.period_loanable|floatformat:2 }}</span></td>
+                                    <td class="text-end"><span class="fw-bold" style="color:#c07000;">₦{{ member.period_investment|floatformat:2 }}</span></td>
+                                    {% endif %}
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="{% if show_period %}9{% else %}6{% endif %}" class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle"></i> No members found matching your criteria.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            {% if page_obj.object_list %}
+                            <tfoot>
+                                <tr class="table-dark fw-bold">
+                                    <td colspan="3" class="text-end">Grand Totals:</td>
+                                    <td class="text-end">₦{{ grand_totals.grand_savings|floatformat:2 }}</td>
+                                    <td class="text-end">₦{{ grand_totals.grand_loanable|floatformat:2 }}</td>
+                                    <td class="text-end">₦{{ grand_totals.grand_investment|floatformat:2 }}</td>
+                                    {% if show_period %}
+                                    <td class="text-end">₦{{ grand_totals.grand_period_savings|floatformat:2 }}</td>
+                                    <td class="text-end">₦{{ grand_totals.grand_period_loanable|floatformat:2 }}</td>
+                                    <td class="text-end">₦{{ grand_totals.grand_period_investment|floatformat:2 }}</td>
+                                    {% endif %}
+                                </tr>
+                            </tfoot>
+                            {% endif %}
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if pagination_info.total_pages > 1 %}
+                    <nav aria-label="Summary pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if pagination_info.current_page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="?name={{ search_name }}&ippis={{ search_ippis }}&group={{ search_group }}&month={{ selected_month }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}&page=1">
+                                    <i class="fas fa-angle-double-left"></i> First
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if pagination_info.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?name={{ search_name }}&ippis={{ search_ippis }}&group={{ search_group }}&month={{ selected_month }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}&page={{ pagination_info.previous_page }}">
+                                    <i class="fas fa-angle-left"></i> Previous
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for page_num in page_obj.paginator.page_range %}
+                                {% if page_num == pagination_info.current_page %}
+                                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                {% elif page_num >= pagination_info.current_page|add:-2 and page_num <= pagination_info.current_page|add:2 %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?name={{ search_name }}&ippis={{ search_ippis }}&group={{ search_group }}&month={{ selected_month }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}&page={{ page_num }}">{{ page_num }}</a>
+                                    </li>
+                                {% elif page_num == 1 or page_num == pagination_info.total_pages %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?name={{ search_name }}&ippis={{ search_ippis }}&group={{ search_group }}&month={{ selected_month }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}&page={{ page_num }}">{{ page_num }}</a>
+                                    </li>
+                                {% elif page_num == pagination_info.current_page|add:-3 or page_num == pagination_info.current_page|add:3 %}
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if pagination_info.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?name={{ search_name }}&ippis={{ search_ippis }}&group={{ search_group }}&month={{ selected_month }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}&page={{ pagination_info.next_page }}">
+                                    Next <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if pagination_info.current_page < pagination_info.total_pages %}
+                            <li class="page-item">
+                                <a class="page-link" href="?name={{ search_name }}&ippis={{ search_ippis }}&group={{ search_group }}&month={{ selected_month }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}&page={{ pagination_info.total_pages }}">
+                                    Last <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const perPageSelect = document.querySelector('select[name="per_page"]');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function () {
+            document.getElementById('filterForm').submit();
+        });
+    }
+    const searchInputs = document.querySelectorAll('input[name="name"], input[name="ippis"]');
+    searchInputs.forEach(input => {
+        input.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') { document.getElementById('filterForm').submit(); }
+        });
+    });
+
+    // ✅ Warn user if both month and date range are set
+    const monthInput = document.querySelector('input[name="month"]');
+    const dateFrom = document.querySelector('input[name="date_from"]');
+    const dateTo = document.querySelector('input[name="date_to"]');
+
+    function checkConflict() {
+        const hasMonth = monthInput && monthInput.value;
+        const hasRange = (dateFrom && dateFrom.value) || (dateTo && dateTo.value);
+        const warning = document.getElementById('filterConflictWarning');
+        if (warning) {
+            warning.style.display = hasMonth && hasRange ? 'block' : 'none';
+        }
+    }
+    [monthInput, dateFrom, dateTo].forEach(el => {
+        if (el) el.addEventListener('change', checkConflict);
+    });
+    checkConflict();
+});
+</script>
+
+<!-- Hidden conflict warning, shown via JS -->
+<div id="filterConflictWarning" class="alert alert-warning py-2 mx-3" style="display:none;">
+    <i class="fas fa-exclamation-triangle"></i>
+    Both <strong>Month</strong> and <strong>Date Range</strong> are set. <strong>Month filter takes priority.</strong>
+</div>
+
+{% endblock %}

@@ -1,0 +1,14 @@
+<h3>Request #{{ request_obj.id }}</h3>
+
+<p>Status: {{ request_obj.status }}</p>
+<p>Total: ₦{{ request_obj.calculate_total_price }}</p>
+<p>Paid: ₦{{ request_obj.total_paid }}</p>
+<p>Balance: ₦{{ request_obj.balance }}</p>
+
+<hr>
+
+<h5>Items</h5>
+
+{% for d in details %}
+    <p>{{ d.item.brand }} - {{ d.quantity }} pcs - ₦{{ d.total_price }}</p>
+{% endfor %}

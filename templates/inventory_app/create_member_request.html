@@ -1,0 +1,135 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3>Create Member Request</h3>
+
+    <form method="post" enctype="multipart/form-data" id="main-form">
+        {% csrf_token %}
+        
+        <div class="row mb-4">
+            <div class="col-md-4"><label>Guarantor IPPIS</label><input type="text" name="gaurantor_ippis" class="form-control" required></div>
+            <div class="col-md-4"><label>Payslip</label><input type="file" name="file_payslip" class="form-control" required></div>
+            <div class="col-md-4"><label>Passport</label><input type="file" name="passport_photo" class="form-control" ></div>
+        </div>
+
+        <hr>
+        <h5>1. Click Items to Select</h5>
+        <div class="row mb-4">
+            {% for item in items %}
+            <div class="col-md-3 mb-3">
+                <div class="card item-card h-100 shadow-sm border p-2" 
+                     data-id="{{ item.id }}" 
+                     data-name="{{ item.brand }} {{ item.model_name }}"
+                     style="cursor:pointer;">
+                    <strong>{{ item.brand }}</strong>
+                    <p class="mb-1 text-muted">{{ item.model_name }}</p>
+                    <span class="status-badge bg-warning">Stock: {{ item.quantity }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <h5>2. Selected Items (Enter Quantity)</h5>
+        {{ formset.management_form }}
+        <div id="selected-items-list" class="mb-4">
+            </div>
+
+        <button type="submit" class="btn btn-success w-100 py-3">Submit All Requests</button>
+    </form>
+</div>
+
+<template id="form-row-template">
+    <div class="row align-items-center border rounded p-3 mb-2 bg-light form-row">
+        <div class="col-md-6">
+            <h6 class="mb-0 item-display-name text-primary"></h6>
+            <input type="hidden" name="memberrequestdetail_set-__prefix__-item" class="item-id-input">
+        </div>
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text">Quantity</span>
+                <input type="number" name="memberrequestdetail_set-__prefix__-quantity" 
+                       class="form-control qty-input" min="1" value="1" required>
+            </div>
+        </div>
+        <div class="col-md-2 text-end">
+            <button type="button" class="btn btn-danger btn-sm remove-row-btn">Remove</button>
+        </div>
+    </div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const listContainer = document.getElementById('selected-items-list');
+    const totalForms = document.querySelector('[name$="-TOTAL_FORMS"]');
+    const template = document.getElementById('form-row-template');
+
+    // Click Item Card
+    document.querySelectorAll('.item-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const itemId = this.getAttribute('data-id');
+            const itemName = this.getAttribute('data-name');
+
+            // Check if already in list
+            const alreadyAdded = document.querySelector(`.item-id-input[value="${itemId}"]`);
+            if (alreadyAdded) {
+                alert("This item is already in your request list.");
+                return;
+            }
+
+            // Create new row using template
+            const count = parseInt(totalForms.value);
+            const clone = template.content.cloneNode(true);
+            
+            // Update the index (__prefix__) for Django
+            const row = clone.querySelector('.form-row');
+            row.querySelectorAll('input').forEach(input => {
+                input.name = input.name.replace('__prefix__', count);
+                input.id = input.id.replace('__prefix__', count);
+            });
+
+            // Set Data
+            clone.querySelector('.item-display-name').textContent = itemName;
+            clone.querySelector('.item-id-input').value = itemId;
+
+            listContainer.appendChild(clone);
+            
+            // Update Management Form
+            totalForms.value = count + 1;
+            
+            // Highlight card
+            this.classList.add('border-success', 'bg-light');
+        });
+    });
+
+    // Remove Row
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-row-btn')) {
+            const row = e.target.closest('.form-row');
+            const itemId = row.querySelector('.item-id-input').value;
+            
+            // Un-highlight card
+            const card = document.querySelector(`.item-card[data-id="${itemId}"]`);
+            if(card) card.classList.remove('border-success', 'bg-light');
+            
+            row.remove();
+            
+            // Re-index all rows so Django doesn't get confused
+            const remainingRows = document.querySelectorAll('.form-row');
+            totalForms.value = remainingRows.length;
+            
+            remainingRows.forEach((r, idx) => {
+                r.querySelectorAll('input').forEach(input => {
+                    input.name = input.name.replace(/-\d+-/, `-${idx}-`);
+                });
+            });
+        }
+    });
+});
+</script>
+
+<style>
+    .item-card:hover { border: 1px solid #0d6efd !important; background-color: #f8f9fa; }
+    .item-card.border-success { border: 2px solid #198754 !important; }
+</style>
+{% endblock %}

@@ -9,7 +9,8 @@ from django.db import transaction
 from datetime import datetime
 from django.core.paginator import Paginator
 from django.db.models import Sum, Count
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth,Coalesce
+
 from django.shortcuts import render
 from .models import Savings
 import openpyxl
@@ -22,11 +23,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 
 from django.db import transaction
 from django.core.paginator import Paginator
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch,Value
 from decimal import Decimal
 from django.db import transaction
 from datetime import timedelta
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum,DecimalField
 
 from django.utils import timezone
 from django.conf import settings
@@ -39,7 +40,8 @@ from django.utils.dateparse import parse_date
 import pandas as pd
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
-
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
 from django.db import transaction
 from .models import *
 from accounts.models import *
@@ -551,8 +553,290 @@ def edit_saving(request, saving_id):
 
     return render(request, "saving/edit_saving.html", {"saving": saving})
 
+from django.db.models import OuterRef, Subquery, DecimalField
+from django.db.models.functions import Coalesce
 
+@login_required
+@group_required(['admin','staff'])
+def member_savings_summary(request):
+    groups = UserGroup.objects.all()
+    search_name = request.GET.get("name", "").strip()
+    search_ippis = request.GET.get("ippis", "").strip()
+    search_group = request.GET.get("group", "").strip()
+    selected_month = request.GET.get("month", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    per_page = request.GET.get("per_page", "100")
+    export = request.GET.get("export", "")
 
+    try:
+        per_page = int(per_page)
+        if per_page not in [100, 150, 200, 250]:
+            per_page = 100
+    except (ValueError, TypeError):
+        per_page = 100
+
+    # Base queryset
+    members = Member.objects.select_related("member")
+
+    # Filters
+    if search_name:
+        members = members.filter(
+            Q(member__first_name__icontains=search_name) |
+            Q(member__last_name__icontains=search_name)
+        )
+    if search_ippis:
+        members = members.filter(ippis__icontains=search_ippis)
+    if search_group.isdigit():
+        members = members.filter(member__group_id=search_group)
+
+    # ✅ Parse month filter
+    month_filter = {}
+    month_label = ""
+    if selected_month:
+        try:
+            year, month_num = selected_month.split("-")
+            month_filter = {"year": int(year), "month": int(month_num)}
+            from calendar import month_name
+            month_label = f"{month_name[int(month_num)]} {year}"
+        except (ValueError, IndexError):
+            pass
+
+    # ✅ Parse date range filter
+    date_range = {}
+    date_range_label = ""
+    start_date = None
+    end_date = None
+    if date_from:
+        start_date = parse_date(date_from)
+        if start_date:
+            date_range["start"] = start_date
+    if date_to:
+        end_date = parse_date(date_to)
+        if end_date:
+            date_range["end"] = end_date
+
+    if start_date and end_date:
+        date_range_label = f"{start_date.strftime('%d %b %Y')} – {end_date.strftime('%d %b %Y')}"
+    elif start_date:
+        date_range_label = f"From {start_date.strftime('%d %b %Y')}"
+    elif end_date:
+        date_range_label = f"Up to {end_date.strftime('%d %b %Y')}"
+
+    # ✅ Helper to build date filter kwargs for a given field name
+    def build_date_filter(field, use_month=False, use_range=False):
+        kwargs = {}
+        if use_month and month_filter:
+            kwargs[f"{field}__year"] = month_filter["year"]
+            kwargs[f"{field}__month"] = month_filter["month"]
+        elif use_range and date_range:
+            if "start" in date_range and "end" in date_range:
+                kwargs[f"{field}__range"] = [date_range["start"], date_range["end"]]
+            elif "start" in date_range:
+                kwargs[f"{field}__gte"] = date_range["start"]
+            elif "end" in date_range:
+                kwargs[f"{field}__lte"] = date_range["end"]
+        return kwargs
+
+    # ✅ All-time subqueries
+    savings_subquery = Savings.objects.filter(
+        member=OuterRef("pk")
+    ).values("member").annotate(total=Sum("month_saving")).values("total")
+
+    loanable_subquery = Loanable.objects.filter(
+        member=OuterRef("pk")
+    ).values("member").annotate(total=Sum("amount")).values("total")
+
+    investment_subquery = Investment.objects.filter(
+        member=OuterRef("pk")
+    ).values("member").annotate(total=Sum("amount")).values("total")
+
+    # ✅ Period subqueries — month filter takes priority over date range
+    use_month = bool(month_filter)
+    use_range = bool(date_range) and not use_month
+
+    period_savings_sq = period_loanable_sq = period_investment_sq = None
+
+    if use_month or use_range:
+        period_savings_sq = Savings.objects.filter(
+            member=OuterRef("pk"),
+            **build_date_filter("month", use_month=use_month, use_range=use_range)
+        ).values("member").annotate(total=Sum("month_saving")).values("total")
+
+        period_loanable_sq = Loanable.objects.filter(
+            member=OuterRef("pk"),
+            **build_date_filter("month", use_month=use_month, use_range=use_range)
+        ).values("member").annotate(total=Sum("amount")).values("total")
+
+        period_investment_sq = Investment.objects.filter(
+            member=OuterRef("pk"),
+            **build_date_filter("month", use_month=use_month, use_range=use_range)
+        ).values("member").annotate(total=Sum("amount")).values("total")
+
+    # Build annotation dict
+    annotation_kwargs = {
+        "agg_savings": Coalesce(
+            Subquery(savings_subquery, output_field=DecimalField()), Decimal("0.00")
+        ),
+        "agg_loanable": Coalesce(
+            Subquery(loanable_subquery, output_field=DecimalField()), Decimal("0.00")
+        ),
+        "agg_investment": Coalesce(
+            Subquery(investment_subquery, output_field=DecimalField()), Decimal("0.00")
+        ),
+    }
+
+    if period_savings_sq is not None:
+        annotation_kwargs["period_savings"] = Coalesce(
+            Subquery(period_savings_sq, output_field=DecimalField()), Decimal("0.00")
+        )
+        annotation_kwargs["period_loanable"] = Coalesce(
+            Subquery(period_loanable_sq, output_field=DecimalField()), Decimal("0.00")
+        )
+        annotation_kwargs["period_investment"] = Coalesce(
+            Subquery(period_investment_sq, output_field=DecimalField()), Decimal("0.00")
+        )
+
+    members = members.annotate(**annotation_kwargs).order_by("member__first_name")
+
+    # Grand totals
+    grand_agg = {
+        "grand_savings": Coalesce(Sum("agg_savings"), Decimal("0.00"), output_field=DecimalField()),
+        "grand_loanable": Coalesce(Sum("agg_loanable"), Decimal("0.00"), output_field=DecimalField()),
+        "grand_investment": Coalesce(Sum("agg_investment"), Decimal("0.00"), output_field=DecimalField()),
+    }
+    if period_savings_sq is not None:
+        grand_agg["grand_period_savings"] = Coalesce(Sum("period_savings"), Decimal("0.00"), output_field=DecimalField())
+        grand_agg["grand_period_loanable"] = Coalesce(Sum("period_loanable"), Decimal("0.00"), output_field=DecimalField())
+        grand_agg["grand_period_investment"] = Coalesce(Sum("period_investment"), Decimal("0.00"), output_field=DecimalField())
+
+    grand_totals = members.aggregate(**grand_agg)
+
+    show_period = period_savings_sq is not None
+    period_label = month_label or date_range_label
+
+    # ✅ Excel export
+    if export == "excel":
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Savings Summary"
+
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="343A40", end_color="343A40", fill_type="solid")
+        total_fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+        center = Alignment(horizontal="center")
+        right = Alignment(horizontal="right")
+
+        title = f"Member Savings Summary{' — ' + period_label if period_label else ''}"
+        ws.merge_cells("A1:I1")
+        ws["A1"] = title
+        ws["A1"].font = Font(bold=True, size=13)
+        ws["A1"].alignment = center
+
+        headers = ["#", "Member", "IPPIS", "Total Savings", "Total Loanable", "Total Investment"]
+        if show_period:
+            headers += [
+                f"Savings ({period_label})",
+                f"Loanable ({period_label})",
+                f"Investment ({period_label})",
+            ]
+
+        header_row = 3
+        for col, h in enumerate(headers, start=1):
+            cell = ws.cell(row=header_row, column=col, value=h)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center
+
+        all_members = members.all()
+        for idx, member in enumerate(all_members, start=1):
+            row = header_row + idx
+            row_data = [
+                idx,
+                f"{member.member.first_name} {member.member.last_name}",
+                member.ippis,
+                float(member.agg_savings),
+                float(member.agg_loanable),
+                float(member.agg_investment),
+            ]
+            if show_period:
+                row_data += [
+                    float(member.period_savings),
+                    float(member.period_loanable),
+                    float(member.period_investment),
+                ]
+            for col, value in enumerate(row_data, start=1):
+                cell = ws.cell(row=row, column=col, value=value)
+                if col >= 4:
+                    cell.number_format = '#,##0.00'
+                    cell.alignment = right
+
+        total_row = header_row + len(list(all_members)) + 1
+        ws.cell(row=total_row, column=1, value="GRAND TOTALS").font = Font(bold=True)
+        ws.merge_cells(f"A{total_row}:C{total_row}")
+
+        totals = [
+            float(grand_totals["grand_savings"]),
+            float(grand_totals["grand_loanable"]),
+            float(grand_totals["grand_investment"]),
+        ]
+        if show_period:
+            totals += [
+                float(grand_totals["grand_period_savings"]),
+                float(grand_totals["grand_period_loanable"]),
+                float(grand_totals["grand_period_investment"]),
+            ]
+        for col, value in enumerate(totals, start=4):
+            cell = ws.cell(row=total_row, column=col, value=value)
+            cell.font = Font(bold=True)
+            cell.fill = total_fill
+            cell.number_format = '#,##0.00'
+            cell.alignment = right
+
+        col_widths = [5, 30, 15, 18, 18, 18, 25, 25, 25]
+        for i, width in enumerate(col_widths, start=1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+
+        filename = f"savings_summary{'_' + selected_month if selected_month else ''}{'_' + date_from + '_' + date_to if date_from or date_to else ''}.xlsx"
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        return response
+
+    # Pagination
+    paginator = Paginator(members, per_page)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+        "groups": groups,
+        "search_name": search_name,
+        "search_ippis": search_ippis,
+        "search_group": search_group,
+        "selected_month": selected_month,
+        "date_from": date_from,
+        "date_to": date_to,
+        "month_label": month_label,
+        "period_label": period_label,
+        "date_range_label": date_range_label,
+        "per_page": per_page,
+        "total_records": paginator.count,
+        "grand_totals": grand_totals,
+        "show_period": show_period,
+        "pagination_info": {
+            "current_page": page_obj.number,
+            "total_pages": paginator.num_pages,
+            "has_previous": page_obj.has_previous(),
+            "has_next": page_obj.has_next(),
+            "previous_page": page_obj.previous_page_number() if page_obj.has_previous() else None,
+            "next_page": page_obj.next_page_number() if page_obj.has_next() else None,
+        },
+    }
+
+    return render(request, "saving/member_savings_summary.html", context)
 
 @login_required
 @group_required(['admin','staff'])
@@ -569,10 +853,10 @@ def list_savings(request):
     # Validate per_page value
     try:
         per_page = int(per_page)
-        if per_page not in [10, 25, 50, 100]:
-            per_page = 25
+        if per_page not in [100, 150, 200, 250]:
+            per_page = 100
     except (ValueError, TypeError):
-        per_page = 25
+        per_page = 100
 
     # Base queryset
     savings = Savings.objects.select_related("member__member")
@@ -617,11 +901,27 @@ def list_savings(request):
     if search_group.isdigit():
         savings = savings.filter(member__member__group_id=search_group)
 
-    # ✅ Compute total savings for current search/filter
+    # Compute total savings for current search/filter
     total_savings_amount = (
         savings.aggregate(total=Sum("month_saving"))["total"] or Decimal("0.00")
     )
-    
+
+    # ✅ Compute total savings per member (all-time, unfiltered by date)
+    # Get the distinct member IDs from the current filtered queryset
+    filtered_member_ids = savings.values_list("member_id", flat=True).distinct()
+
+    member_total_savings = (
+        Savings.objects.filter(member_id__in=filtered_member_ids)
+        .values("member_id")
+        .annotate(total_savings=Sum("month_saving"))
+    )
+
+    # Build a dict: { member_id: total_savings }
+    member_total_savings_dict = {
+        entry["member_id"]: entry["total_savings"] or Decimal("0.00")
+        for entry in member_total_savings
+    }
+
     # Order results
     savings = savings.order_by("-id", "member__member__first_name")
 
@@ -668,6 +968,8 @@ def list_savings(request):
         lookup_key = (saving.member_id, saving.month)
         saving.loanable_amount = loanable_dict.get(lookup_key, Decimal("0.00"))
         saving.investment_amount = investment_dict.get(lookup_key, Decimal("0.00"))
+        # ✅ Attach each member's all-time total savings directly to the saving object
+        saving.member_total_savings = member_total_savings_dict.get(saving.member_id, Decimal("0.00"))
 
     context = {
         "page_obj": page_obj,
@@ -680,7 +982,7 @@ def list_savings(request):
         "date_from": date_from,
         "date_to": date_to,
         "total_records": paginator.count,
-        "total_savings_amount": total_savings_amount, 
+        "total_savings_amount": total_savings_amount,
         "pagination_info": {
             "current_page": page_obj.number,
             "total_pages": paginator.num_pages,
@@ -692,6 +994,142 @@ def list_savings(request):
     }
 
     return render(request, "saving/list_savings.html", context)
+# def list_savings(request):
+#     groups = UserGroup.objects.all()
+#     selected_month = request.GET.get("month")
+#     search_name = request.GET.get("name", "").strip()
+#     search_ippis = request.GET.get("ippis", "").strip()
+#     search_group = request.GET.get("group", "").strip()
+#     date_from = request.GET.get("date_from")
+#     date_to = request.GET.get("date_to")
+#     per_page = request.GET.get("per_page", "25")
+
+#     # Validate per_page value
+#     try:
+#         per_page = int(per_page)
+#         if per_page not in [10, 25, 50, 100]:
+#             per_page = 25
+#     except (ValueError, TypeError):
+#         per_page = 25
+
+#     # Base queryset
+#     savings = Savings.objects.select_related("member__member")
+
+#     # Parse month filter
+#     month_filter = {}
+#     if selected_month:
+#         try:
+#             year, month_num = selected_month.split("-")
+#             month_filter = {"month__year": year, "month__month": month_num}
+#             savings = savings.filter(**month_filter)
+#         except (ValueError, IndexError):
+#             pass
+
+#     # Apply date range filter
+#     if date_from and date_to:
+#         start_date = parse_date(date_from)
+#         end_date = parse_date(date_to)
+#         if start_date and end_date:
+#             savings = savings.filter(month__range=[start_date, end_date])
+#     elif date_from:
+#         start_date = parse_date(date_from)
+#         if start_date:
+#             savings = savings.filter(month__gte=start_date)
+#     elif date_to:
+#         end_date = parse_date(date_to)
+#         if end_date:
+#             savings = savings.filter(month__lte=end_date)
+
+#     # Filter by member name
+#     if search_name:
+#         savings = savings.filter(
+#             Q(member__member__first_name__icontains=search_name) |
+#             Q(member__member__last_name__icontains=search_name)
+#         )
+
+#     # Filter by IPPIS
+#     if search_ippis:
+#         savings = savings.filter(member__ippis__icontains=search_ippis)
+
+#     # Filter by group
+#     if search_group.isdigit():
+#         savings = savings.filter(member__member__group_id=search_group)
+
+#     # ✅ Compute total savings for current search/filter
+#     total_savings_amount = (
+#         savings.aggregate(total=Sum("month_saving"))["total"] or Decimal("0.00")
+#     )
+    
+#     # Order results
+#     savings = savings.order_by("-id", "member__member__first_name")
+
+#     # Pagination
+#     paginator = Paginator(savings, per_page)
+#     page_number = request.GET.get("page")
+#     page_obj = paginator.get_page(page_number)
+
+#     # Get member IDs from current page only
+#     current_page_member_ids = [saving.member_id for saving in page_obj.object_list]
+
+#     # Build dictionaries for loanable & investment amounts
+#     loanable_dict = {}
+#     investment_dict = {}
+
+#     if current_page_member_ids:
+#         loanable_filter = {"member_id__in": current_page_member_ids}
+#         investment_filter = {"member_id__in": current_page_member_ids}
+
+#         # Add date filters
+#         if month_filter:
+#             loanable_filter.update(month_filter)
+#             investment_filter.update(month_filter)
+#         elif date_from and date_to:
+#             loanable_filter["month__range"] = [start_date, end_date]
+#             investment_filter["month__range"] = [start_date, end_date]
+#         elif date_from:
+#             loanable_filter["month__gte"] = start_date
+#             investment_filter["month__gte"] = start_date
+#         elif date_to:
+#             loanable_filter["month__lte"] = end_date
+#             investment_filter["month__lte"] = end_date
+
+#         loanables = Loanable.objects.filter(**loanable_filter).values("member_id", "amount", "month")
+#         for loanable in loanables:
+#             loanable_dict[(loanable["member_id"], loanable["month"])] = loanable["amount"]
+
+#         investments = Investment.objects.filter(**investment_filter).values("member_id", "amount", "month")
+#         for investment in investments:
+#             investment_dict[(investment["member_id"], investment["month"])] = investment["amount"]
+
+#     # Assign amounts
+#     for saving in page_obj.object_list:
+#         lookup_key = (saving.member_id, saving.month)
+#         saving.loanable_amount = loanable_dict.get(lookup_key, Decimal("0.00"))
+#         saving.investment_amount = investment_dict.get(lookup_key, Decimal("0.00"))
+
+#     context = {
+#         "page_obj": page_obj,
+#         "groups": groups,
+#         "selected_month": selected_month,
+#         "search_name": search_name,
+#         "search_ippis": search_ippis,
+#         "search_group": search_group,
+#         "per_page": per_page,
+#         "date_from": date_from,
+#         "date_to": date_to,
+#         "total_records": paginator.count,
+#         "total_savings_amount": total_savings_amount, 
+#         "pagination_info": {
+#             "current_page": page_obj.number,
+#             "total_pages": paginator.num_pages,
+#             "has_previous": page_obj.has_previous(),
+#             "has_next": page_obj.has_next(),
+#             "previous_page": page_obj.previous_page_number() if page_obj.has_previous() else None,
+#             "next_page": page_obj.next_page_number() if page_obj.has_next() else None,
+#         },
+#     }
+
+#     return render(request, "saving/list_savings.html", context)
 
 @login_required
 @group_required(['admin'])

@@ -13,6 +13,7 @@ urlpatterns = [
     path('saving-report/', views.report_view, name='saving_report'),
     path('search_member_savings/', views.search_member_for_savings, name='search_member'),
     path('member/<int:id>/add_savings/', views.process_member_savings, name='add_individual_savings'),
+    path("summary/", views.member_savings_summary, name="member_savings_summary"),
     path('list-savings/', views.list_savings, name='list_savings'),
     path('all-member-savings/', views.all_member_savings, name='all_users_savings'),
 

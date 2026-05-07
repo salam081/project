@@ -12,7 +12,6 @@ from django.db import models
 
 from django.db.models import Sum, F, DecimalField
 from django.db.models.functions import Coalesce
-from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone

@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.db import transaction
 
 class SavingType(models.Model):
-    title = models.CharField(max_length=50)
+    title = models.CharField(max_length=100)
     request_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     available = models.BooleanField(default=True)
     

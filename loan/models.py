@@ -58,6 +58,7 @@ class LoanRequest(models.Model):
     bank_name = models.ForeignKey(BankName,on_delete=models.CASCADE)
     bank_code = models.ForeignKey(BankCode,on_delete=models.CASCADE)
     account_number  = models.CharField(max_length=100)
+    account_name  = models.CharField(max_length=150)
     guarantor = models.ForeignKey(Member, on_delete=models.SET_NULL, null=True, blank=True, related_name="guaranteed_loans")
     guarantor_accepted = models.BooleanField(default=False)
     created_by = models.ForeignKey(User,on_delete=models.CASCADE)

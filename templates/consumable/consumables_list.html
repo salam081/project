@@ -9,11 +9,16 @@
     <div class="container-fluid py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h6 class="text-primary fw-bold mb-0">
-                <i class="bi bi-clipboard-check me-3"></i>Consumable Requests List
+                <i class="bi bi-clipboard-check me-3"></i>Member Consumable Requests List
             </h6>
-            {# Optional: Add a button for creating new requests if applicable #}
-            {# <a href="{% url 'request_consumable' %}" class="btn btn-primary">New Request</a> #}
+            <a href="{% url 'guest_requests_list' %}" class="btn btn-primary text-white">
+                <i class="bi bi-people me-2"></i>View Guest Consumable Requests
+            </a>
         </div>
+        {% comment %} <a href="{% url 'guest_requests_list' %}" class="btn btn-primary text-white mb-3">
+            <i class="bi bi-arrow-left me-2"></i>View Guest Requests
+        </a> {% endcomment %}
+        
 
         <div class="card shadow mb-4">
             <div class="card-body">
@@ -29,20 +34,10 @@
                         </select>
                     </div>
 
-                    {% comment %} <div class="col-md-4 col-lg-3">
-                        <label for="user-filter" class="form-label fw-bold">User:</label>
-                        <select name="user" id="user-filter" class="form-select">
-                            <option value="all" {% if not selected_user or selected_user == 'all' %}selected{% endif %}>All Users</option>
-                            {% for user in all_users %}
-                                <option value="{{ user.id }}" {% if selected_user|floatformat:0 == user.id|floatformat:0 %}selected{% endif %}>
-                                    {{ user.get_full_name|default:user.username }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div> {% endcomment %}
+             
                     <div class="col-md-4 col-lg-3">
-                        <label for="user-filter" class="form-label fw-bold">User:</label>
-                        <input type="text" name="user" id="user-filter" class="form-control" placeholder="Search by username..." value="{{ selected_user|default:'' }}">
+                        <label for="user-filter" class="form-label fw-bold">Name OR IPPIS:</label>
+                        <input type="text" name="user" id="user-filter" class="form-control" placeholder="Search by firstName Ippis" value="{{ selected_user|default:'' }}">
                     </div>
 
                     <div class="col-md-4 col-lg-3">
@@ -92,7 +87,7 @@
                                     {% if request_obj.user %}
                                         {{ request_obj.user.first_name }} {{ request_obj.user.last_name }}
                                     {% else %}
-                                        {{ request_obj.guest_name }}
+                                    {{ request_obj.guest_name }}
                                         <b class="text-danger">-Guest</b>
                                     {% endif %}
                                 </td>

@@ -1,0 +1,137 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white py-3">
+            <h6 class="mb-0">Stock Inward / Receiving Voucher</h6>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                {{ formset.management_form }} <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Supplier</label>
+                        {{ form.supplier }} </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Note / Reference</label>
+                        {{ form.note }}
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="productTable">
+                        <thead class="table-info">
+                            <tr>
+                                <th style="width: 20%;">Brand</th>
+                                <th style="width: 15%;">Brand Image</th> <!-- ✅ NEW -->
+                                <th style="width: 20%;">Model</th>
+                                <th style="width: 15%;">Qty</th>
+                                <th style="width: 15%;">Unit Price</th>
+                                <th style="width: 10%;">Subtotal</th>
+                                <th style="width: 5%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody">
+                            {% for item_form in formset %}
+                            <tr class="item-row">
+                                <td>{{ item_form.brand }}</td>
+                                <td>{{ item_form.brand_image }}</td>
+                                <td>{{ item_form.model_name }}</td>
+                                <td>{{ item_form.quantity }}</td>
+                                <td>{{ item_form.unit_price }}</td>
+                                <td><input type="text" class="form-control subtotal" value="0.00" readonly></td>
+                                <td><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)">×</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2">
+                                    <button type="button" class="btn btn-sm btn-success" id="add-row">+ Add Another Brand</button>
+                                </td>
+                                <td class="text-end fw-bold">Total Items:</td>
+                                <td id="totalQty" class="fw-bold">0</td>
+                                <td class="total-section">Total: <span id="grandTotal">0.00</span></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-primary btn-lg px-5">Process Shipment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Updated JavaScript to handle Django formset indexing
+    const addButton = document.getElementById('add-row');
+    const totalForms = document.getElementById('id_form-TOTAL_FORMS'); // From management_form
+
+    addButton.addEventListener('click', function() {
+        let tbody = document.getElementById('tbody');
+        let rows = document.getElementsByClassName('item-row');
+        let formNum = rows.length; 
+        
+        let newRow = rows[0].cloneNode(true);
+        let formRegex = RegExp(`form-(\\d)-`,'g');
+
+        // Update the index of the new form (e.g., form-0- to form-1-)
+        newRow.innerHTML = newRow.innerHTML.replace(formRegex, `form-${formNum}-`);
+        
+        // Clear values
+        let inputs = newRow.getElementsByTagName('input');
+        for(let input of inputs) {
+            input.value = (input.type === 'number') ? 0 : "";
+            if(input.classList.contains('subtotal')) input.value = "0.00";
+        }
+        
+        tbody.appendChild(newRow);
+        totalForms.setAttribute('value', formNum + 1); // Tell Django there's a new form
+        attachListeners();
+    });
+
+    function removeRow(btn) {
+        let tbody = document.getElementById('tbody');
+        if (tbody.rows.length > 1) {
+            btn.closest('tr').remove();
+            calculateGrandTotal();
+            // Optional: You should also update TOTAL_FORMS here if you want to be strict
+        }
+    }
+
+    function calculateGrandTotal() {
+        let rows = document.querySelectorAll('#tbody tr');
+        let grandTotal = 0;
+        let totalQty = 0;
+
+        rows.forEach(row => {
+            // Updated selectors to match Django's auto-generated IDs
+            let qty = parseFloat(row.querySelector('[id$="-quantity"]').value) || 0;
+            let price = parseFloat(row.querySelector('[id$="-unit_price"]').value) || 0;
+            let subtotal = qty * price;
+            
+            row.querySelector('.subtotal').value = subtotal.toFixed(2);
+            grandTotal += subtotal;
+            totalQty += qty;
+        });
+
+        document.getElementById('grandTotal').innerText = grandTotal.toFixed(2);
+        document.getElementById('totalQty').innerText = totalQty;
+    }
+
+    function attachListeners() {
+        // Listen to any input that ends with -quantity or -unit_price
+        document.querySelectorAll('[id$="-quantity"], [id$="-unit_price"]').forEach(input => {
+            input.removeEventListener('input', calculateGrandTotal); // Prevent double firing
+            input.addEventListener('input', calculateGrandTotal);
+        });
+    }
+
+    attachListeners();
+</script>
+{% endblock %}

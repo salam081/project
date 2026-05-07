@@ -1,0 +1,48 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container ">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card border-0 shadow">
+                <div class="card-header bg-info text-white py-3 border-0">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i> Upload Payments Excel
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <h6 class="text-muted small mb-4">
+                        Upload an Excel file with the following columns:
+
+                        <br><br>
+                        <strong>Required columns:</strong> IPPIS, Amount
+
+                        <br><br>
+                        The repayment date will be selected below and applied to all records.
+
+                        <br><br>
+                        <strong>Note:</strong> Ensure the data is accurate to avoid discrepancies.
+                    </h6>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label">Repayment Date</label>
+                            <input type="date" name="repayment_date" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Upload Excel File</label>
+                            <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            Upload Payments
+                        </button>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}                

@@ -1,9 +1,11 @@
 from django.urls import path
 from .import views
-urlpatterns = [
-   path('savings_request_form_payment/',  views.savings_request_form_payment, name='savings_request_form_payment'),
-   # path('all_special_savings_request/',  views.all_special_savings_request, name='all_special_savings_request'),
 
+urlpatterns = [
+   path('add_form_type/',  views.add_forms_type, name='add_forms_type'),
+   path('savings_request_form_payment/',  views.savings_request_form_payment, name='savings_request_form_payment'),
+
+   # path('all_special_savings_request/',  views.all_special_savings_request, name='all_special_savings_request'),
    path('upload_special_savings/',  views.upload_special_savings, name='upload_special_savings'),
    path("create_special_savings/", views.admin_create_special_savings, name="create_special_savings"),
    path('special_savings_list/',  views.special_savings_list, name='special_savings_list'),

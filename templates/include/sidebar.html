@@ -70,6 +70,10 @@
                     <i class="bi bi-eye"></i>
                     <span class="nav-text">Members Savings</span>
                 </a>
+                <a href="{% url 'member_savings_summary' %}" class="nav-link">
+                    <i class="bi bi-eye"></i>
+                    <span class="nav-text">Savings Summary</span>
+                </a>
                 <a href="{% url 'delete_monthly_savings' %}" class="nav-link">
                     <i class="bi bi-trash"></i>
                     <span class="nav-text">Delete Savings</span>
@@ -261,6 +265,40 @@
                 </a>
             </div>
         </div>
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#inventorySubmenu" aria-expanded="false" aria-controls="inventorySubmenu">
+                <i class="bi bi-graph-up-arrow"></i>
+                <span class="nav-text">Inventory</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="inventorySubmenu">
+                <a href="{% url 'inventory_home' %}" class="nav-link">
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="nav-text">Inventory Dashboard</span>
+                </a>
+                <a href="{% url 'receive_products' %}" class="nav-link">
+                    <i class="bi bi-plus-circle"></i>
+                    <span class="nav-text">Receive Products</span>
+                </a>
+                <a href="{% url 'stock_return' %}" class="nav-link">
+                    <i class="bi bi-bag-check"></i>
+                    <span class="nav-text">Stock Return</span>
+                </a>
+            
+                <a href="{% url 'product_list' %}" class="nav-link">
+                    <i class="bi bi-tag"></i>
+                    <span class="nav-text">Product List</span>
+                </a> 
+                <a href="{% url 'member_make_request' %}" class="nav-link">
+                    <i class="bi bi-tag"></i>
+                    <span class="nav-text">Make Request</span>
+                </a> 
+                <a href="{% url 'upload_payments_excel' %}" class="nav-link">
+                    <i class="bi bi-tag"></i>
+                    <span class="nav-text">Upload Payments </span>
+                </a> 
+            </div>
+        </div>
 
         <!-- Project Finance Dropdown -->
         <div class="nav-item">
@@ -382,6 +420,16 @@
                 <i class="bi bi-sliders"></i>
                 <span class="nav-text">Member Active Requests</span>
             </a>
+            <a href="{% url 'add_forms_type' %}" class="nav-link">
+                <i class="bi bi-sliders"></i>
+                <span class="nav-text">Manage Forms</span>
+            </a>
+             <div class="nav-item">
+            <a href="{% url 'savings_request_form_payment' %}" class="nav-link">
+                <i class="bi bi-wallet-fill"></i>
+                <span class="nav-text">Form Request</span>
+            </a>
+        </div>
         </div>
 
         <!-- My Info Dropdown (Admin's own account info) -->

@@ -1,0 +1,81 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container ">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-danger text-white py-3 border-0">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-arrow-return-left me-2"></i> Log Stock Return
+                    </h6>
+                </div>
+                
+                <div class="card-body p-4">
+                    <h6 class="text-muted small">
+                        Use this form to return damaged, expired, or overstock items to your supplier. 
+                        The value will be automatically deducted from your Net Stock Value.
+                    </h6>
+
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Select Stock Batch</label>
+                            <select name="product" class="form-select form-select-lg" required>
+                                <option value="" selected disabled>Choose a batch...</option>
+                                {% for item in items %}
+                                    <option value="{{ item.id }}">
+                                        {{ item.brand }} {{ item.model_name }} 
+                                        (Available: {{ item.net_quantity }} units)
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Only items currently in stock are listed.</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">Quantity to Return</label>
+                                <div class="input-group">
+                                    <input type="number" name="quantity" class="form-control form-control-lg" 
+                                           placeholder="e.g. 40" min="1" required>
+                                    <span class="input-group-text bg-light">Units</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Reason for Return</label>
+                            <textarea name="reason" class="form-control" rows="3" 
+                                      placeholder="e.g. Damaged during transit, Wrong model sent..."></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger btn-lg shadow-sm">
+                                Confirm & Update Inventory
+                            </button>
+                            <a href="{% url 'inventory_home' %}" class="btn btn-light">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4 border-0 bg-warning bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <i class="bi bi-info-circle-fill text-warning me-3 fs-4"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">Accounting Note</h6>
+                            <b class="text-dark">
+                                This action creates a **StockReturn** record. It will not delete the original 
+                                **StockIn** entry, preserving your audit history.
+                            </b>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

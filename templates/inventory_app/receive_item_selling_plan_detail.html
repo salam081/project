@@ -1,0 +1,132 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+
+          
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <a href="{% url 'receive_products' %}" class="btn btn-light btn-sm border px-3">
+                    &#8592; Back
+                </a>
+                <div>
+                    <h6 class="text-bold mb-0" style="font-size:.8rem;letter-spacing:.08em;">SELLING PLAN</h6>
+                    <h6 class="fw-bold mb-0">
+                        {{ received_item.brand }} {{ received_item.model_name }}
+                    </h6>
+                </div>
+            </div>
+
+            
+            <div class="rounded-4 p-4 mb-4 text-white
+                {% if plan.profit >= 0 %}bg-success{% else %}bg-danger{% endif %}"
+                style="background: {% if plan.profit >= 0 %}
+                    linear-gradient(135deg,#198754,#20c997)
+                {% else %}
+                    linear-gradient(135deg,#dc3545,#fd7e14)
+                {% endif %} !important;">
+                <h6 class="mb-1 opacity-75" style="font-size:.8rem;letter-spacing:.1em;">
+                    {% if plan.profit >= 0 %}PROJECTED PROFIT{% else %}PROJECTED LOSS{% endif %}
+                </h6>
+                <h1 class="display-5 fw-bold mb-0">₦{{ plan.profit|intcomma }}</h1>
+                <p class="mb-0 mt-1 opacity-75" style="font-size:.85rem;">
+                    Based on {{ plan.quantity|intcomma }} unit{{ plan.quantity|pluralize }} at
+                    ₦{{ plan.selling_price_per_unit|intcomma }}/unit
+                </p>
+            </div>
+
+           
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <div class="card border-0 bg-light rounded-4 h-100 p-3">
+                        <h6 class="text-dark mb-1" style="font-size:.75rem;letter-spacing:.07em;">TOTAL SALE VALUE</h6>
+                        <h6 class="fw-bold mb-0 text-dark">₦{{ plan.total_sale_value|intcomma }}</h6>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card border-0 bg-light rounded-4 h-100 p-3">
+                        <h6 class="text-dark mb-1" style="font-size:.75rem;letter-spacing:.07em;">PURCHASE COST</h6>
+                        <h6 class="fw-bold mb-0 text-dark">₦{{ plan.purchase_cost|intcomma }}</h6>
+                    </div>
+                </div>
+            </div>
+
+          
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-0">
+
+                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+                        <span class="text-muted" style="font-size:.88rem;">Quantity</span>
+                        <span class="fw-semibold">{{ plan.quantity|intcomma }} unit{{ plan.quantity|pluralize }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+                        <span class="text-muted" style="font-size:.88rem;">Selling Price / Unit</span>
+                        <span class="fw-semibold">₦{{ plan.selling_price_per_unit|intcomma }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+                        <span class="text-muted" style="font-size:.88rem;">Include Expenditure</span>
+                        <span>
+                            {% if plan.include_expenditure %}
+                                <span class="status-badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3">Yes</span>
+                            {% else %}
+                                <span class="status-badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-3">No</span>
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+                        <span class="text-muted" style="font-size:.88rem;">Availability</span>
+                        <span>
+                            {% if plan.available %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3">Available</span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3">Unavailable</span>
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+                        <span class="text-muted" style="font-size:.88rem;">Created By</span>
+                        <span class="fw-semibold">{{ plan.created_by }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center px-4 py-3">
+                        <span class="text-muted" style="font-size:.88rem;">Date Created</span>
+                        <span class="fw-semibold">{{ plan.date_created|date:"N j, Y" }}</span>
+                    </div>
+
+                </div>
+            </div>
+
+           
+            {% if plan.notes %}
+            <div class="card border-0 bg-warning-subtle rounded-4 mb-4">
+                <div class="card-body px-4 py-3">
+                    <p class="text-muted mb-1" style="font-size:.75rem;letter-spacing:.07em;">NOTES</p>
+                    <p class="mb-0 text-dark" style="font-size:.93rem;">{{ plan.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+           
+            <div class="d-grid gap-2">
+                <a href="{% url 'create_selling_plan' received_item.id %}"
+                   class="btn btn-warning fw-semibold rounded-3 py-2">
+                    ✏️ Edit / Recreate Plan
+                </a>
+                <a href="{% url 'receive_products' %}"
+                   class="btn btn-outline-secondary rounded-3 py-2">
+                    Back to Items
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

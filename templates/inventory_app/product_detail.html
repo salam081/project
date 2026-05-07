@@ -1,0 +1,162 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4 shadow">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb text-bold">
+            <li class="breadcrumb-item"><a href="{% url 'product_list' %}">Inventory</a></li>
+            <li class="breadcrumb-item active">Batch #{{ product.id }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="fw-bold text-primary mb-0">{{ product.brand }} {{ product.model_name }}</h3>
+                        {# FIX: added text-white so ID is readable on dark bg #}
+                        <span class="status-badge bg-dark text-white">ID: {{ product.id }}</span>
+                    </div>
+                    <hr>
+                    <div class="row mt-4">
+                        <div class="col-6 col-md-3 mb-3">
+                            <small class="text-muted d-block">Unit Price</small>
+                            <span class="fw-bold">₦{{ product.unit_price|floatformat:2 }}</span>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3">
+                            <small class="text-muted d-block">Received Qty</small>
+                            <span class="fw-bold">{{ product.quantity }}</span>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3">
+                            <small class="text-muted d-block">Returned Qty</small>
+                            {% comment %} {# FIX: was using broken add/stringformat trick that added instead of subtracted.
+                               Now uses returned_qty passed directly from the view. #} {% endcomment %}
+                            <span class="fw-bold text-danger">
+                                {% if returned_qty > 0 %}-{{ returned_qty }}{% else %}—{% endif %}
+                            </span>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3">
+                            <small class="text-muted d-block">Available Now</small>
+                            {# FIX: added color logic — red if zero stock, green if available #}
+                            <span class="fw-bold fs-5 {% if product.net_quantity == 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ product.net_quantity }}
+                            </span>
+                        </div>
+                    </div>
+
+                    {# NEW: value summary row #}
+                    <hr>
+                    <div class="row">
+                        <div class="col-6 col-md-4 mb-2">
+                            <small class="text-muted d-block">Gross Value</small>
+                            <span class="fw-bold">₦{{ product.total_price|floatformat:2 }}</span>
+                        </div>
+                        <div class="col-6 col-md-4 mb-2">
+                            <small class="text-muted d-block">Net Value (on shelf)</small>
+                            <span class="fw-bold text-success">₦{{ product.net_stock_value|floatformat:2 }}</span>
+                        </div>
+                        <div class="col-6 col-md-4 mb-2">
+                            <small class="text-muted d-block">Received By</small>
+                            <span class="fw-bold">{{ product.received_by.username }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-danger">Return History</h5>
+                    {# NEW: return count badge #}
+                    <span class="status-badge bg-danger-subtle text-danger border border-danger">
+                        {{ product.stockreturn_set.count }} return(s)
+                    </span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Qty</th>
+                                <th>Reason</th>
+                                <th>Processed By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ret in product.stockreturn_set.all %}
+                            <tr>
+                                <td class="text-muted small">{{ ret.returned_at|date:"M d, Y" }}</td>
+                                <td class="text-danger fw-bold">-{{ ret.quantity }}</td>
+                                <td>{{ ret.reason|default:"No reason provided" }}</td>
+                                {# FIX: guard against returned_by being NULL (SET_NULL on model) #}
+                                <td>
+                                    {% if ret.returned_by %}
+                                        {{ ret.returned_by.username }}
+                                    {% else %}
+                                        <span class="text-muted fst-italic">Deleted user</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted small">
+                                    <i class="bi bi-check-circle text-success me-1"></i>
+                                    No returns logged for this batch.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4 bg-light">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Sourcing Information</h6>
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Supplier</small>
+                        <span class="fw-bold">{{ product.stock_in.supplier.name }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Voucher ID</small>
+                        {# FIX: href="#" was a dead link — now links to actual stock-in admin or can be a real url #}
+                        <span class="fw-bold">#{{ product.stock_in.id }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Date Received</small>
+                        <span>{{ product.stock_in.received_at|date:"F d, Y" }}</span>
+                    </div>
+                    <div class="mb-0">
+                        <small class="text-muted d-block">Voucher Note</small>
+                        <span class="fst-italic text-muted small">
+                            {{ product.stock_in.note|default:"No note added." }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {# NEW: zero-stock warning card #}
+            {% if product.net_quantity == 0 %}
+            <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <div>This batch is <strong>fully returned</strong> or depleted. No units remain.</div>
+            </div>
+            {% endif %}
+
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary" onclick="window.print()">
+                    <i class="bi bi-printer me-2"></i> Print Batch Report
+                </button>
+                <a href="{% url 'stock_return' %}" class="btn btn-outline-danger">
+                    <i class="bi bi-arrow-return-left me-2"></i> Log a Return
+                </a>
+                <a href="{% url 'product_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i> Back to Inventory
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

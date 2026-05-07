@@ -525,6 +525,7 @@ def loan_request_view(request):
         bank_name_id = request.POST.get("bank_name")
         bank_code_id = request.POST.get("bank_code")
         account_number = request.POST.get("account_number")
+        account_name = request.POST.get("account_name")
         guarantor_ippis = request.POST.get("guarantor_ippis")
 
         # Convert amount
@@ -618,6 +619,7 @@ def loan_request_view(request):
             bank_name_id=bank_name_id,
             bank_code_id=bank_code_id,
             account_number=account_number,
+            account_name=account_name,
             guarantor=guarantor_member,
             created_by=request.user,
         )

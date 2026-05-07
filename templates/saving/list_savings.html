@@ -30,16 +30,16 @@
                         <div class="col-md-2">
                             <label class="form-label">Records per page:</label>
                             <select name="per_page" class="form-control form-control-sm">
-                                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
-                                <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
-                                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
                                 <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                                <option value="65" {% if per_page == 150 %}selected{% endif %}>150</option>
+                                <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+                                <option value="250" {% if per_page == 250 %}selected{% endif %}>250</option>
                             </select>
                         </div>
                         <div class="col-md-2">
                             <label for="group">Search by Group</label>
                             <select name="group" id="group" class="form-control form-control-sm">
-                                <option value="">Select Group</option>  <!-- Empty value instead of "disabled" -->
+                                <option value="">Select Group</option>
                                 {% for g in groups %}
                                     <option value="{{ g.id }}" {% if g.id|stringformat:"s" == search_group %}selected{% endif %}>
                                         {{ g.title }}
@@ -69,22 +69,28 @@
                             {% endif %}
                             of {{ total_records }} entries
                         </div>
-                        
-                        <!-- Records per page on the right -->
                         <div>
                             <small class="text-muted">
                                 Page {{ pagination_info.current_page }} of {{ pagination_info.total_pages }}
                             </small>
                         </div>
                     </div>
-                    <div class="alert alert-info mb-3" role="alert">
-                        <strong>Total Savings Amount:</strong> ₦{{ total_savings_amount|floatformat:2 }}
-                     </div>
+
+                    <!-- Summary Alert -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="alert alert-info mb-0" role="alert">
+                                <strong>Total Savings Amount (filtered):</strong> ₦{{ total_savings_amount|floatformat:2 }}
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Table -->
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped table-hover">
                             <thead class="table-dark">
                                 <tr>
+                                    <th>S/N</th>
                                     <th>Member</th>
                                     <th>IPPIS</th>
                                     <th>Month</th>
@@ -92,15 +98,23 @@
                                     <th class="text-nowrap" style="min-width: 120px;">Savings Amount</th>
                                     <th>Loanable</th>
                                     <th>Investment</th>
-                                    {% comment %} <th>Action</th> {% endcomment %}
+                                    <th class="text-nowrap" style="min-width: 140px;">
+                                        Total Savings
+                                        <i class="fas fa-info-circle text-warning" 
+                                           title="All-time total savings for this member" 
+                                           data-toggle="tooltip" 
+                                           data-placement="top">
+                                        </i>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for saving in page_obj.object_list %}
                                 <tr>
+                                    <td>{{forloop.counter}}</td>
                                     <td>
                                         <a href="{% url 'member_active_summary' saving.member.id %}?ippis={{ saving.member.ippis }}">
-                                        <strong>{{ saving.member.member.first_name }} {{ saving.member.member.last_name }}</strong>
+                                            <strong>{{ saving.member.member.first_name }} {{ saving.member.member.last_name }}</strong>
                                         </a>
                                     </td>
                                     <td>
@@ -111,11 +125,12 @@
                                     <td class="text-end">₦{{ saving.month_saving|floatformat:2 }}</td>
                                     <td class="text-end">₦{{ saving.loanable_amount|floatformat:2 }}</td>
                                     <td class="text-end">₦{{ saving.investment_amount|floatformat:2 }}</td>
-                                    {% comment %} <td>
-                                        <a href="{% url 'edit_saving' saving.id %}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a>
-                                    </td> {% endcomment %}
+                                    <!-- ✅ Member all-time total savings -->
+                                    <td class="text-end">
+                                        <span class="fw-bold text-success">
+                                            ₦{{ saving.member_total_savings|floatformat:2 }}
+                                        </span>
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
@@ -135,7 +150,6 @@
                     {% if pagination_info.total_pages > 1 %}
                     <nav aria-label="Savings pagination" class="mt-4">
                         <ul class="pagination justify-content-center">
-                            <!-- First page -->
                             {% if pagination_info.current_page > 1 %}
                                 <li class="page-item">
                                     <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page=1">
@@ -144,7 +158,6 @@
                                 </li>
                             {% endif %}
 
-                            <!-- Previous page -->
                             {% if pagination_info.has_previous %}
                                 <li class="page-item">
                                     <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page={{ pagination_info.previous_page }}">
@@ -153,7 +166,6 @@
                                 </li>
                             {% endif %}
 
-                            <!-- Page numbers -->
                             {% for page_num in page_obj.paginator.page_range %}
                                 {% if page_num == pagination_info.current_page %}
                                     <li class="page-item active">
@@ -174,7 +186,6 @@
                                 {% endif %}
                             {% endfor %}
 
-                            <!-- Next page -->
                             {% if pagination_info.has_next %}
                                 <li class="page-item">
                                     <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page={{ pagination_info.next_page }}">
@@ -183,7 +194,6 @@
                                 </li>
                             {% endif %}
 
-                            <!-- Last page -->
                             {% if pagination_info.current_page < pagination_info.total_pages %}
                                 <li class="page-item">
                                     <a class="page-link" href="?{% if selected_month %}month={{ selected_month }}&{% endif %}{% if search_name %}name={{ search_name }}&{% endif %}{% if search_ippis %}ippis={{ search_ippis }}&{% endif %}per_page={{ per_page }}&page={{ pagination_info.total_pages }}">
@@ -201,7 +211,6 @@
     </div>
 </div>
 
-<!-- Optional: Auto-submit form on per_page change -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const perPageSelect = document.querySelector('select[name="per_page"]');
@@ -211,7 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add Enter key support for search inputs
     const searchInputs = document.querySelectorAll('input[name="name"], input[name="ippis"]');
     searchInputs.forEach(input => {
         input.addEventListener('keypress', function(e) {
@@ -220,11 +228,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // ✅ Initialize Bootstrap tooltips for the info icon
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function(el) {
+        new bootstrap.Tooltip(el);
+    });
 });
 </script>
 
 <style>
-/* Custom styles for better UX */
 .table th {
     background-color: #343a40;
     color: white;
@@ -253,7 +266,6 @@ document.addEventListener('DOMContentLoaded', function() {
     border-color: #007bff;
 }
 
-/* Loading indicator for form submissions */
 .btn:disabled {
     opacity: 0.6;
     pointer-events: none;

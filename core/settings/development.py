@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'PurchasedItems',
     'report',
     'projectfinance',
+    'inventory_app',
 ]
 
 
@@ -49,7 +50,7 @@ AUTH_USER_MODEL = 'accounts.User'
 ROOT_URLCONF = 'core.urls'
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE = 900  #15 minutes
+SESSION_COOKIE_AGE = 2000  #15 minutes
 SESSION_SAVE_EVERY_REQUEST = True
 
 # LOGIN_URL = '/'   

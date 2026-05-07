@@ -11,6 +11,42 @@ from accounts.models import Member
 from .models import *
 
 
+@login_required
+# @group_required(['admin','staff'])
+def add_forms_type(request):
+    forms_types = SavingType.objects.all()
+
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        request_fee = request.POST.get('request_fee')
+        form_type_id = request.POST.get('form_type_id')
+        action = request.POST.get('action')  # 'toggle' or 'edit'
+
+        if form_type_id:
+            form_type = get_object_or_404(SavingType, id=form_type_id)
+
+            if action == 'toggle':
+                form_type.available = not form_type.available
+                form_type.save()
+                messages.success(request, 'Form type availability updated successfully.')
+                return redirect('add_forms_type')
+
+            elif action == 'edit':
+                form_type.title = title
+                form_type.request_fee = request_fee
+               
+                form_type.save()
+                messages.success(request, 'Form type updated successfully.')
+                return redirect('add_forms_type')
+
+        else:
+            SavingType.objects.create(title=title, request_fee=request_fee, available=True,)
+            messages.success(request, 'Form type created successfully.')
+            return redirect('add_forms_type')
+
+    context = {'forms_types': forms_types}
+    return render(request, 'special_savings/add_forms_type.html', context)
+
 
 # Create your views here.
 def savings_request_form_payment(request):
@@ -51,7 +87,9 @@ def savings_request_form_payment(request):
 
             if SpecialSavingsTergetSavingsRequestForm.objects.filter(
                 member=member, 
-                savings_type=savings_type
+                savings_type=savings_type,
+                status = "paid"
+                
             ).exists():
                 messages.warning(
                     request, 
@@ -69,7 +107,8 @@ def savings_request_form_payment(request):
                 form_fee=savings_type.request_fee,
                 amount=amount,
                 duration_in_months= duration_in_months,
-                created_by=request.user
+                created_by=request.user,
+                status = "used"
             )
 
             messages.success(

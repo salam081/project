@@ -488,22 +488,28 @@ def loans_by_year(request, year, loan_type_filter):
         ws = wb.active
         ws.title = "Loan Data"
 
-        headers = ['ID', 'First Name', 'Last Name', 'Other Name', 'Approved Amount', 'Account Number', 'Bank Name', 'Bank Code', 'Duration Month']
+        headers = ['ID','Ippis',  'Approved Amount', 'Account Name','Account Number', 'Bank Name', 'Bank Code', 'Duration Month']
+        # headers = ['ID','Ippis', 'Account Name', 'FullName', 'Approved Amount', 'Account Number', 'Bank Name', 'Bank Code', 'Duration Month']
+       
         ws.append(headers)
-
+        
         for loan in loanobj:
+            user = loan.member.member
+
+            # full_name = f"{user.first_name} {user.last_name} {user.other_name or ''}".strip()
+
             ws.append([
                 loan.id,
-                str(loan.member.member.first_name),
-                str(loan.member.member.last_name),
-                str(loan.member.member.other_name),
+                str(loan.member.ippis),
                 loan.approved_amount if loan.approved_amount is not None else 'N/A',
+                loan.account_name,
                 loan.account_number,
                 str(loan.bank_name),
                 str(loan.bank_code.name),
                 loan.loan_term_months
             ])
-
+        
+      
         for col in ws.columns:
             max_length = 0
             col_letter = get_column_letter(col[0].column)
@@ -909,55 +915,123 @@ def loan_analytics_view(request):
 
 
 
+from openpyxl.styles import Font
+from dateutil.relativedelta import relativedelta
 def export_loan_schedule(request, loan_id):
-    loan = LoanRequest.objects.get(id=loan_id)
+    try:
+        loan = LoanRequest.objects.get(id=loan_id)
+    except LoanRequest.DoesNotExist:
+        return HttpResponse("Loan not found", status=404)
 
-    amount = Decimal(loan.amount)
+    # SAFETY: Use requested amount if not approved yet, otherwise use approved amount
+    raw_amount = loan.approved_amount if loan.approved_amount else loan.amount
+    amount = Decimal(str(raw_amount))
     months = loan.loan_term_months
 
-    # Calculate base monthly
+    if months <= 0:
+        return HttpResponse("Invalid loan term", status=400)
+
+    # Get the start date (Use approval date if approved, otherwise application date)
+    start_date = loan.approval_date if loan.approval_date else loan.application_date
+
+    # Calculate base monthly payment
     monthly = (amount / months).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    payments = [monthly] * months
-
-    # Fix last payment
-    total = sum(payments)
-    diff = amount - total
-    payments[-1] += diff
-
-    # Create Excel
+    # Create Excel Workbook
     wb = Workbook()
     ws = wb.active
-    ws.title = "Loan Schedule"
+    ws.title = "Repayment Schedule"
 
-    # Header
-    ws.append([
-        "Month",
-        "Payment Amount (₦)",
-        "Cumulative Paid (₦)",
-        "Balance Remaining (₦)"
-    ])
+    # Make Headers Bold
+    bold_font = Font(bold=True)
+    headers = ["Due Date", "Month Number", "Payment Amount (₦)", "Cumulative Paid (₦)", "Balance Remaining (₦)"]
+    for col_num, header in enumerate(headers, 1):
+        ws.cell(row=1, column=col_num, value=header).font = bold_font
 
     balance = amount
     cumulative = Decimal('0.00')
 
-    for i, payment in enumerate(payments, start=1):
+    for i in range(1, months + 1):
+        # Calculate the exact date this month is due
+        current_due_date = start_date + relativedelta(months=i)
+
+        # If it's the last month, just charge whatever is left to prevent 1 penny missing
+        if i == months:
+            payment = balance
+        else:
+            payment = monthly
+
         cumulative += payment
         balance -= payment
 
+        # Add row to Excel
         ws.append([
+            current_due_date.strftime("%Y-%m-%d"), # Formats date nicely
             i,
-            float(payment),
-            float(cumulative),
-            float(balance)
+            payment,
+            cumulative,
+            balance
         ])
 
-    # Response
+    # Prepare HTTP Response to download
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response['Content-Disposition'] = f'attachment; filename=loan_{loan.id}_schedule.xlsx'
+    response['Content-Disposition'] = f'attachment; filename=Loan_Schedule_{loan.id}.xlsx'
 
     wb.save(response)
     return response
+
+
+# def export_loan_schedule(request, loan_id):
+#     loan = LoanRequest.objects.get(id=loan_id)
+
+#     amount = Decimal(loan.amount)
+#     months = loan.loan_term_months
+
+#     # Calculate base monthly
+#     monthly = (amount / months).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+#     payments = [monthly] * months
+
+#     # Fix last payment
+#     total = sum(payments)
+#     diff = amount - total
+#     payments[-1] += diff
+
+#     # Create Excel
+#     wb = Workbook()
+#     ws = wb.active
+#     ws.title = "Loan Schedule"
+
+#     # Header
+#     ws.append([
+#         "Month",
+#         "Payment Amount (₦)",
+#         "Cumulative Paid (₦)",
+#         "Balance Remaining (₦)"
+#     ])
+
+#     balance = amount
+#     cumulative = Decimal('0.00')
+
+#     for i, payment in enumerate(payments, start=1):
+#         cumulative += payment
+#         balance -= payment
+
+#         ws.append([
+#             i,
+#             float(payment),
+#             float(cumulative),
+#             float(balance)
+#         ])
+
+#     # Response
+#     response = HttpResponse(
+#         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+#     )
+#     response['Content-Disposition'] = f'attachment; filename=loan_{loan.id}_schedule.xlsx'
+
+#     wb.save(response)
+#     return response
 

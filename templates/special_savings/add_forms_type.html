@@ -1,0 +1,154 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Manage Forms {% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h6 class="text-center text-primary fs-4">Manage Forms</h6>
+
+
+    <div class="card mb-4 shadow">
+        <div class="card-header  text-dark">
+            <h6 class="mb-0">Add New Form </h6>
+        </div>
+        <div class="card-body">
+            <form action="{% url 'add_forms_type' %}" method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="id_name" class="form-label">Form Title</label>
+                        <input type="text" class="form-control" id="id_name" name="title" required>
+                    </div>
+                   
+                    <div class="col-md-6">
+                        <label for="id_request_fee" class="form-label">Form Fee</label>
+                        <input type="number" class="form-control" id="id_request_fee" name="request_fee" step="0.01">
+                    </div>
+                   
+                   
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success">Create Form Type</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card col-12 shadow">
+        <div class="card-header  text-dark">
+            <h6 class="">Existing Forms</h6>
+        </div>
+        <div class="card-body">
+            {% if forms_types %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-info">
+                        <tr>
+                            <th scope="col">Title</th>
+                            <th class="text-nowrap" style="min-width: 120px;">Request Fee</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form_type in forms_types %}
+                        <tr>
+                            <td class="text-nowrap" style="min-width: 120px;">{{ form_type.title }}</td>
+                           
+                            <td>{{ form_type.request_fee|default:"N/A" }}</td>
+                           
+                            <td>
+                                {% if form_type.available %}
+                                    <span class="status-badge bg-success">Available</span>
+                                {% else %}
+                                    <span class="status-badge bg-danger">Unavailable</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-info btn-sm text-white" data-bs-toggle="modal" data-bs-target="#editModal"
+                                        data-id="{{ form_type.id }}"
+                                        data-title="{{ form_type.title }}"
+                                        data-request-fee="{{ form_type.request_fee }}">
+                                        Edit
+                                    </button>
+                                    <form action="{% url 'add_forms_type' %}" method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="form_type_id" value="{{ form_type.id }}">
+                                        <input type="hidden" name="action" value="toggle">
+                                        <button type="submit" class="btn  btn-sm">
+                                            {% if form_type.available %}
+                                            <span class="bg-warning p-2 text-white">Deactivate </span>
+                                            {% else %}
+                                            <span class="bg-danger p-2 text-white">Activate</span>
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center">No form types have been created yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">Edit Form Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editForm" action="{% url 'add_forms_type' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form_type_id" id="edit-form-type-id">
+                <input type="hidden" name="action" value="edit">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit-title" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="edit-title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-request-fee" class="form-label">Request Fee</label>
+                        <input type="number" class="form-control" id="edit-request-fee" name="request_fee" step="0.01">
+                    </div>
+                   
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const editModal = document.getElementById('editModal');
+        editModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const title = button.getAttribute('data-title');
+            const requestFee = button.getAttribute('data-request-fee');
+           
+
+            const modalId = editModal.querySelector('#edit-form-type-id');
+            const modalTitle = editModal.querySelector('#edit-title');
+            const modalRequestFee = editModal.querySelector('#edit-request-fee');
+           
+
+            modalId.value = id;
+            modalTitle.value = title;
+            modalRequestFee.value = requestFee;
+           
+        });
+    });
+</script>
+{% endblock %}

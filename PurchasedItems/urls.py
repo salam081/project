@@ -22,8 +22,6 @@ urlpatterns = [
     path('purchased_item/<int:pk>/delete/', views.purchased_item_delete, name='delete_purchased_item'),
     
 
-
-
     path('items/<int:item_pk>/selling-plan/create/', views.selling_plan_create, name='selling_plan_create'),
     path('selling-plans/', views.selling_plan_list, name='selling_plan_list'),
     path('selling-plans/<int:pk>/', views.selling_plan_detail, name='selling_plan_detail'),

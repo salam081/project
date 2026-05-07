@@ -1,0 +1,239 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container col-12 p-1">
+
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Request #{{ member_request.id }} — Details</h3>
+        <a href="{% url 'member_make_request' %}" class="btn btn-secondary btn-sm text-white">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+
+    <div class="row justify-content-center mt-3">
+        <div class="col-12 col-lg-10">
+
+            <!-- Request Summary -->
+            <div class="alert-light border rounded p-3 mb-4 shadow bg-white">
+    <!-- Top Row: Main Info -->
+    <div class="row g-3 mb-3 border-bottom pb-3">
+        <div class="col-6 col-md-3">
+            <span class="small text-muted d-block">Full Name</span>
+            <div class="fw-bold text-truncate">
+                {% if member_request.user %}
+                    {{ member_request.user.get_full_name|default:member_request.user.username }}
+                {% else %}
+                    {{ member_request.guest_name }}
+                    <span class="status-badge bg-secondary ms-1" style="font-size:0.5rem;">GUEST</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <span class="small text-muted d-block">Status</span>
+            <div>
+                {% if member_request.status == "Pending" %}
+                    <span class="status-badge bg-warning text-dark">Pending</span>
+                {% elif member_request.status == "Approved" %}
+                    <span class="status-badge bg-success">Approved</span>
+                {% elif member_request.status == "Declined" %}
+                    <span class="status-badge bg-danger">Declined</span>
+                {% elif member_request.status == "ItemPicked" %}
+                    <span class="status-badge bg-info">Picked</span>
+                {% elif member_request.status == "Fully Paid" %}
+                    <span class="status-badge bg-success text-white">Fully Paid</span>
+                {% else %}
+                    <span class="status-badge bg-secondary text-white">{{ member_request.status }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <span class="small text-muted d-block">Date</span>
+            <div class="fw-bold small">{{ member_request.date_created|date:"d M Y" }}</div>
+            <div class="text-muted" style="font-size: 0.7rem;">{{ member_request.date_created|date:"H:i" }}</div>
+        </div>
+        <div class="col-6 col-md-3">
+            <span class="small text-muted d-block">Approved By</span>
+            <div class="fw-bold text-truncate">{{ member_request.approved_by.get_full_name|default:"--" }}</div>
+        </div>
+    </div>
+
+    <!-- Bottom Row: Verification & Documents -->
+    <div class="row g-3 align-items-center">
+        <div class="col-6 col-md-4">
+            <span class="small text-muted d-block">Guarantor IPPIS</span>
+            <div class="fw-bold">{{ member_request.gaurantor_ippis|default:"--" }}</div>
+        </div>
+        <div class="col-3 col-md-4">
+            <span class="small text-muted d-block">Payslip</span>
+            {% if member_request.file_payslip %}
+                <img src="{{ member_request.file_payslip.url }}"
+                     class="rounded border shadow-sm"
+                     style="width:40px; height:40px; object-fit:cover; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#payslipModal">
+            {% else %}
+                <span class="text-muted x-small">N/A</span>
+            {% endif %}
+        </div>
+        <div class="col-3 col-md-4">
+            <span class="small text-muted d-block">Passport</span>
+            {% if member_request.passport_photo %}
+                <img src="{{ member_request.passport_photo.url }}"
+                     class="rounded border shadow-sm"
+                     style="width:40px; height:40px; object-fit:cover; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#passportModal">
+            {% else %}
+                <span class="text-muted x-small">N/A</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modals (Place these at the very bottom of the file, outside the container) -->
+    {% if member_request.file_payslip %}
+    <div class="modal fade" id="payslipModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark border-0">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-2">
+                    <img src="{{ member_request.file_payslip.url }}" class="img-fluid w-100 rounded">
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if member_request.passport_photo %}
+    <div class="modal fade" id="passportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-0">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-2 text-center">
+                    <img src="{{ member_request.passport_photo.url }}" class="img-fluid rounded" style="max-height: 80vh;">
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+            <!-- End Summary -->
+
+            <!-- Financial Summary Cards -->
+            <div class="row g-3 mb-4 text-center">
+                <div class="col-md-4 ">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-body">
+                            <span class="d-block mb-1">Total Value</span>
+                            <h5 class="fw-bold mb-0 fs-6">
+                                ₦{{ member_request.calculate_total_price|intcomma }}
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-body">
+                            <span class="d-block mb-1">Amount Paid</span>
+                            <h5 class="fw-bold text-success mb-0 fs-6">
+                                ₦{{ member_request.total_paid|intcomma }}
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-body">
+                            <span class="d-block mb-1">Balance Remaining</span>
+                            <h5 class="fw-bold mb-0 {% if member_request.balance <= 0 %}text-success{% else %}text-danger{% endif %} fs-6">
+                                ₦{{ member_request.balance|intcomma }}
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <h6 class="fw-bold mb-2">Requested Items</h6>
+            <div class="table-responsive mb-4 shadow p-3 border rounded bg-white">
+                <table class="table table-hover align-middle">
+                    <thead class="table-info">
+                        <tr>
+                            <th>S/N</th>
+                            <th>Brand</th>
+                            <th>Model</th>
+                            <th>Unit Price</th>
+                            <th>Qty</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in details %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ d.item.received_item.brand }}</td>
+                            <td>{{ d.item.received_item.model_name }}</td>
+                            <td>₦{{ d.item_price|intcomma }}</td>
+                            <td>{{ d.quantity }}</td>
+                            <td class="fw-bold">₦{{ d.total_price|intcomma }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No items on this request.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if details %}
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="5" class="text-end fw-bold">Grand Total</td>
+                            <td class="fw-bold text-success">
+                                ₦{{ member_request.calculate_total_price|intcomma }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- Repayment History -->
+            <h6 class="fw-bold mb-2">Repayment History</h6>
+            <div class="table-responsive shadow p-3 border rounded bg-white" style="max-height: 250px; overflow-y: auto">
+                <table class="table table-hover align-middle">
+                    <thead class="table-info">
+                        <tr>
+                            <th>S/N</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Received Date</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Amount Paid</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Balance After</th>
+                            <th class="text-nowrap text-truncate" style="max-width: 270px;">Recorded By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in member_request.repayments.all %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ payment.repayment_date|date:"d M Y" }}</td>
+                            <td class="text-success fw-bold">₦{{ payment.amount_paid|intcomma }}</td>
+                            <td class="{% if payment.balance_remaining <= 0 %}text-success{% else %}text-danger{% endif %}">
+                                ₦{{ payment.balance_remaining|intcomma|default:"--" }}
+                            </td>
+                            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ payment.created_by.get_full_name|default:payment.created_by.username }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No payments recorded yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

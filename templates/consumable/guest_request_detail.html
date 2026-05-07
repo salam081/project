@@ -1,0 +1,149 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 mb-0">Request Details: #{{ req.id }}</h2>
+        <a href="{% url 'guest_requests_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar: Guest & Status Info -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Guest Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if req.passport %}
+                            <img src="{{ req.passport.url }}" class="img-thumbnail rounded-circle" style="width: 120px; height: 120px; object-fit: cover;">
+                        {% else %}
+                            <div class="bg-secondary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                                <i class="bi bi-user fa-3x"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Name</span> <span class="fw-bold">{{ req.guest_name }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Phone</span> <span>{{ req.guest_phone|default:"--" }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>IPPIS</span> <span>{{ req.guest_ippis|default:"--" }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Status</span> 
+                            <span class="status-badge {% if req.status == 'Approved' %}bg-success{% elif req.status == 'Pending' %}bg-warning text-dark{% else %}bg-primary{% endif %}">
+                                {{ req.status }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            
+
+           <div class="text-center mb-3 shadow">
+            {% if req.file_payslpt %}
+                <!-- Thumbnail — click to zoom -->
+                <img src="{{ req.file_payslpt.url }}"
+                    class="img-thumbnail rounded-circle"
+                    style="width: 130px; height: 180px; object-fit: cover; cursor: zoom-in;"
+                    data-bs-toggle="modal"
+                    data-bs-target="#payslipModal">
+            {% else %}
+                <div class="bg-secondary text-white rounded-circle d-inline-flex align-items-center justify-content-center"
+                    style="width: 100px; height: 100px;">
+                    <i class="bi bi-person fa-3x"></i>
+                </div>
+            {% endif %}
+        </div>
+        </div>
+
+            <!-- Zoom Modal -->
+            {% if req.file_payslpt %}
+            <div class="modal fade" id="payslipModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-xl">
+                    <div class="modal-content bg-dark border-0">
+                        <div class="modal-header border-0 pb-0">
+                            <span class="text-white small">Payslip</span>
+                            <button type="button" class="btn-close btn-close-white ms-auto"
+                                    data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-2">
+                            <img src="{{ req.file_payslpt.url }}"
+                                class="img-fluid w-100 rounded"
+                                style="object-fit: contain;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Main Content: Requested Items -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Requested Items</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-nowrap align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-nowrap text-truncate" style="max-width: 270px;">Item Description</th>
+                                <th class="text-center">Qty</th>
+                                <th  class="text-end">Unit Price</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detail in req.details.all %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ detail.selling_item.purchased_item.item_name }}</div>
+                                    <small class="text-muted">{{ detail.selling_item.purchased_item.item_description }}</small>
+                                </td>
+                                <td class="text-center">{{ detail.quantity }}</td>
+                                <td class="text-end">₦{{ detail.item_price|intcomma }}</td>
+                                <td class="text-end fw-bold">₦{{ detail.total_price|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="3" class="text-end fw-bold">Total Request Value:</td>
+                                <td class="text-end fw-bold text-primary h6">₦{{ req.calculate_total_price|intcomma }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Financial Summary -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card border-success shadow-sm mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-1">Total Paid Amount</h6>
+                            <h6 class="text-success mb-0">₦{{ req.total_paid|intcomma }}</h6>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-danger shadow-sm mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-1">Outstanding Balance</h6>
+                            <h6 class="text-danger mb-0">₦{{ req.balance|intcomma }}</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

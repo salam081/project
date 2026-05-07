@@ -66,8 +66,8 @@
 <div class="container">
 
     <div class="text-center mb-1 mb-md-1">
-        <h4 class="h5 h4-md fw-bold mb-2">Savings Request Fee And Savings Types Management</h4>
-        <h6 class="small">Manage and track savings request efficiently</h6>
+        <h4 class="h5 h4-md fw-bold mb-2">Forms Request Fee  Management</h4>
+        <h6 class="">Manage and track forms request fee efficiently</h6>
         <hr class="w-50 w-25-md mx-auto">
     </div>
 
@@ -78,7 +78,7 @@
                 <i class="bi bi-money-bill fa-lg fa-2x-md text-primary"></i>
             </div>
             <div class="stat-content">
-                <p class="card-title fw-normal mb-1 mb-md-2 small">Total Fees Collected</p>
+                <p class="card-title fw-bold mb-1 mb-md-2 small">Total Fees Collected</p>
                 <h6 class="h4-md fw-bold mb-0 text-primary">₦{{ fee|floatformat:2|intcomma }}</h6>
             </div>
         </div>
@@ -90,7 +90,7 @@
                 <i class="bi bi-calculator fa-lg fa-2x-md text-info"></i>
             </div>
             <div class="stat-content">
-                <p class="card-title fw-normal mb-1 mb-md-2 small">Number of Payments</p>
+                <p class="card-title fw-bold mb-1 mb-md-2 small">Number of Payments</p>
                 <h6 class="h4-md fw-bold mb-0 text-info">{{ saving_req_form|intcomma }}</h6>
             </div>
         </div>
@@ -267,7 +267,7 @@
     <!-- Recent Payments Table - Printable Section -->
     <div id="printable-section">
         <div class="card border-0 shadow">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 h6 h5-md">
                     <i class="fas fa-history me-2"></i>Recent Payments
                 </h5>
@@ -281,9 +281,9 @@
                 <div class="d-none d-md-block">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
+                            <thead class="table-info">
                                 <tr>
-                                    <th scope="col" class="px-4">#</th>
+                                    <th scope="col" class="px-4">S/N</th>
                                     <th scope="col">Member Details</th>
                                     <th scope="col">Savings Type</th>
                                     <th scope="col">Form Fee</th>

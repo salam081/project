@@ -4,7 +4,11 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import pandas as pd
+import secrets
+import string
+from django.utils.safestring import mark_safe
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth import update_session_auth_hash
 from django.core.paginator import Paginator
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ValidationError
@@ -390,7 +394,7 @@ def is_profile_complete(user):
 def login_view(request):
     if request.method == "POST":
         username = request.POST.get("username", "").strip().lower()
-        password = request.POST.get("password")
+        password = request.POST.get("password").strip()
 
         user = authenticate(request, username=username, password=password)
         if user is not None:
@@ -556,9 +560,9 @@ def activate_users(request):
 @group_required(['admin', 'staff', 'members', 'non staff member','loan committee'])
 def changePassword(request):
     if request.method == 'POST':
-        old_password = request.POST.get('old_password')
-        new_password1 = request.POST.get('new_password1')
-        new_password2 = request.POST.get('new_password2')
+        old_password = request.POST.get('old_password').strip()
+        new_password1 = request.POST.get('new_password1').strip()
+        new_password2 = request.POST.get('new_password2').strip()
 
         if not request.user.check_password(old_password):
             messages.error(request, 'Old password is incorrect')
@@ -569,39 +573,93 @@ def changePassword(request):
         else:
             request.user.set_password(new_password1)
             request.user.save()
+             # Keep the user logged in after changing password
+            update_session_auth_hash(request, request.user)
             messages.success(request, 'Password successfully changed login ')
-            return redirect('login')
+            return redirect('change_password')
 
     return render(request, 'accounts/change_password.html')
 
 
-User = get_user_model()
-@login_required
-@group_required(['admin', 'staff'])
+
+
+
 def reset_password_view(request, identifier):
+    if request.method != "POST":
+        messages.error(request, "Invalid request.")
+        return redirect("all_members")
+    
+    if not (request.user.group and request.user.group.title.lower() in ['staff', 'admin']):
+        messages.error(request, "Permission denied.")
+        return redirect("all_members")
+
     try:
-        # Try User.id first
         user = User.objects.get(id=identifier)
     except User.DoesNotExist:
         try:
-            # Try Member.id instead
             member = Member.objects.get(id=identifier)
             user = member.member
         except Member.DoesNotExist:
-            messages.error(request, "User does not exist.")
+            messages.error(request, "User not found.")
             return redirect("all_members")
 
-    # Prevent resetting your own password
     if user == request.user:
         messages.error(request, "You cannot reset your own password this way.")
         return redirect("all_members")
 
-    # Reset password
-    user.set_password("pass")
+    if user.is_superuser and not request.user.is_superuser:
+        messages.error(request, "You cannot reset a superuser's password.")
+        return redirect("all_members")
+
+    # ✅ Generate a readable temporary password
+    alphabet = string.ascii_letters + string.digits
+    new_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+
+    user.set_password(new_password)
     user.save()
 
-    messages.success(request, f"Password for {user.username} has been reset.")
-    return redirect("all_members")
+    # ✅ Store in session to display ONCE on the next page
+    request.session["temp_password_info"] = {
+        "username": user.username,
+        "password": new_password,
+    }
+
+    return redirect("password_reset_success")
+
+
+def password_reset_success(request):
+    # ✅ Pop from session so it only shows once
+    info = request.session.pop("temp_password_info", None)
+
+    if not info:
+        messages.warning(request, "No password reset info found.")
+        return redirect("all_members")
+
+    return render(request, "accounts/password_reset_success.html", {"info": info})
+# def reset_password_view(request, identifier):
+#     try:
+#         # Try User.id first
+#         user = User.objects.get(id=identifier)
+#     except User.DoesNotExist:
+#         try:
+#             # Try Member.id instead
+#             member = Member.objects.get(id=identifier)
+#             user = member.member
+#         except Member.DoesNotExist:
+#             messages.error(request, "User does not exist.")
+#             return redirect("all_members")
+
+#     # Prevent resetting your own password
+#     if user == request.user:
+#         messages.error(request, "You cannot reset your own password this way.")
+#         return redirect("all_members")
+
+#     # Reset password
+#     user.set_password("pass")
+#     user.save()
+
+#     messages.success(request, f"Password for {user.username} has been reset.")
+#     return redirect("all_members")
 
 
 

@@ -1,10 +1,10 @@
 {% extends "base/base.html" %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-primary text-white py-3">
-            <h6 class="mb-0">Stock Inward / Receiving Voucher</h6>
+<div class="container ">
+    <div class="card shadow border-0">
+        <div class="card-header text-dark py-2">
+            <h6 class="mb-0"> Receiving Products</h6>
         </div>
         <div class="card-body">
             <form method="post">
@@ -24,7 +24,6 @@
                         <thead class="table-info">
                             <tr>
                                 <th style="width: 20%;">Brand</th>
-                                <th style="width: 15%;">Brand Image</th> <!-- ✅ NEW -->
                                 <th style="width: 20%;">Model</th>
                                 <th style="width: 15%;">Qty</th>
                                 <th style="width: 15%;">Unit Price</th>
@@ -36,7 +35,7 @@
                             {% for item_form in formset %}
                             <tr class="item-row">
                                 <td>{{ item_form.brand }}</td>
-                                <td>{{ item_form.brand_image }}</td>
+                                
                                 <td>{{ item_form.model_name }}</td>
                                 <td>{{ item_form.quantity }}</td>
                                 <td>{{ item_form.unit_price }}</td>
@@ -60,7 +59,7 @@
                 </div>
 
                 <div class="mt-4 text-end">
-                    <button type="submit" class="btn btn-primary btn-lg px-5">Process Shipment</button>
+                    <button type="submit" class="btn btn-primary btn-lg px-5">Save Received Products</button>
                 </div>
             </form>
         </div>

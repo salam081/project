@@ -1,21 +1,24 @@
 from django.shortcuts import render
 from multiprocessing.sharedctypes import Value
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
+from accounts.decorators import group_required
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator,PageNotAnInteger,EmptyPage
 from django.forms import DecimalField
 from django.http import JsonResponse, HttpResponse
-from django.db.models import F, Q, Sum,Prefetch, DecimalField, Value
+from django.db.models import F, Q, Sum,Prefetch, DecimalField, Value,ExpressionWrapper
 from django.db.models.functions import Coalesce
 from collections import defaultdict
+from django.http import HttpResponse, JsonResponse
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils import get_column_letter
 import pandas as pd
-from datetime import datetime
+from datetime import datetime,date
+import datetime
+from django.utils.dateparse import parse_date
 from django.contrib import messages
 from django.db import transaction
 from decimal import Decimal, InvalidOperation
@@ -31,20 +34,175 @@ from accounts.models import *
 from accounts.models import *
 from main.models import *
 
-from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse
-from accounts.decorators import group_required
-from django.contrib.auth.decorators import login_required
-from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Sum, F, Q, DecimalField, Count
-from django.db.models.functions import Coalesce
-from decimal import Decimal
-from datetime import datetime, date
-
-
-
-
 # =============ProjectFinanceApplication===================
+
+
+@login_required
+@group_required(['admin'])
+def project_finance_dashboard(request):
+    # ── Filters ──────────────────────────────────────────────────────────────
+    status_filter = request.GET.get('status', '').strip()
+    date_from     = request.GET.get('date_from', '').strip()
+    date_to       = request.GET.get('date_to', '').strip()
+
+    parsed_from = parse_date(date_from) if date_from else None
+    parsed_to   = parse_date(date_to)   if date_to   else None
+
+    # ── Date predicates (reused across querysets) ────────────────────────────
+    req_date_filter = Q()
+    if parsed_from:
+        req_date_filter &= Q(created_at__date__gte=parsed_from)
+    if parsed_to:
+        req_date_filter &= Q(created_at__date__lte=parsed_to)
+
+    app_date_filter = Q()
+    if parsed_from:
+        app_date_filter &= Q(created_at__date__gte=parsed_from)
+    if parsed_to:
+        app_date_filter &= Q(created_at__date__lte=parsed_to)
+
+    pmt_date_filter = Q()
+    if parsed_from:
+        pmt_date_filter &= Q(request__created_at__date__gte=parsed_from)
+    if parsed_to:
+        pmt_date_filter &= Q(request__created_at__date__lte=parsed_to)
+
+    status_counts = (
+        ProjectFinanceRequest.objects
+        .filter(req_date_filter)
+        .values('status')
+        .annotate(cnt=Count('id'))
+    )
+    counts_by_status = {row['status']: row['cnt'] for row in status_counts}
+    total_requests = sum(counts_by_status.values())
+
+    fin_agg = (
+        ProjectFinanceRequest.objects
+        .filter(req_date_filter)
+        .aggregate(
+            total_requested = Coalesce(Sum('requested_amount'),     Value(0), output_field=DecimalField()),
+            total_repayment = Coalesce(Sum('total_repayment_amount'), Value(0), output_field=DecimalField()),
+            total_balance   = Coalesce(Sum('balance_remaining'),    Value(0), output_field=DecimalField()),
+        )
+    )
+
+    total_paid_agg = (
+        ProjectFinancePayment.objects
+        .filter(pmt_date_filter)
+        .aggregate(
+            total_paid=Coalesce(Sum('amount_paid'), Value(0), output_field=DecimalField())
+        )
+    )
+
+    app_status_counts = (
+        ProjectFinanceApplication.objects
+        .filter(app_date_filter)
+        .values('status')
+        .annotate(cnt=Count('id'))
+    )
+    app_counts = {row['status']: row['cnt'] for row in app_status_counts}
+    total_apps = sum(app_counts.values())
+
+    summary = {
+        # Request status counts
+        'total':      total_requests,
+        'pending':    counts_by_status.get('Pending',   0),
+        'approved':   counts_by_status.get('Approved',  0),
+        'declined':   counts_by_status.get('Declined',  0),
+        'completed':  counts_by_status.get('Completed', 0),
+        'fully_paid': counts_by_status.get('FullyPaid', 0),
+        # Financials
+        'total_requested':       fin_agg['total_requested'],
+        'total_repayment':       fin_agg['total_repayment'],
+        'total_balance_remaining': fin_agg['total_balance'],
+        'total_paid':            total_paid_agg['total_paid'],
+        # Application counts
+        'total_applications':    total_apps,
+        'pending_applications':  app_counts.get('Pending',  0),
+        'reviewed_applications': app_counts.get('Reviewed', 0),
+        'rejected_applications': app_counts.get('Rejected', 0),
+    }
+
+    req_range_filter = Q()
+    if parsed_from:
+        req_range_filter &= Q(created_at__gte=parsed_from)
+    if parsed_to:
+        from datetime import datetime, time
+        end_of_day = datetime.combine(parsed_to, time.max)
+        req_range_filter &= Q(created_at__lte=end_of_day)
+
+    requests_qs = (
+        ProjectFinanceRequest.objects
+        .filter(req_range_filter)
+        .select_related(
+            'application__member__member',
+            'guarantor__member',
+            'approved_by',
+        )
+        .only(
+            'id', 'product', 'status', 'guarantor_status',
+            'requested_amount', 'total_repayment_amount',
+            'balance_remaining', 'markup_rate', 'created_at',
+            # select_related fields
+            'application__id',
+            'application__member__id',
+            'application__member__ippis',
+            'application__member__member__id',
+            'application__member__member__first_name',
+            'application__member__member__last_name',
+            'guarantor__id',
+            'guarantor__member__id',
+            'guarantor__member__first_name',
+            'guarantor__member__last_name',
+            'approved_by__id',
+        )
+        .order_by('-created_at')
+    )
+
+    if status_filter:
+        requests_qs = requests_qs.filter(status=status_filter)
+
+    # ── Recent Payments — only last 20, defer heavy fields ───────────────────
+    pmt_range_filter = Q()
+    if parsed_from:
+        pmt_range_filter &= Q(request__created_at__gte=parsed_from)
+    if parsed_to:
+        pmt_range_filter &= Q(request__created_at__lte=end_of_day if parsed_to else parsed_to)
+
+    recent_payments = (
+        ProjectFinancePayment.objects
+        .filter(pmt_range_filter)
+        .select_related(
+            'request__application__member__member',
+            'recorded_by',
+        )
+        .only(
+            'id', 'amount_paid', 'balance_remaining', 'month', 'created_at',
+            'request__id', 'request__product',
+            'request__application__id',
+            'request__application__member__id',
+            'request__application__member__ippis',
+            'request__application__member__member__id',
+            'request__application__member__member__first_name',
+            'request__application__member__member__last_name',
+            'recorded_by__id',
+            'recorded_by__first_name',
+            'recorded_by__last_name',
+        )
+        .order_by('-created_at')[:20]
+    )
+
+    context = {
+        'requests':        requests_qs,
+        'recent_payments': recent_payments,
+        'summary':         summary,
+        'status_filter':   status_filter,
+        'date_from':       date_from,
+        'date_to':         date_to,
+        'status_choices':  ProjectFinanceRequest.STATUS_CHOICES,
+    }
+    return render(request, 'projectfinance/finance_dashboard.html', context)
+
 @login_required
 @group_required(['admin','staff'])
 def application_list_view(request):
@@ -109,16 +267,164 @@ def application_detail_view(request, application_id):
     return render(request, 'projectfinance/application_detail.html', context)
    
 
+def _parse_date(val):
+    try:
+        return datetime.strptime(val.strip(), "%Y-%m-%d").date() if val else None
+    except ValueError:
+        return None
+
 @login_required
-@group_required(['admin','staff'])
+@group_required(['admin', 'staff'])
 def admin_project_finance_requests_list(request):
-    status_filter = request.GET.get('status', '')
-    requests = ProjectFinanceRequest.objects.select_related('application__member__member' ).order_by('-created_at')
-    # Apply filter only if a status is selected
+    # 1. Get filter parameters
+    status_filter = request.GET.get("status", "").strip()
+    ippis_filter  = request.GET.get("ippis", "").strip()
+    date_from_raw = request.GET.get("date_from", "").strip()
+    date_to_raw   = request.GET.get("date_to", "").strip()
+
+    parsed_from = _parse_date(date_from_raw)
+    parsed_to   = _parse_date(date_to_raw)
+
+    shared_q = Q()
+    if parsed_from:
+        shared_q &= Q(created_at__date__gte=parsed_from)
+    if parsed_to:
+        shared_q &= Q(created_at__date__lte=parsed_to)
+    if ippis_filter:
+        shared_q &= Q(application__member__ippis__icontains=ippis_filter)
+
+    # 3. Base Queryset matching current filters
+    base_qs = ProjectFinanceRequest.objects.filter(shared_q)
+
+    # 4. Helper function to get totals for ANY status (Now with Markup Profit calculation!)
+    def get_totals_for_status(queryset, status_name=None):
+        qs = queryset
+        if status_name:
+            qs = queryset.filter(status=status_name)
+            
+        data = qs.aggregate(
+            total_count=Count('id'),
+            req_sum=Sum('requested_amount'),
+            pay_sum=Sum('total_repayment_amount'),
+            bal_sum=Sum('balance_remaining')
+        )
+        
+        req_total = data['req_sum'] or Decimal("0.00")
+        pay_total = data['pay_sum'] or Decimal("0.00")
+        
+        return {
+            "count": data['total_count'] or 0,
+            "sum_requested": req_total,
+            "sum_repayment": pay_total,
+            "sum_balance": data['bal_sum'] or Decimal("0.00"),
+            "sum_markup": pay_total - req_total,  # 👈 Added: Total profit calculation
+        }
+
+    # 5. Build individual cards manually 
+    pending_totals   = get_totals_for_status(base_qs, "Pending")
+    approved_totals  = get_totals_for_status(base_qs, "Approved")
+    declined_totals  = get_totals_for_status(base_qs, "Declined")
+    completed_totals = get_totals_for_status(base_qs, "Completed")
+    fullypaid_totals = get_totals_for_status(base_qs, "FullyPaid")
+    grand_totals     = get_totals_for_status(base_qs, status_name=None) 
+
+    # 6. Determine Active Totals for the summary bar
+    if status_filter == "Pending":
+        active_totals = pending_totals
+    elif status_filter == "Approved":
+        active_totals = approved_totals
+    elif status_filter == "Declined":
+        active_totals = declined_totals
+    elif status_filter == "Completed":
+        active_totals = completed_totals
+    elif status_filter == "FullyPaid":
+        active_totals = fullypaid_totals
+    else:
+        active_totals = grand_totals
+
+    # 7. Get table data and paginate
+    requests_qs = base_qs.select_related("application__member__member").order_by("-created_at")
     if status_filter:
-        requests = requests.filter(status=status_filter)
-    context = {'requests': requests,'selected_status': status_filter,}
-    return render(request, 'projectfinance/project_finance_list_requests.html', context)
+        requests_qs = requests_qs.filter(status=status_filter)
+
+    if request.GET.get("export") == "excel":
+        return export_project_finance_requests_excel(requests_qs)
+
+    paginator = Paginator(requests_qs, 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    querydict = request.GET.copy()
+    querydict.pop("page", None)
+
+    context = {
+        "requests": page_obj,
+        "page_obj": page_obj,
+        "selected_status": status_filter,
+        "ippis_filter": ippis_filter,
+        "date_from": date_from_raw if parsed_from else "",
+        "date_to": date_to_raw if parsed_to else "",
+        "querystring": querydict.urlencode(),
+        
+        "grand": grand_totals,
+        "pending": pending_totals,
+        "approved": approved_totals,
+        "declined": declined_totals,
+        "completed": completed_totals,
+        "fullypaid": fullypaid_totals,
+        "active_totals": active_totals,
+    }
+    return render(request, "projectfinance/project_finance_list_requests.html", context)
+
+
+def export_project_finance_requests_excel(queryset):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Project Finance Requests"
+
+    headers = [
+        'S/N', 'Member Name', 'IPPIS', 'Product', 'Requested Amount',
+        'Markup Rate (%)', 'Total Repayment', 'Balance Remaining',
+        'Guarantor', 'Guarantor Status', 'Status', 'Date Requested',
+    ]
+    ws.append(headers)
+
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center')
+
+    money_columns = {5, 6, 7, 8}  # Requested, Markup, Total Repayment, Balance
+
+    for idx, req in enumerate(queryset, start=1):
+        applicant = req.application.member.member
+        guarantor = req.guarantor.member
+        ws.append([
+            idx,
+            f"{applicant.first_name} {applicant.last_name}",
+            getattr(req.application.member, 'ippis', ''),
+            req.product,
+            float(req.requested_amount),
+            float(req.markup_rate) if req.markup_rate is not None else None,
+            float(req.total_repayment_amount) if req.total_repayment_amount is not None else None,
+            float(req.balance_remaining) if req.balance_remaining is not None else None,
+            f"{guarantor.first_name} {guarantor.last_name}",
+            req.guarantor_status,
+            req.status,
+            req.created_at.strftime('%Y-%m-%d %H:%M'),
+        ])
+        for col in money_columns:
+            ws.cell(row=idx + 1, column=col).number_format = '#,##0.00'
+
+    for col_cells in ws.columns:
+        max_length = max((len(str(cell.value)) for cell in col_cells if cell.value is not None), default=10)
+        ws.column_dimensions[col_cells[0].column_letter].width = max_length + 2
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="project_finance_requests.xlsx"'
+    wb.save(response)
+    return response
 
 @login_required
 @group_required(['admin'])
@@ -148,11 +454,6 @@ def admin_approve_finance_request(request, id):
         return redirect('admin_project_finance_requests')
 
     return render(request, 'projectfinance/project_finance_approve.html', {'finance_request': finance_request})
-
-
-
-
-
 # ==========================================
 # MAIN REPORT GENERATION FUNCTION
 # ==========================================
@@ -371,13 +672,13 @@ def project_finance_report_view(request):
     # Parse dates if provided
     if start_date_str:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
         except ValueError:
             context['error'] = "Invalid start date format. Please use YYYY-MM-DD."
     
     if end_date_str:
         try:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
         except ValueError:
             context['error'] = "Invalid end date format. Please use YYYY-MM-DD."
 
@@ -405,13 +706,13 @@ def project_finance_report_api(request):
     # Parse dates if provided
     if start_date:
         try:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
         except ValueError:
             return JsonResponse({'error': 'Invalid start date format'}, status=400)
     
     if end_date:
         try:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+            end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
         except ValueError:
             return JsonResponse({'error': 'Invalid end date format'}, status=400)
     
@@ -458,45 +759,6 @@ def project_finance_report_api(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-# ==========================================
-# OPTIONAL: Helper function for template use
-# ==========================================
-
-def get_member_request_details(member_id, start_date=None, end_date=None):
-    """
-    Helper function to get detailed request information for a specific member
-    """
-    base_filter = Q(application__member__id=member_id)
-    if start_date:
-        base_filter &= Q(created_at__gte=start_date)
-    if end_date:
-        base_filter &= Q(created_at__lte=end_date)
-    
-    requests = ProjectFinanceRequest.objects.filter(
-        base_filter,
-        status__in=['Reviewed', 'Approved', 'FullyPaid']
-    ).select_related(
-        'application__member__member'
-    ).prefetch_related(
-        'projectfinancepayment_set'
-    ).order_by('created_at')
-    
-    request_details = []
-    for request_obj in requests:
-        # Get all payments for this request
-        payments = request_obj.projectfinancepayment_set.all()
-        total_paid = sum(payment.amount_paid for payment in payments)
-        
-        request_details.append({
-            'request': request_obj,
-            'payments': payments,
-            'total_paid': total_paid,
-            'outstanding': (request_obj.total_repayment_amount or Decimal('0.00')) - total_paid,
-            'profit_current': total_paid - request_obj.requested_amount,
-            'profit_expected': (request_obj.total_repayment_amount or Decimal('0.00')) - request_obj.requested_amount
-        })
-    
-    return request_details
 #=======================================
 
 @login_required

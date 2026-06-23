@@ -1,45 +1,47 @@
+
 {% extends 'base/base.html' %}
+{% load humanize %}
+
 {% block content %}
-  <div class="content-card ">
-    <h2>Approve Request: {{ finance_request.product }}</h2>
-    <p>Requested Amount: ₦{{ finance_request.requested_amount }}</p>
-    <div class="mb-4 py-4">
-      <h5 class="fw-semibold text-dark">Request Details</h5>
-      <ul class="list-group list-group-flush">
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <span class="text-secondary">Request ID:</span>
-          <span class="fw-bold">{{ finance_request.id }}</span>
-        </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <span class="text-secondary">Applicant:</span>
-          <span class="fw-bold">{{ finance_request.application.member.member.first_name }} {{ project_request.application.member.member.last_name }}</span>
-        </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <span class="text-secondary">Product:</span>
-          <span class="fw-bold">{{ finance_request.product }}</span>
-        </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <span class="text-secondary">Requested Amount:</span>
-          <span class="fw-bold">₦{{ finance_request.requested_amount }}</span>
-        </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <span class="text-secondary">Guarantor's IPPIS:</span>
-          <span class="fw-bold">{{ finance_request.guarantor.ippis }}</span>
-        </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <span class="text-secondary">Guarantor Status:</span>
-          <span class="fw-bold">{{ finance_request.guarantor_status }}</span>
-        </li>
-      </ul>
+<style>
+  hr{
+    background-color: cyan;
+    padding: 2px;
+  }
+  input{
+    border: 2px solid blue;
+  }
+</style>
+<div class="container d-flex align-items-center justify-content-center mt-3">
+  
+    <div class="card shadow col-12 col-sm-12 col-md-8 col-lg-8 col-xl-8  p-1">
+        <div class="card-header  text-primary">
+            <h6 class="mb-0">Approve  Request  #ID {{ finance_request.id }} </h6>
+        </div>
+        {% comment %} <div class="  mt-2 fw-bold "> ID <span class="text-success fs-5">{{ finance_request.id }}</span></div> {% endcomment %}
+        <div class="card-body">
+    
+            <p><strong>Member:</strong> {{ finance_request.application.member.member.first_name }} {{ project_request.application.member.member.last_name }} </p>
+            <p><strong>Ippis:</strong> {{ finance_request.application.member.ippis }}  </p>
+            <p><strong>Product:</strong> {{ finance_request.product }}  </p>
+            <p><strong>Requested Amount:</strong> ₦{{ finance_request.requested_amount }}</p>
+            <p><strong>Guarantor Ippis:</strong> {{ finance_request.guarantor.ippis }} </p>
+            <p><strong>Guarantor Status:</strong> {{ finance_request.guarantor_status }}</p>
+            <p><strong>Request Date:</strong> {{ finance_request.created_at }}</p>
+             <hr>
+             <form method="post">
+              {% csrf_token %}
+              <div class="mb-3">
+                {% comment %} <p class="text-muted">Markup rate as a percentage (e.g., 5.00 for 5%).</p> {% endcomment %}
+                <label for="markup_rate" class="form-label">Markup rate as a percentage (e.g., 20.00 for 20 %)</label>
+                <input type="number" name="markup_rate" step="0.01" class="form-control" required placeholder="Enter Markup" />
+              </div>
+              <button type="submit" class="btn btn-primary">Approve with Markup</button>
+            </form>
+        </div>
     </div>
-    <form method="post">
-      {% csrf_token %}
-      <div class="mb-3">
-        <p class="text-muted">Markup rate as a percentage (e.g., 5.00 for 5%).</p>
-        <label for="markup_rate" class="form-label">Markup Rate (%)</label>
-        <input type="number" name="markup_rate" step="0.01" class="form-control" required />
-      </div>
-      <button type="submit" class="btn btn-primary">Approve with Markup</button>
-    </form>
-  </div>
-{% endblock %}
+</div>
+
+
+{% endblock content %}
+

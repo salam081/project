@@ -1,0 +1,222 @@
+{% extends "base/base.html" %}
+
+{% block title %}RAM Requests{% endblock %}
+{% block page_title %}RAM Requests{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="container py-4">
+      <!-- HEADER BLOCK -->
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+         <div>
+            <h6 class="fw-bold mb-0">RAM Requests</h6>
+            <small class="text-muted">{{ total_count }} record(s) found</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="?{% if filter_status %}status={{ filter_status }}&{% endif %}{% if filter_search %}search={{ filter_search }}&{% endif %}{% if filter_date_from %}date_from={{ filter_date_from }}&{% endif %}{% if filter_date_to %}date_to={{ filter_date_to }}&{% endif %}{% if filter_budget %}budget={{ filter_budget }}&{% endif %}export=excel"
+            class="btn btn-success text-white">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+            </a>
+            <a href="{% url 'ram_request_create' %}" class="btn btn-primary text-white">
+                <i class="bi bi-plus-lg me-1"></i> New Request
+            </a>
+        </div>
+    </div>
+
+
+
+            <!-- Filter Card -->
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" id="filterForm">
+                        <div class="row g-3 align-items-end">
+                            <!-- Search -->
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Search Member / Guest</label>
+                                <input type="text" name="search" class="form-control"
+                                    placeholder="Name or IPPIS..." value="{{ filter_search }}">
+                            </div>
+
+                            <!-- Status -->
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Status</label>
+                                <select name="status" class="form-select">
+                                    <option value="">All Status</option>
+                                    <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="approved" {% if filter_status == 'approved' %}selected{% endif %}>Approved</option>
+                                    <option value="rejected" {% if filter_status == 'rejected' %}selected{% endif %}>Rejected</option>
+                                    <option value="fully Paid" {% if filter_status == 'fully Paid' %}selected{% endif %}>Fully Paid</option>
+                                </select>
+                            </div>
+
+                            <!-- Budget -->
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Budget</label>
+                                <select name="budget" class="form-select">
+                                    <option value="">All Budgets</option>
+                                    {% for budget in budgets %}
+                                    <option value="{{ budget.pk }}" {% if filter_budget == budget.pk|stringformat:"s" %}selected{% endif %}>
+                                        {{ budget.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Date From -->
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Date From</label>
+                                <input type="date" name="date_from" class="form-control" value="{{ filter_date_from }}">
+                            </div>
+
+                            <!-- Date To -->
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Date To</label>
+                                <input type="date" name="date_to" class="form-control" value="{{ filter_date_to }}">
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="col-md-1 d-flex gap-1">
+                                <button type="submit" class="btn btn-primary  w-100">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                                <a href="{% url 'ram_request_list' %}" class="btn btn-outline-secondary w-100">
+                                    <i class="bi bi-x-lg"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Table -->
+             <div class="card border-0 shadow  overflow-hidden py-2">
+                    <div class="table-responsive">
+                        <table class="table table-hover ">
+                        <thead class="table-info">
+                            <tr>
+                                <th class="ps-4">#</th>
+                                <th class="text-nowrap">Member / Guest</th>
+                                <th>IPPIS</th>
+                                <th class="text-nowrap">Duration (Months)</th> 
+                                <th>Quantity</th>
+                                <th class="text-nowrap">Selling Price</th>
+                                <th>Paid</th>
+                                <th>Balance</th>
+                                <th>Status</th>
+                            
+                                <th class="pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in ram_requests %}
+                            <tr>
+                                <td class="ps-4">{{ forloop.counter }}</td>
+                                <td class="text-nowrap">
+                                    {% if req.member %}
+                                        {{ req.member.member.get_full_name }}
+                                    {% elif req.guest_name %}
+                                        {{ req.guest_name }}
+                                        <span class="status-badge bg-warning ms-1">Guest</span>
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td>
+                                    {% if req.member %}{{ req.member.ippis }}
+                                    {% else %}{{ req.guest_ippis|default:"—" }}{% endif %}
+                                </td>
+                                <td class="text-center">{{ req.items.first.duration_months }}</td>
+                                {% comment %} <td>{{ req.budget.name }}</td> {% endcomment %}
+                                <td>{{ req.items.first.quantity }}</td>
+                                <td>₦{{ req.total_selling_price|floatformat:2 }}</td>
+                                <td class="text-success">₦{{ req.total_paid|floatformat:2 }}</td>
+                                <td class="text-danger">₦{{ req.balance_remaining|floatformat:2 }}</td>
+                                <td>
+                                    <span class="status-badge
+                                        {% if req.status == 'approved' %}bg-success
+                                        {% elif req.status == 'pending' %}bg-warning text-dark
+                                        {% elif req.status == 'rejected' %}bg-danger
+                                        {% elif req.status == 'fully Paid' %}bg-primary
+                                        {% endif %}">
+                                        {{ req.get_status_display }}
+                                    </span>
+                                </td>
+                            
+                                <td>
+                                    <div class="d-flex justify-content-between align-items-center ">
+                                    <a href="{% url 'ram_request_detail' req.pk %}" class="btn btn-sm btn-primary text-white" title="view Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if user.is_staff and req.status == 'pending' %}
+                                    <a href="{% url 'ram_request_approve' req.pk %}" class="btn btn-sm btn-success ms-1 text-white" title="Approve"
+                                    onclick="return confirm(' Are You Sure You Want to Approve this request? ')">
+                                        <i class="bi bi-check-lg"></i>
+                                    </a>
+                                    <a href="{% url 'ram_request_reject' req.pk %}" class="btn btn-sm btn-danger ms-1 text-white" title="Reject"
+                                    onclick="return confirm('Reject this request?')">
+                                        <i class="bi bi-x-lg"></i>
+                                    </a>
+                                    {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No requests found.
+                                    {% if filter_search or filter_status or filter_date_from or filter_date_to %}
+                                    <a href="{% url 'ram_request_list' %}">Clear filters</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                    
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ filter_search }}&status={{ filter_status }}&date_from={{ filter_date_from }}&date_to={{ filter_date_to }}&budget={{ filter_budget }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}&search={{ filter_search }}&status={{ filter_status }}&date_from={{ filter_date_from }}&date_to={{ filter_date_to }}&budget={{ filter_budget }}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ filter_search }}&status={{ filter_status }}&date_from={{ filter_date_from }}&date_to={{ filter_date_to }}&budget={{ filter_budget }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <p class="text-center text-muted small">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} — {{ total_count }} total record(s)
+                </p>
+            </nav>
+
+</div>
+{% endif %}
+
+{% endblock %}

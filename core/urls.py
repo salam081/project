@@ -19,6 +19,8 @@ urlpatterns = [
     path('', include('report.urls')),
     path('', include('projectfinance.urls')),
     path('', include('inventory_app.urls')),
+    path('', include('ram_app.urls')),
+    path('', include('form_app.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

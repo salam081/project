@@ -4,6 +4,7 @@ from django.db import models
 from django.db.models import Sum
 from django.conf import settings
 # models.py
+
 class ProjectFinanceApplication(models.Model):
     STATUS_CHOICES = [('Pending', 'Pending'),('Reviewed', 'Reviewed'),('Rejected', 'Rejected')]
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="project_finance_applications")
@@ -14,6 +15,7 @@ class ProjectFinanceApplication(models.Model):
 
     def __str__(self):
         return f"Application by {self.member.member.first_name} {self.member.member.last_name} - {self.created_at.strftime('%Y-%m-%d')}"
+
 
 class ProjectFinanceRequest(models.Model):
     STATUS_CHOICES = [
@@ -59,6 +61,15 @@ class ProjectFinanceRequest(models.Model):
                 self.balance_remaining = self.requested_amount
 
         super().save(*args, **kwargs)
+        
+    @property
+    def markup_amount(self):
+        """
+        Returns the actual profit amount in Naira (Total Repayment minus Requested Amount).
+        """
+        if self.total_repayment_amount and self.requested_amount:
+            return self.total_repayment_amount - self.requested_amount
+        return Decimal('0.00')    
 
     def update_balance_remaining(self):
         # The logic is fine, but it should be called as needed.
@@ -75,7 +86,8 @@ class ProjectFinanceRequest(models.Model):
 
     def __str__(self):
         return f"{self.application.member.member.first_name} - {self.product}"
-
+    
+    
 
 
 class ProjectFinancePayment(models.Model):

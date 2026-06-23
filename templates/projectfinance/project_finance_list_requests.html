@@ -1,97 +1,259 @@
 {% extends 'base/base.html' %}
 {% load humanize %}
+
 {% block content %}
-<h2 class="mt-4">Project Finance Requests</h2>
-<div class="content-card shadow col-md-12">
-    <div class="row">
-   <form method="get" class="mb-3 col-md-6">
-    <label for="status">Filter by Status:</label>
-    <select class="form-select" name="status" id="status" onchange="this.form.submit()">
-        <option value="">All</option>
-        <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
-        <option value="Declined" {% if status_filter == 'Declined' %}selected{% endif %}>Declined</option>
-        <option value="Approved" {% if status_filter == 'Approved' %}selected{% endif %}>Approved</option>
-        <option value="FullyPaid" {% if status_filter == 'FullyPaid' %}selected{% endif %}>Fully Paid</option>
-    </select>
-</form>
-</div>
-<a href="{% url 'admin_project_finance_requests' %}" class="  btn btn-outline-danger">Clear</a>
-    <div class="table-responsive mt-4 shadow">
-        {% if requests %}
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th class="text-nowrap" style="min-width: 120px;">Member Name</th>
-                    <th class="text-nowrap" style="min-width: 120px;">Request Amount</th>
-                    <th class="text-nowrap" style="min-width: 120px;">Mark Up</th>
-                    <th class="text-nowrap" style="min-width: 120px;">Payback Amount</th>
-                    <th class="text-nowrap" style="min-width: 120px;">Guarantor Status</th>
-                    <th class="text-nowrap" style="min-width: 120px;">Request Status</th>
-                    <th scope="col">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for req in requests %}
-                <tr>
-                    <td class="text-nowrap" style="min-width: 120px;">
-                        <p class="mb-1 fw-bold text-dark">
-                            {{ req.application.member.member.first_name }} {{ req.application.member.member.last_name }}
-                        </p>
-                    </td>
-                    <td class="text-nowrap" style="min-width: 120px;">
-                        <small class="text-dark">
-                            {% comment %} Request for **{{ req.product }}**<br> {% endcomment %}
-                             ₦{{ req.requested_amount|intcomma }}
-                        </small>
-                    </td>
-                    <td>
-                       <small class="text-dark">
-                           {{ req.markup_rate|floatformat:0 }}%
-                        </small>
-                    </td>
-                    <td>
-                       <small class="text-dark">
-                           {{ req.total_repayment_amount|floatformat:2|intcomma }}
-                        </small>
-                    </td>
-                    <td>
-                        <small style="font-weight: bolder;"  class="{% if req.guarantor_status == 'Approved' %}text-success{% elif req.guarantor_status == 'Declined' %}text-danger{% else %}text-warning{% endif %}">
-                            {{ req.guarantor_status }}
-                        </small>
-                    </td>
-                    <td>
-                        <span class="status-badge text-white
-                        {% if req.status == 'pending' %}status-pending
-                        {% elif req.status == 'Approved' %}status-active
-                        {% elif req.status == 'FullyPaid' %}status-completed
-                        {% elif req.status == 'Declined' %}status-cancelled
-                        {% else %}bg-secondary{% endif %}">
-                        {{ req.status }}
-                        </span>
-                    </td>
-                    <td>
-    {% if req.status == 'FullyPaid' %}
-        <button class="btn btn-sm btn-success" disabled>Completed</button>
-    {% elif req.status == 'Approved' %}
-        <a href="{% url 'make_finance_payment' req.id %}" class="btn btn-sm btn-info " style="white-space: nowrap; word-break: keep-all;">Make Payment</a>
-    {% else %}
-        {% if req.guarantor_status == 'Approved' %}
-            <a href="{% url 'project_finance_approved' req.id %}" class="btn btn-sm btn-primary">Approve </a>
-        {% else %}
-            <button class="btn btn-sm btn-secondary" disabled title="Guarantor has not approved yet">Review</button>
-        {% endif %}
-    {% endif %}
-</td>
-                </tr>
-                {% endfor %}
-               
-            </tbody>
-        </table>
-        {% else %}
-        <div class="alert alert-info text-center rounded-3" role="alert">
-            No new requests for review.
-        </div>
-        {% endif %}
+<div class="container py-4">
+
+  {# HEADER #}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h6 class="fw-bold mb-1">Project Finance Requests List</h6>
+      <p class="text-muted mb-0">Review and manage all member requests</p>
     </div>
+    <div>
+      <span class="status-badge bg-primary fs-6 px-3 py-2 rounded-pill">
+        {{ page_obj.paginator.count }} request{{ page_obj.paginator.count|pluralize }}
+      </span>
+    </div>
+  </div>
+
+   {# STATUS CARDS #}
+   <div class="row g-3 mb-4">
+     {# 1. ALL CARD #}
+    <div class="col-12 col-md-4 col-lg-2">
+      <a href="?ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+      <div class="card border-0 shadow {% if not selected_status %}border-bottom border-3 border-secondary{% endif %}">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="status-badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1" style="font-size:.7rem;">All</span> {{ grand.count }}
+            <i class="bi bi-collection text-secondary fs-5"></i>
+          </div>
+          
+          {% comment %} <div class="text-dark fw-bold" >All Requests  {{ grand.count }} </div> {% endcomment %}
+           <div class="small text-dark fw-semibold">R: ₦{{ grand.sum_requested|floatformat:2|intcomma }}</div>
+            <div class="small text-primary fw-medium">M: ₦{{ grand.sum_markup|floatformat:2|intcomma }}</div> 
+            <div class="small text-danger">B: ₦{{ grand.sum_balance|floatformat:2|intcomma }}</div>
+        </div>
+      </div>
+      </a>
+    </div>
+    {# 2. PENDING CARD #}
+    <div class="col-12 col-md-4 col-lg-2">
+      <a href="?status=Pending&ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+      <div class="card border-0 shadow   {% if selected_status == 'Pending' %}border-bottom border-3 border-warning{% endif %}">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="status-badge bg-warning-subtle text-warning rounded-pill px-2 py-1" style="font-size:.7rem;">Pending    </span>{{ pending.count }}
+            <i class="bi bi-hourglass-split text-warning fs-5"></i>
+          </div>
+          {% comment %} <div class="text-dark" fw-bold style="font-size:.85rem;">Awaiting </div> {% endcomment %}
+           <div class="small text-dark fw-semibold">R: ₦{{ pending.sum_requested|floatformat:2|intcomma }}</div>
+            <div class="small text-primary fw-medium">M: ₦{{ pending.sum_markup|floatformat:2|intcomma }}</div> 
+            <div class="small text-danger">B: ₦{{ pending.sum_balance|floatformat:2|intcomma }}</div>
+        </div>
+      </div>
+      </a>
+    </div>
+     {# 3. APPROVED CARD #}
+    <div class="col-12 col-md-4 col-lg-2">
+      <a href="?status=Approved&ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+      <div class="card border-0 shadow  {% if selected_status == 'Approved' %}border-bottom border-3 border-success{% endif %}">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="status-badge bg-success-subtle text-success rounded-pill px-1 p-1" style="font-size:.7rem;">Approved</span> {{ approved.count }}
+            <i class="bi bi-check-circle text-success fs-5"></i>
+          </div>
+          {% comment %} <div class="text-dark" style="font-size:.85rem;">Approved {{ approved.count }}</div> {% endcomment %}
+          <div class="small text-dark fw-semibold">R: ₦{{ approved.sum_requested|floatformat:2|intcomma }}</div>
+            <div class="small text-primary fw-medium">M: ₦{{ approved.sum_markup|floatformat:2|intcomma }}</div>
+             <div class="small text-danger">B: ₦{{ approved.sum_balance|floatformat:2|intcomma }}</div>
+        </div>
+      </div>
+      </a>
+    </div>
+    {# 4. DECLINED CARD #}
+    <div class="col-12 col-md-4 col-lg-2">
+      <a href="?status=Declined&ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+      <div class="card border-0 shadow  {% if selected_status == 'Declined' %}border-bottom border-3 border-danger{% endif %}">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="status-badge bg-danger-subtle text-danger rounded-pill px-2 py-1" style="font-size:.7rem;">Declined</span> {{ declined.count }}
+            <i class="bi bi-x-circle text-danger fs-5"></i>
+          </div>
+          {% comment %} <div class="text-dark" style="font-size:.85rem;">Declined {{ declined.count }}</div> {% endcomment %}
+           <div class="small text-dark fw-semibold">R: ₦{{ declined.sum_requested|floatformat:2|intcomma }}</div>
+            <div class="small text-primary fw-medium">M: ₦{{ declined.sum_markup|floatformat:2|intcomma }}</div>
+             <div class="small text-danger">B: ₦{{ declined.sum_balance|floatformat:2|intcomma }}</div>
+        </div>
+      </div>
+      </a>
+    </div>
+
+   
+    {# 6. FULLY PAID CARD #}
+    <div class="col-12 col-md-4 col-lg-2">
+      <a href="?status=FullyPaid&ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+      <div class="card border-0 shadow  {% if selected_status == 'FullyPaid' %}border-bottom border-3 border-primary{% endif %}">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="status-badge bg-primary-subtle text-primary rounded-pill px-2 py-1" style="font-size:.7rem;">FullyPaid</span>  {{ fullypaid.count }}
+            <i class="bi bi-cash-coin text-primary fs-5"></i>
+          </div>
+          {% comment %} <div class="text-dark" style="font-size:.85rem;">Fully Paid {{ fullypaid.count }}</div> {% endcomment %}
+           <div class="small text-dark fw-semibold">R: ₦{{ fullypaid.sum_requested|floatformat:2|intcomma }}</div>
+            <div class="small text-primary fw-medium">M: ₦{{ fullypaid.sum_markup|floatformat:2|intcomma }}</div>
+             <div class="small text-danger">B: ₦{{ fullypaid.sum_balance|floatformat:2|intcomma }}</div>
+        </div>
+      </div>
+      </a>
+    </div>
+  </div>
+  
+
+  {# TOTAL SUMMARY BAR #}
+  <div class="card border-0 shadow mb-4 bg-light mt-3">
+    <div class="card-body py-2 px-3">
+      <div class="d-flex flex-wrap gap-4 justify-content-between align-items-center small fw-semibold text-muted">
+        <div><span class="text-dark">Filtered Count:</span> {{ active_totals.count }}</div>
+        <div><span class="text-dark">Requested:</span> ₦{{ active_totals.sum_requested|floatformat:2|intcomma }}</div>
+        <div><span class="text-dark">Total Profit (Markup):</span> <span class="text-primary">₦{{ active_totals.sum_markup|floatformat:2|intcomma }}</span></div>
+         <div><span class="text-dark">Total Repayment:</span> ₦{{ active_totals.sum_repayment|floatformat:2|intcomma }}</div>
+        <div><span class="text-dark">Remaining Balance:</span> <span class="text-danger">₦{{ active_totals.sum_balance|floatformat:2|intcomma }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  {# FILTERS FORM #}
+  <div class="card border-0 shadow ">
+    <div class="card-body">
+      <form method="get" class="row  align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted mb-1">Status</label>
+          <select name="status" class="form-select">
+            <option value="">All Statuses</option>
+            <option value="Pending" {% if selected_status == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Approved" {% if selected_status == 'Approved' %}selected{% endif %}>Approved</option>
+            <option value="Declined" {% if selected_status == 'Declined' %}selected{% endif %}>Declined</option>
+            <option value="Completed" {% if selected_status == 'Completed' %}selected{% endif %}>Completed</option>
+            <option value="FullyPaid" {% if selected_status == 'FullyPaid' %}selected{% endif %}>Fully Paid</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-bold text-muted mb-1">IPPIS</label>
+          <input type="text" name="ippis" value="{{ ippis_filter }}" class="form-control" placeholder="Enter Ippis">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-bold text-muted mb-1">From Date</label>
+          <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-bold text-muted mb-1">To Date</label>
+          <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary w-100">Filters</button>
+          <a href="{% url 'admin_project_finance_requests' %}" class="btn btn-secondary w-100 text-white">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# DATA TABLE #}
+  <div class="card border-0 shadow mb-4 p-3">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-info">
+          <tr>
+            <th>S/N</th>
+            <th>Member</th>
+            <th>Ippis</th>
+            <th>Product</th>
+            <th class="text-end text-nowrap">Requested Amount</th>
+            <th class="text-center text-nowrap">Markup Rate</th>
+            <th class="text-end text-nowrap">Profit (Markup)</th>
+             <th class="text-end text-nowrap">Total Repayment</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in requests %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <div class="fw-bold text-nowrap">
+                {{ req.application.member.member.first_name }} {{ req.application.member.member.last_name }}
+              </div>
+              {% comment %} <small class="text-muted text-nowrap">{{ req.product }}</small> {% endcomment %}
+            </td>
+            <td>{{ req.application.member.ippis }} </td>
+            <td class="text-end fw-semibold text-nowrap">{{ req.product }}</td>
+            <td class="text-end fw-semibold text-nowrap">₦{{ req.requested_amount|intcomma }}</td>
+            <td class="text-center">{{ req.markup_rate|default:"—" }}{% if req.markup_rate %}%{% endif %}</td>
+            <td class="text-end text-primary fw-medium">₦{{ req.markup_amount|floatformat:2|intcomma }}</td> <td class="text-end text-success fw-semibold">₦{{ req.total_repayment_amount|default:"0"|floatformat:2|intcomma }}</td>
+           
+             <td class="text-nowrap">
+                {% if req.status == 'Pending' %}
+                    <span class="status-badge bg-warning text-white">Pending</span>
+                {% elif req.status == 'Approved' %}
+                    <span class="status-badge bg-success text-white">Approved</span>
+                {% elif req.status == 'Declined' %}
+                    <span class="status-badge bg-danger text-white">Declined</span>
+                {% elif req.status == 'FullyPaid' %}
+                    <span class="status-badge bg-primary text-white">FullyPaid</span>
+                {% else %}
+                    <span class="status-badge bg-secondary text-white">{{ req.get_status_display }}</span>
+                {% endif %}
+            </td>
+            <td class="text-center text-nowrap">
+              <a href="{% url 'project_finance_request_detail' req.id %}" class="btn btn-sm btn-primary text-white">
+                <i class="bi bi-eye"></i>
+              </a>
+              {% if user.is_authenticated and user.group.title == 'admin' %}
+              {% if req.status == 'Pending' %}
+              <a href="{% url 'project_finance_approved' req.id %}" class="btn btn-sm btn-success text-white" title="Approve">
+                <i class="bi bi-check"></i>
+              </a>
+              {% endif %}
+              {% if req.status == 'Approved' %}
+              <a href="{% url 'make_finance_payment' req.id %}" class="btn btn-sm btn-info text-white" title="Add Payment">
+                <i class="bi bi-bank"></i>
+              </a>
+             
+             {% endif %}
+             {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">No matching finance requests found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# PAGINATION #}
+  {% if page_obj.has_other_pages %}
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ querystring }}">Previous</a>
+      </li>
+      {% endif %}
+      <li class="page-item active">
+        <span class="page-link">{{ page_obj.number }}</span>
+      </li>
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ querystring }}">Next</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
 </div>
 {% endblock %}

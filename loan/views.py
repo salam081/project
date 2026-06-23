@@ -7,7 +7,8 @@ from django.views.decorators.http import require_http_methods
 from django.utils.dateparse import parse_date
 from django.template.loader import render_to_string
 from datetime import date
-
+from django.db.models import Sum, Q, F, Value, DecimalField, ExpressionWrapper
+from django.db.models.functions import Coalesce
 from django.db.models.functions import TruncMonth
 # from accounts.decorator import group_required
 from django.db.models import Sum,Count, Q , Avg, Prefetch,F
@@ -194,59 +195,147 @@ def loan_request_fee_payment(request):
 @login_required
 @group_required(['admin','staff'])
 def admin_loan_requests_list(request):
-    requests_list = LoanRequest.objects.select_related('member', 'loan_type', 'bank_name').order_by('-date_created')
-    # Filtering
-    status_filter = request.GET.get('status')
-    loan_type_filter = request.GET.get('loan_type')
-    search_query = request.GET.get('search')
-    
+
+    status_filter    = request.GET.get('status', '')
+    loan_type_filter = request.GET.get('loan_type', '')
+    search_query     = request.GET.get('search', '')
+
+    DECIMAL = DecimalField(max_digits=12, decimal_places=2)
+
+    base_qs = LoanRequest.objects.select_related(
+        'member__member',
+        'loan_type',
+        'bank_name',
+    ).prefetch_related('repaybacks')
+
+    # ----------------------
+    # FILTERS
+    # ----------------------
     if status_filter:
-        requests_list = requests_list.filter(status=status_filter)
-    
+        base_qs = base_qs.filter(status=status_filter)
+
     if loan_type_filter:
-        requests_list = requests_list.filter(loan_type_id=loan_type_filter)
-    
+        base_qs = base_qs.filter(loan_type_id=loan_type_filter)
+
     if search_query:
-        requests_list = requests_list.filter(
+        base_qs = base_qs.filter(
             Q(member__member__first_name__icontains=search_query) |
             Q(member__member__last_name__icontains=search_query) |
-            Q(member__ippis__icontains=search_query) 
-            # Q(guarantor__member__member__first_name__icontains=search_query)
+            Q(member__ippis__icontains=search_query)
         )
-    else:
-         results_queryset = requests_list
-    results_queryset = results_queryset.order_by('status')
-    total_approved_amount = results_queryset.aggregate(total=Sum('approved_amount'))['total'] or 0
-    totals_by_status = dict(
-        results_queryset.values('status')
-        .annotate(total=Sum('amount'))
-        .values_list('status', 'total')
-    )
-    total_repaid = LoanRepayback.objects.filter(loan_request__in=results_queryset).aggregate(total=Sum('amount_paid'))['total'] or 0
-    total_amont_loan_request = totals_by_status.get('approved', 0)
-    total_pending = totals_by_status.get('pending', 0)
 
-    # Totals by status
-    totals_by_status = dict(
-        results_queryset.values('status')
-        .annotate(total=Sum('approved_amount'))
-        .values_list('status', 'total')
+    # ----------------------
+    # TOTALS (ALWAYS RUN)
+    # ----------------------
+    loan_totals = base_qs.aggregate(
+        total_pending=Coalesce(
+            Sum('amount', filter=Q(status='pending')),
+            Value(0),
+            output_field=DECIMAL
+        ),
+        total_approved=Coalesce(
+            Sum('approved_amount', filter=Q(status='approved')),
+            Value(0),
+            output_field=DECIMAL
+        ),
+        total_fullypaid=Coalesce(
+            Sum('approved_amount', filter=Q(status='Fullpaid')),
+            Value(0),
+            output_field=DECIMAL
+        ),
     )
-    # Pagination
-    paginator = Paginator(requests_list, 100)
+
+    repayment_totals = LoanRepayback.objects.filter(
+        loan_request__in=base_qs
+    ).aggregate(
+        total_repaid=Coalesce(
+            Sum('amount_paid'),
+            Value(0),
+            output_field=DECIMAL
+        )
+    )
+
+    # ----------------------
+    # PAGINATION
+    # ----------------------
+    requests_list = base_qs.order_by('-id')
+
+    paginator = Paginator(requests_list, 50)
     page_number = request.GET.get('page')
-    requests = paginator.get_page(page_number)
-    # Filter options
-    loan_types = LoanType.objects.all()
-    status_choices = LoanRequest._meta.get_field('status').choices
+    requests_page = paginator.get_page(page_number)
+
     context = {
-        'requests': requests,'loan_types': loan_types,
-        'status_choices': status_choices,'current_status': status_filter,
-        'current_loan_type': loan_type_filter,'search_query': search_query,
-        'total_approved': total_amont_loan_request,'total_pending': total_pending,
-        'total_repaid': total_repaid,'total_approved_amount': total_approved_amount,
+        'requests': requests_page,
+
+        'total_pending': loan_totals['total_pending'],
+        'total_approved': loan_totals['total_approved'],
+        'total_fullypaid': loan_totals['total_fullypaid'],
+
+        'total_repaid': repayment_totals['total_repaid'],
+
+        'status_choices': LoanRequest._meta.get_field('status').choices,
+        'loan_types': LoanType.objects.all(),
+        'current_status': status_filter,
+        'current_loan_type': loan_type_filter,
+        'search_query': search_query,
     }
+
     return render(request, 'loan/requests_list.html', context)
+
+# def admin_loan_requests_list(request):
+#     requests_list = LoanRequest.objects.select_related('member', 'loan_type', 'bank_name').order_by('-date_created')
+#     # Filtering
+#     status_filter = request.GET.get('status')
+#     loan_type_filter = request.GET.get('loan_type')
+#     search_query = request.GET.get('search')
+    
+#     if status_filter:
+#         requests_list = requests_list.filter(status=status_filter)
+    
+#     if loan_type_filter:
+#         requests_list = requests_list.filter(loan_type_id=loan_type_filter)
+    
+#     if search_query:
+#         requests_list = requests_list.filter(
+#             Q(member__member__first_name__icontains=search_query) |
+#             Q(member__member__last_name__icontains=search_query) |
+#             Q(member__ippis__icontains=search_query) 
+           
+#         )
+#     else:
+#          results_queryset = requests_list
+#     results_queryset = results_queryset.order_by('status')
+#     total_approved_amount = results_queryset.aggregate(total=Sum('approved_amount'))['total'] or 0
+#     totals_by_status = dict(
+#         results_queryset.values('status')
+#         .annotate(total=Sum('amount'))
+#         .values_list('status', 'total')
+#     )
+#     total_repaid = LoanRepayback.objects.filter(loan_request__in=results_queryset).aggregate(total=Sum('amount_paid'))['total'] or 0
+#     total_amont_loan_request = totals_by_status.get('approved', 0)
+#     total_pending = totals_by_status.get('pending', 0)
+
+#     # Totals by status
+#     totals_by_status = dict(
+#         results_queryset.values('status')
+#         .annotate(total=Sum('approved_amount'))
+#         .values_list('status', 'total')
+#     )
+#     # Pagination
+#     paginator = Paginator(requests_list, 100)
+#     page_number = request.GET.get('page')
+#     requests = paginator.get_page(page_number)
+#     # Filter options
+#     loan_types = LoanType.objects.all()
+#     status_choices = LoanRequest._meta.get_field('status').choices
+#     context = {
+#         'requests': requests,'loan_types': loan_types,
+#         'status_choices': status_choices,'current_status': status_filter,
+#         'current_loan_type': loan_type_filter,'search_query': search_query,
+#         'total_approved': total_amont_loan_request,'total_pending': total_pending,
+#         'total_repaid': total_repaid,'total_approved_amount': total_approved_amount,
+#     }
+#     return render(request, 'loan/requests_list.html', context)
 
 
 # ========admin loan request details=========

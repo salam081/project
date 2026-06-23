@@ -1,0 +1,52 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-10">
+        <div class="card border-0 shadow-lg">
+          <div class="card-header  text-dark py-3 border-0">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-arrow-return-left me-2"></i> Supplier Registration</h6>
+          </div>
+
+          <div class="card-body py-2">
+            <form method="POST">
+              {% csrf_token %}
+
+              <div class="row">
+                <div class="col-md-12 mb-3">
+                  <label class="form-label fw-bold">Full Name</label>
+                  <div class="input-group">
+                    <input type="text" name="name" class="form-control form-control" placeholder="Enter Full Name" required />
+                  </div>
+                </div>
+                <div class="col-md-12 mb-3">
+                  <label class="form-label fw-bold">Phone</label>
+                  <div class="input-group">
+                    <input type="number" name="phone" class="form-control form-control" placeholder="Enter Phone Number" required />
+                  </div>
+                </div>
+                <div class="col-md-12 mb-3">
+                  <label class="form-label fw-bold">Address</label>
+                  <div class="input-group">
+                    <input type="text" name="address" class="form-control form-control" placeholder="Enter Address" required />
+                  </div>
+                </div>
+              </div>
+
+              {% comment %} <div class="mb-4">
+                <label class="form-label fw-bold">Reason for Return</label>
+                <textarea name="reason" class="form-control" rows="3" placeholder="e.g. Damaged during transit, Wrong model sent..."></textarea>
+              </div> {% endcomment %}
+
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success btn-lg shadow">Add Supplier</button>
+                <a href="{% url 'inventory_home' %}" class="btn btn-light">Cancel</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,336 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- HEADER -->
+    <div class="d-flex justify-content-between align-items-center">
+    
+    <div>
+        <h2 class="fw-bold text-dark mb-0">Member Requests</h2>
+        <p class="text-muted mb-0">
+            List of all member requests for Point of Selas.
+        </p>
+    </div>
+
+    <button type="button" class="btn btn-success btn-sm text-white"
+        onclick="const urlParams = new URLSearchParams(window.location.search); urlParams.set('export', 'excel'); window.location.search = urlParams.toString();">
+        <i class="bi bi-file-earmark-excel"></i> Export Excel
+    </button>
+
+</div>
+<hr>
+<div class="row g-3">
+
+    <div class="col-12 col-md-6 col-lg-2">
+        <div class="stats-card d-flex shadow align-items-center bg-secondary-subtle">
+           
+            <div class="p-3 ">
+                <p class="text-muted mb-1">Total Amount</p>
+                <h6 class="mb-0">{{ total_amount }}</h6>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-2">
+        <div class="stats-card d-flex shadow align-items-center bg-warning-subtle">
+            
+            <div class="p-3">
+                <p class="text-muted mb-1">Pending</p>
+                <h6 class="mb-0">{{ pending_amount }}</h6>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-2">
+        <div class="stats-card d-flex shadow align-items-center bg-success-subtle">
+            
+            <div class="p-3">
+                <p class="text-muted mb-1">Approved</p>
+                <h6 class="mb-0">{{ approved_amount }}</h6>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-2">
+        <div class="stats-card d-flex shadow align-items-center bg-primary-subtle">
+           
+            <div class="p-3">
+                <p class="text-muted mb-1">Item Picked</p>
+                <h6 class="mb-0">{{ picked_amount }}</h6>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-2">
+        <div class="stats-card d-flex shadow align-items-center bg-danger-subtle">
+            
+            <div class="p-3">
+                <p class="text-muted mb-1">Declined</p>
+                <h6 class="mb-0">{{ declined_amount }}</h6>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-2">
+        <div class="stats-card d-flex shadow align-items-center bg-info-subtle">
+            
+            <div class="p-3">
+                <p class="text-muted mb-1">Fully Paid</p>
+                <h6 class="mb-0">{{ fullypaid_amount }}</h6>
+            </div>
+        </div>
+    </div>
+
+</div>
+   <div class="row mb-4 py-3 align-items-center mt-2 shadow">
+    <div class="col-12">
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+            
+            <div style="min-width: 160px; flex: 1;">
+                <label for="date_from" class="form-label d-md-none fw-bold">Date From</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light text-muted small">Date From</span>
+                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+            </div>
+
+            <div style="min-width: 160px; flex: 1;">
+                <label for="date_to" class="form-label d-md-none fw-bold">Date To</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light text-muted small">Date To</span>
+                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+            </div>
+
+            <div style="min-width: 140px; flex: 1;">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Status</option>
+                    <option value="Pending" {% if status_filter == "Pending" %}selected{% endif %}>Pending</option>
+                    <option value="Approved" {% if status_filter == "Approved" %}selected{% endif %}>Approved</option>
+                    <option value="Declined" {% if status_filter == "Declined" %}selected{% endif %}>Declined</option>
+                    <option value="ItemPicked" {% if status_filter == "ItemPicked" %}selected{% endif %}>Picked</option>
+                    <option value="Fully Paid" {% if status_filter == "Fully Paid" %}selected{% endif %}>Fully Paid</option>
+                </select>
+            </div>
+
+            <div style="min-width: 170px; flex: 2;">
+                <input type="text" name="search" value="{{ search_query }}" class="form-control form-control-sm" placeholder="Search IPPIS, Name">
+            </div>
+
+            <div class="d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-search"></i> Filter
+                </button>
+                
+               
+
+                <a href="{% url 'member_make_request_list' %}" class="btn btn-warning btn-sm text-white">Clear</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+    <!-- TABLE CARD -->
+    <div class="card border-0 shadow p-2 mb-4">
+
+        <div class="table-responsive">
+
+            <table class="table table-hover align-middle mb-0">
+
+                <!-- HEADER -->
+                <thead class="table-info text-uppercase small sticky-top">
+                    <tr>
+                        <th>S/N</th>
+                        <th class="ps-3">Member</th>
+                        <th>IPPIS</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
+                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Approved By</th>
+                        <th class="text-end pe-3">Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for fee in page_obj %}
+
+                    <tr>
+
+                        <!-- MEMBER -->
+                        <td>{{ forloop.counter }}</td>
+                        <td class="text-nowrap text-truncate" style="max-width: 270px;"">
+                            {% if fee.member %}
+                                {{ fee.member.member.get_full_name|default:fee.member.member.first_name }}
+                            {% else %}
+                                {{ fee.guest_name }}
+                                <span class="status-badge bg-danger ms-1">GUEST</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- IPPIS -->
+                        <td class="text-muted small">
+                            {% if fee.member %}
+                                {{ fee.member.ippis|default:"--" }}
+                            {% else %}
+                                {{ fee.guest_ippis|default:"--" }}
+                            {% endif %}
+                        </td>
+
+                        <!-- ITEMS -->
+                        <td class="small text-muted">
+                            {% for d in fee.details.all %}
+                                <div class="text-truncate" style="max-width: 220px;">
+                                    {{ d.item.received_item.brand }}
+                                    {{ d.item.received_item.model_name }}
+                                    <span class="text-primary fw-bold">(x{{ d.quantity }})</span>
+                                </div>
+                            {% empty %}
+                                <span class="text-muted">No items</span>
+                            {% endfor %}
+                        </td>
+
+                        <!-- TOTAL -->
+                        <td class="fw-bold">
+                            ₦{{ fee.calculate_total_price|intcomma }}
+                        </td>
+
+                        <!-- STATUS -->
+                        <td>
+                            {% if fee.status == "Pending" %}
+                                <span class="status-badge bg-warning text-dark">Pending</span>
+                            {% elif fee.status == "Approved" %}
+                                <span class="status-badge bg-success">Approved</span>
+                            {% elif fee.status == "Declined" %}
+                                <span class="status-badge bg-danger">Declined</span>
+                            {% elif fee.status == "ItemPicked" %}
+                                <span class="status-badge bg-info">Picked</span>
+                            {% elif fee.status == "Fully Paid" %}
+                                <span class="status-badge bg-primary">FullyPaid</span>
+                            {% else %}
+                                <span class="status-badge bg-secondary">{{ fee.status }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- PAID -->
+                        <td class="text-success fw-semibold small">
+                            ₦{{ fee.total_paid|intcomma }}
+                        </td>
+
+                        <!-- BALANCE -->
+                        <td class="text-danger fw-semibold small">
+                            ₦{{ fee.balance|intcomma }}
+                        </td>
+
+                        <!-- APPROVED BY -->
+                        <td class="small text-muted">
+                            {% if fee.approved_by %}
+                                {{ fee.approved_by.get_full_name }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+
+                        <!-- ACTION -->
+                        <td class="text-end pe-3">
+
+                            <div class="btn-group">
+
+                                {% if fee.status == "Pending" %}
+
+                                    <a href="{% url 'make_request_details' fee.id %}"
+                                       class="btn btn-primary btn-sm text-white">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if user.group.title == 'admin' %}
+                                    <a href="{% url 'approve_request' fee.id %}"
+                                       class="btn btn-success btn-sm text-white">
+                                        <i class="bi bi-check"></i>
+                                    </a>
+
+                                    <a href="{% url 'decline_request' fee.id %}"
+                                       class="btn btn-danger btn-sm text-white">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                 {% endif %}
+                                {% elif fee.status == "Approved" %}
+
+                                    <a href="{% url 'picked_request' fee.id %}"
+                                       class="btn btn-primary btn-sm text-white">
+                                        <i class="bi bi-check2"></i>
+                                    </a>
+
+                                {% else %}
+
+                                    <a href="{% url 'make_request_details' fee.id %}"
+                                       class="btn btn-primary btn-sm text-white">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+
+                                {% endif %}
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            No requests found
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+        </div>
+
+    </div>
+
+    <!-- PAGINATION -->
+    {% if page_obj.has_other_pages %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}&search={{ request.GET.search }}">
+                        Prev
+                    </a>
+                </li>
+            {% endif %}
+
+            <li class="page-item disabled">
+                <span class="page-link">
+                    Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}&search={{ request.GET.search }}">
+                        Next
+                    </a>
+                </li>
+            {% endif %}
+
+        </ul>
+    </nav>
+    {% endif %}
+
+</div>
+
+{% endblock %}

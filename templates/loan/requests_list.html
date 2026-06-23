@@ -1,273 +1,263 @@
 {% extends 'base/base.html' %}
 {% block content %}
-   <style>
-        .avatar {
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        .table-hover tbody tr:hover {
-            background-color: rgba(0, 0, 0, 0.025);
-        }
-        .btn-group .btn {
-            border-radius: 0.375rem !important;
-            margin-right: 2px;
-        }
-        .page-link {
-            color: #4e73df;
-        }
-        .page-item.active .page-link {
-            background-color: #4e73df;
-            border-color: #4e73df;
-        }
-    </style>
-<div class="container mt-2">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h6><i class="fas fa-list me-2"></i>Loan Requests List</h6>
-        </div>
+<style>
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.025);
+    }
+    .btn-group .btn {
+        border-radius: 0.375rem !important;
+        margin-right: 2px;
+    }
+    .page-link { color: #4e73df; }
+    .page-item.active .page-link {
+        background-color: #4e73df;
+        border-color: #4e73df;
+    }
+</style>
 
-        <!-- Filters -->
-        <div class="card mb-4 shadow">
+<div class="container mt-2">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h6><i class="fas fa-list me-2"></i>Loan Requests List</h6>
+    </div>
+
+    <!-- Summary Cards -->
+     <div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow bg-warning-subtle">
             <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-4">
-                        <label for="status" class="form-label">Status</label>
-                        
-                        <select name="status" id="status" class="form-select">
-                        <option value="">All Status</option>
-                        {% for value, label in status_choices %}
-                            <option value="{{ value }}" {% if current_status == value %} selected {% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="loan_type" class="form-label">Loan Type</label>
-                        <select name="loan_type" id="loan_type" class="form-select">
-                            <option value="">All Types</option>
-                            {% for loan_type in loan_types %}
-                                <option value="{{ loan_type.id }}" {% if current_loan_type == loan_type.id|stringformat:"s" %}selected{% endif %}>{{ loan_type.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <!-- <div class="col-md-4">
-                        <label for="search" class="form-label">Search</label>
-                        <input type="text" name="search" id="search" class="form-control" placeholder="Search by name, IPPIS, or guarantor" >
-                    </div> -->
-                    <div class="col-md-2">
-                        <label class="form-label">&nbsp;</label>
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-search me-1"></i>Filter
-                            </button>
-                            <a href="{% url 'admin_loan_requests' %}" class="btn btn-outline-danger">clear</a>
-                        </div>
-                    </div>
-                </form>
-               
+                <h6 class="text-muted mb-2">Pending Loans</h6>
+                <h3 class="fw-bold text-warning">₦{{ total_pending|floatformat:2 }}</h3>
             </div>
         </div>
-        <div class=" p-1 text-dark">
-
-        {% comment %} <strong>All Approved Amount</strong> <b class="text-success fs-5">₦{{total_approved_amount}}</b>   {% endcomment %}
-        </div>
-        <!-- Loan Requests Table -->
-        <div class="card shadow">
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow bg-success-subtle">
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-info">
-                            <tr>
-                                <th>ID</th>
-                                <th>Member</th>
-                                <th>IPPIS</th>
-                                <th class="text-nowrap" style="min-width: 120px;">Loan Type</th>
-                                <th class="text-nowrap" style="min-width: 120px;">Loan Duration</th>
-                                <th class="text-nowrap" style="min-width: 120px;">Requests Amount</th>
-                                <th class="text-nowrap" style="min-width: 120px;">Approved Amount</th>
-                                <th>Status</th>
-                                <!-- <th>Date Applied</th> -->
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for request in requests %}
-                            <tr>
-                                <td>#{{ request.id }}</td>
-                                <td class="text-nowrap" style="min-width: 120px;">
-                                    <div class="d-flex align-items-center">
-                                        <div class=" text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                                            {{ request.member.first_name }}{{ request.member.last_name }}
-                                        </div>
-                                        <div>
-                                            <div class="fw-bold">{{ request.member.member.first_name }} {{ request.member.member.last_name }}</div>
-                                            <small class="text-muted">{{ request.member.email }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>{{ request.member.ippis }}</td>
-                                <td class="text-nowrap" style="min-width: 120px;">
-                                    <span >{{ request.loan_type.name }}</span>
-                                </td>
-                                <td class="text-nowrap" style="min-width: 120px;">
-                                    <span >{{ request.loan_term_months }} month</span>
-                                </td>
-                                <td>₦{{ request.amount|floatformat:2 }}</td>
-                                <td>
-                                    {% if request.approved_amount %}
-                                        ₦{{ request.approved_amount|floatformat:2 }}
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-nowrap" style="min-width: 120px;">
-                                <span class="status-badge 
-                                    {% if request.status == 'pending' %}status-pending
-                                    {% elif request.status == 'approved' %}status-active
-                                    {% elif request.status == 'Fullpaid' %}status-completed
-                                    {% elif request.status == 'rejected' %}status-cancelled
+                <h6 class="text-muted mb-2">Approved Loans</h6>
+                <h3 class="fw-bold text-success">₦{{ total_approved|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow bg-primary-subtle">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Fully Paid Loans</h6>
+                <h3 class="fw-bold text-primary">₦{{ total_fullypaid|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow bg-info-subtle">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Repaid</h6>
+                <h3 class="fw-bold text-info">₦{{ total_repaid|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Filters -->
+    <div class="card  shadow">
+        <div class="card-body">
+            <form method="get" class="row ">
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">All Status</option>
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="loan_type" class="form-label">Loan Type</label>
+                    <select name="loan_type" id="loan_type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for lt in loan_types %}
+                            <option value="{{ lt.id }}" {% if current_loan_type == lt.id|stringformat:"s" %}selected{% endif %}>{{ lt.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" name="search" id="search" class="form-control"
+                           placeholder="Name or IPPIS..." value="{{ search_query }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Filter
+                        </button>
+                        <a href="{% url 'admin_loan_requests' %}" class="btn btn-outline-danger">Clear</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-info">
+                        <tr>
+                            <th>ID</th>
+                            <th>Member</th>
+                            <th>IPPIS</th>
+                            <th class="text-nowrap">Loan Type</th>
+                            <th class="text-nowrap">Duration</th>
+                            <th class="text-nowrap">Requested</th>
+                            <th class="text-nowrap">Approved</th>
+                            <th class="text-nowrap">Repaid</th>
+                            <th class="text-nowrap">Balance</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in requests %}
+                        <tr>
+                            <td>#{{ loan.id }}</td>
+                            <td class="text-nowrap">
+                                <div class="fw-bold">{{ loan.member.member.first_name }} {{ loan.member.member.last_name }}</div>
+                                <small class="text-muted">{{ loan.member.email }}</small>
+                            </td>
+                            <td>{{ loan.member.ippis }}</td>
+                            <td class="text-nowrap">{{ loan.loan_type.name }}</td>
+                            <td class="text-nowrap">{{ loan.loan_term_months }} month{{ loan.loan_term_months|pluralize }}</td>
+                            <td class="text-nowrap">₦{{ loan.amount|floatformat:2 }}</td>
+                            <td class="text-nowrap">
+                                {% if loan.approved_amount %}
+                                    ₦{{ loan.approved_amount|floatformat:2 }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                          <td class="text-nowrap">
+                            {% if loan.total_repaid %}
+                                <span class="text-success">₦{{ loan.total_repaid|floatformat:2 }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-nowrap">
+                            {% if loan.approved_amount %}
+                                {% if loan.balance <= 0 %}
+                                    <span class="text-success fw-bold">Cleared</span>
+                                {% else %}
+                                    <span class="text-danger">₦{{ loan.balance|floatformat:2 }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+</td>
+                            <td class="text-nowrap">
+                                <span class="status-badge
+                                    {% if loan.status == 'pending' %}status-pending
+                                    {% elif loan.status == 'approved' %}status-active
+                                    {% elif loan.status == 'Fullpaid' %}status-completed
+                                    {% elif loan.status == 'rejected' %}status-cancelled
                                     {% else %}bg-secondary{% endif %}">
-                                    {{ request.status }}
+                                    {{ loan.status }}
                                 </span>
-                                </td>
-                                <!-- <td>
-                                    <div>{{ request.application_date|date:"M d, Y" }}</div>
-                                    <small class="text-muted">{{ request.application_date|time:"H:i" }}</small>
-                                </td> -->
+                            </td>
                             <td>
                                 <div class="btn-group" role="group">
                                     {% if user.is_authenticated and user.group.title == 'admin' %}
-                                        {% if request.status == 'approved' %}
-                                            <!-- View Details -->
-                                            <a href="{% url 'loan_request_detail' request.id %}" 
-                                            class="btn btn-sm btn-outline-info" 
-                                            title="View Details">
-                                                <i class="fas fa-book"></i>
-                                            </a>
-
-                                            <!-- Add Repayment -->
-                                            <a href="{% url 'add_payment' %}" 
-                                            class="btn btn-sm btn-outline-success" 
-                                            title="Add Repayment">
-                                                <i class="bi bi-money-bill"></i>
-                                            </a>
-
-                                        {% elif request.status == 'pending' %}
-                                            <!-- View Details -->
-                                            <a href="{% url 'loan_request_detail' request.id %}" 
-                                            class="btn btn-sm btn-outline-info" 
-                                            title="View Details">
+                                        {% if loan.status == 'approved' %}
+                                            <a href="{% url 'loan_request_detail' loan.id %}" class="btn btn-sm btn-outline-info" title="View Details">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-
-                                            <!-- Approve Request -->
-                                            <a href="{% url 'approve_loan_request' request.id %}" 
-                                            class="btn btn-sm btn-outline-primary text-dark" 
-                                            title="Approve Request">
-                                                <i class="bi bi-check"></i>
+                                            <a href="{% url 'add_payment' %}" class="btn btn-sm btn-outline-success" title="Add Repayment">
+                                                <i class="bi bi-cash-coin"></i>
                                             </a>
-
-                                            <!-- Edit Request -->
-                                            <a href="{% url 'edit_requested_loan' request.id %}" 
-                                            class="btn btn-sm btn-outline-warning" 
-                                            title="Edit Request">
-                                                <i class="bi bi-pen"></i>
+                                        {% elif loan.status == 'pending' %}
+                                            <a href="{% url 'loan_request_detail' loan.id %}" class="btn btn-sm btn-outline-info" title="View Details">
+                                                <i class="bi bi-eye"></i>
                                             </a>
-
-                                            <!-- Reject Request -->
-                                            <a href="{% url 'reject_loan_request' request.id %}" 
-                                            class="btn btn-sm btn-outline-danger text-dark" 
-                                            title="Reject Request">
+                                            <a href="{% url 'approve_loan_request' loan.id %}" class="btn btn-sm btn-outline-primary" title="Approve">
+                                                <i class="bi bi-check-lg"></i>
+                                            </a>
+                                            <a href="{% url 'edit_requested_loan' loan.id %}" class="btn btn-sm btn-outline-warning" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'reject_loan_request' loan.id %}" class="btn btn-sm btn-outline-danger" title="Reject">
                                                 <i class="bi bi-x-lg"></i>
                                             </a>
-
-                                        {% elif request.status == 'Fullpaid' %}
-                                            <!-- View Details -->
-                                            <a href="{% url 'loan_request_detail' request.id %}" 
-                                            class="btn btn-sm btn-outline-info" 
-                                            title="View Details">
+                                        {% elif loan.status == 'Fullpaid' %}
+                                            <a href="{% url 'loan_request_detail' loan.id %}" class="btn btn-sm btn-outline-info" title="View Details">
                                                 <i class="bi bi-book"></i>
                                             </a>
                                         {% endif %}
-
                                     {% else %}
-                                        <!-- Non-admin users: View Details only -->
-                                        <a href="{% url 'loan_request_detail' request.id %}" 
-                                        class="btn btn-sm btn-outline-info" 
-                                        title="View Details">
+                                        <a href="{% url 'loan_request_detail' loan.id %}" class="btn btn-sm btn-outline-info" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     {% endif %}
                                 </div>
                             </td>
-
-                            {% empty %}
-                            <tr>
-                                <td colspan="9" class="text-center py-4">
-                                    <div class="text-muted">
-                                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                                        <p>No loan requests found matching your criteria.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Pagination -->
-                {% if requests.has_other_pages %}
-                <nav aria-label="Page navigation" class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        {% if requests.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_loan_type %}loan_type={{ current_loan_type }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ requests.previous_page_number }}">
-                                    <i class="fas fa-chevron-left"></i> Previous
-                                </a>
-                            </li>
-                        {% endif %}
-
-                        {% for num in requests.paginator.page_range %}
-                            {% if requests.number == num %}
-                                <li class="page-item active">
-                                    <span class="page-link">{{ num }}</span>
-                                </li>
-                            {% elif num > requests.number|add:'-3' and num < requests.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_loan_type %}loan_type={{ current_loan_type }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ num }}">{{ num }}</a>
-                                </li>
-                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="11" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                No loan requests found matching your criteria.
+                            </td>
+                        </tr>
                         {% endfor %}
+                    </tbody>
+                </table>
+            </div>
 
-                        {% if requests.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?{% if current_status %}status={{ current_status }}&{% endif %}{% if current_loan_type %}loan_type={{ current_loan_type }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ requests.next_page_number }}">
-                                    Next <i class="fas fa-chevron-right"></i>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-                {% endif %}
-
-                <!-- Results Info -->
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <p class="text-muted mb-0">
-                            Showing {{ requests.start_index }} to {{ requests.end_index }} of {{ requests.paginator.count }} entries
-                        </p>
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <a href="{% url 'admin_loan_requests' %}" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-refresh me-1"></i>Clear Filters
+            <!-- Pagination -->
+            {% if requests.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if requests.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?status={{ current_status }}&loan_type={{ current_loan_type }}&search={{ search_query }}&page={{ requests.previous_page_number }}">
+                            <i class="fas fa-chevron-left"></i> Previous
                         </a>
-                    </div>
+                    </li>
+                    {% endif %}
+
+                    {% for num in requests.paginator.page_range %}
+                        {% if requests.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > requests.number|add:'-3' and num < requests.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?status={{ current_status }}&loan_type={{ current_loan_type }}&search={{ search_query }}&page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if requests.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?status={{ current_status }}&loan_type={{ current_loan_type }}&search={{ search_query }}&page={{ requests.next_page_number }}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            <!-- Results Info -->
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <p class="text-muted mb-0">
+                        Showing {{ requests.start_index }} to {{ requests.end_index }} of {{ requests.paginator.count }} entries
+                    </p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <a href="{% url 'admin_loan_requests' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-refresh me-1"></i>Clear Filters
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script> -->
-    
- 
-
-   
+</div>
 {% endblock %}

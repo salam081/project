@@ -149,14 +149,6 @@ def savings_request_form_payment(request):
     return render(request, "special_savings/savings_request_form_payment.html", context)
 
 
-# def all_special_savings_request(request):
-#     requests = SpecialSavingsTergetSavingsRequestForm.objects.all()
-#     paginator = Paginator(requests, 50)
-#     page_number = request.GET.get('page')
-#     special_requests = paginator.get_page(page_number)
-#     return render(request, "special_savings/all_special_savings_request.html", {"requests": requests,'special_requests':special_requests})
-
-
 
 
 @login_required

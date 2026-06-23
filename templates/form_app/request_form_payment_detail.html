@@ -1,0 +1,83 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 580px;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="mb-0">Payment Detail</h6>
+    <a href="{% url 'request_form_payment_list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+  </div>
+
+  <div class="card shadow">
+    <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+      <span>Payment #{{ payment.pk }}</span>
+      {% if payment.status == "paid" %}
+        <span class="status-badge bg-success">Paid</span>
+      {% else %}
+        <span class="status-badge bg-secondary">Used</span>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <table class="table table-borderless mb-0">
+        <tbody>
+          <tr>
+            <th class="w-40 text-muted">Payment Type</th>
+            <td>{{ payment.payment_type.title }}</td>
+          </tr>
+          <tr>
+            <th class="text-muted">
+              {% if payment.member %}Member{% else %}Guest{% endif %}
+            </th>
+            <td>
+              {% if payment.member %}
+                {{ payment.member.member.first_name }} {{ payment.member.member.last_name }}
+              {% else %}
+                {{ payment.guest_name|default:"—" }}
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th class="text-muted">IPPIS</th>
+            <td>
+              {% if payment.member %}
+                {{ payment.member.ippis }}
+              {% else %}
+                {{ payment.guest_ippis|default:"—" }}
+              {% endif %}
+            </td>
+          </tr>
+          {% if payment.guest_phone %}
+          <tr>
+            <th class="text-muted">Phone</th>
+            <td>{{ payment.guest_phone }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th class="text-muted">Amount</th>
+            <td>₦{{ payment.amount|intcomma }}</td>
+          </tr>
+          <tr>
+            <th class="text-muted">Request Fee</th>
+            <td>₦{{ payment.payment_type.request_fee|intcomma }}</td>
+          </tr>
+          <tr>
+            <th class="text-muted">Recorded By</th>
+            <td>{{ payment.created_by.get_full_name|default:payment.created_by.username|default:"—" }}</td>
+          </tr>
+          <tr>
+            <th class="text-muted">Date</th>
+            <td>{{ payment.date_created|date:"d M Y, h:i A" }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <a href="{% url 'request_form_payment_delete' payment.pk %}" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-trash"></i> Delete
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

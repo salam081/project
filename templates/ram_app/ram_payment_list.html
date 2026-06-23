@@ -1,0 +1,110 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="container py-4">
+<!-- Filter Card -->
+    <div class="card shadow">
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row g-3 align-items-end">
+                <!-- Search -->
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Search Member / Guest</label>
+                    <input type="text" name="search" class="form-control"
+                        placeholder="Name or IPPIS..." value="{{ filter_search }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Date From</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ filter_date_from }}">
+                </div>
+
+                <!-- Date To -->
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Date To</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ filter_date_to }}">
+                </div>
+                <!-- Buttons -->
+                <div class="col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary  w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    <a href="{% url 'ram_payment_list' %}" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+                </div>
+            </form>
+        </div>
+    </div> 
+
+    <div class="card border-0 shadow  overflow-hidden p-3">
+        <div class="table-responsive">
+            <table class="table table-hover ">
+            <thead class="table-info">
+                <tr>
+                   
+                    <th>S/N</th>
+                    <th>Member</th>
+                    <th>Amount Paid</th>
+                    <th>Month</th>
+                    <th>Received By</th>
+                    <th>payment Date</th>
+                    
+                    <th class="">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in paymentObj %}
+                <tr>
+                    <td>{{forloop.counter}}</td>
+                    <td class=" ">  {{ payment.request.member.member.get_full_name|default:payment.request.guest_name|default:"—" }}</td>
+                    <td>{{payment.amount}}</td>
+                    <td>{{payment.repayment_mounth}}</td>
+                    <td>{{payment.received_by}}</td>
+                    <td>{{ payment.date_paid|date:"d M Y" }}</td>
+                    <td class="">
+                        <div class="d-flex justify-content-between align-items-center ">
+                        <a href="{% url 'budget_detail' payment.pk %}" class="btn btn-sm btn-primary" title="View Details">
+                            <i class="bi bi-eye"></i> 
+                        </a>
+                         <a href="{% url 'budget_update' payment.pk %}" class="btn btn-sm btn-warning ms-1"title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <button
+                        class="btn btn-sm {% if budget.is_active %}btn-success{% else %}btn-secondary{% endif %}"
+                        onclick="toggleBudget({{ payment.id }})"
+                        id="toggle-btn-{{ budget.id }}"
+                    >
+                        {% if payment.is_active %}Active{% else %}Inactive{% endif %}
+                    </button>
+                        {% if user.is_staff and payment.status == 'pending' %}
+                        <a href="{% url 'budget_approve' budget.pk %}" class="btn btn-sm btn-success ms-1"
+                           onclick="return confirm('Approve this budget?')">
+                            <i class="bi bi-check-lg"></i>
+                        </a>
+                        <a href="{% url 'budget_reject' payment.pk %}" class="btn btn-sm btn-danger ms-1"
+                           onclick="return confirm('Reject this budget?')">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                       
+                        {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-5">
+                        <i class="bi bi-wallet2 fs-2 d-block mb-2"></i>
+                        No budgets found. <a href="{% url 'budget_create' %}">Create one</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

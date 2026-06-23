@@ -1,0 +1,57 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="mb-0">Forms Payment Types</h6>
+    <a href="{% url 'payment_type_create' %}" class="btn btn-primary btn-sm text-white">
+      <i class="bi bi-plus-lg"></i> Add Payment Type
+    </a>
+  </div>
+
+  <div class="card shadow">
+    <div class="card-body p-2">
+      <table class="table table-hover table-striped mb-0">
+        <thead class="table-info">
+          <tr>
+            <th>S/N</th>
+            <th>Title</th>
+            <th>Request Fee</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pt in payment_types %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ pt.title }}</td>
+            <td>₦{{ pt.request_fee|intcomma }}</td>
+            <td>
+              {% if pt.available %}
+                <span class="status-badge bg-success">Active</span>
+              {% else %}
+                <span class="status-badge bg-secondary">Inactive</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'payment_type_edit' pt.pk %}" class="btn btn-sm btn-warning" title="Edit">
+                <i class="bi bi-pencil"></i> 
+              </a>
+              <a href="{% url 'payment_type_delete' pt.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                <i class="bi bi-trash"></i> 
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">No payment types found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

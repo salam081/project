@@ -1,5 +1,5 @@
 {% extends 'base/base.html' %}
-
+{% load humanize %}
 {% block title %}My Loan Requests{% endblock %}
 
 {% block content %}
@@ -63,6 +63,7 @@
                                     <th class="text-nowrap" style="min-width: 120px;">Loan Type</th>
                                     <th class="text-nowrap" style="min-width: 120px;">Duration</th>
                                     <th>Status</th>
+                                    <th class="text-nowrap" style="min-width: 120px;">Requested Amount</th>
                                     <th class="text-nowrap" style="min-width: 120px;">Approved Amount</th>
                                     <th class="text-nowrap" style="min-width: 120px;">Monthly Payment</th>
                                     <th class="text-nowrap" style="min-width: 120px;">Total Paid</th>
@@ -96,16 +97,19 @@
                                            
                                         </td>
                                         <td>
-                                            <strong>₦{{ entry.approved_amount|floatformat:2 }}</strong>
+                                            <strong>₦{{ loan.amount|floatformat:2|intcomma }}</strong>
                                         </td>
                                         <td>
-                                            <strong>₦{{ entry.monthly_payment|floatformat:2 }}</strong>
+                                            <strong>₦{{ entry.approved_amount|floatformat:2|intcomma }}</strong>
                                         </td>
                                         <td>
-                                            <strong>₦{{ entry.total_paid|floatformat:2 }}</strong>
+                                            <strong>₦{{ entry.monthly_payment|floatformat:2|intcomma }}</strong>
                                         </td>
                                         <td>
-                                            <strong>₦{{ entry.balance|floatformat:2 }}</strong>
+                                            <strong>₦{{ entry.total_paid|floatformat:2|intcomma }}</strong>
+                                        </td>
+                                        <td>
+                                            <strong>₦{{ entry.balance|floatformat:2|intcomma }}</strong>
                                         </td>
                                         <td class="action-buttons">
                                             <a href="{% url 'member_loan_request_detail' entry.loan.id %}" class="btn btn-primary btn-sm text-white">

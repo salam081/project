@@ -1,0 +1,110 @@
+{% extends "base/base.html" %}
+
+{% block title %}Budgets{% endblock %}
+{% block page_title %}Budgets{% endblock %}
+
+{% block content %}
+
+
+
+<div class="container">
+>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h6 class="fw-bold mb-0">All Budgets</h6>
+    <a href="{% url 'budget_create' %}" class="btn btn-primary text-white">
+        <i class="bi bi-plus-lg me-1"></i> Create Budget
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body ">
+    <div class="responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-info">
+                <tr>
+                    <th class="ps-4">Budget Name</th>
+                    <th>Total Amount</th>
+                    <th>Spent</th>
+                    <th>Remaining</th>
+                    <th>Status</th>
+                    <th>Created By</th>
+                    <th>Date</th>
+                    <th class="pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for budget in budgets %}
+                <tr>
+                    <td class="ps-4 fw-semibold">{{ budget.name }}</td>
+                    <td>₦{{ budget.total_amount|floatformat:2 }}</td>
+                    <td class="text-danger">₦{{ budget.total_spent|floatformat:2 }}</td>
+                    <td class="text-success">₦{{ budget.remaining_amount|floatformat:2 }}</td>
+                    <td>
+                        <span class="status-badge badge-{{ budget.status }}">
+                            {{ budget.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ budget.created_by.get_full_name|default:budget.created_by.username }}</td>
+                    <td>{{ budget.date_created|date:"d M Y" }}</td>
+                    <td class="pe-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                        <a href="{% url 'budget_detail' budget.pk %}" class="btn btn-sm btn-primary" title="View Details">
+                            <i class="bi bi-eye"></i> 
+                        </a>
+                         <a href="{% url 'budget_update' budget.pk %}" class="btn btn-sm btn-warning ms-1"title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <button
+                        class="btn btn-sm {% if budget.is_active %}btn-success{% else %}btn-secondary{% endif %}"
+                        onclick="toggleBudget({{ budget.id }})"
+                        id="toggle-btn-{{ budget.id }}"
+                    >
+                        {% if budget.is_active %}Active{% else %}Inactive{% endif %}
+                    </button>
+                        {% if user.is_staff and budget.status == 'pending' %}
+                        <a href="{% url 'budget_approve' budget.pk %}" class="btn btn-sm btn-success ms-1"
+                           onclick="return confirm('Approve this budget?')">
+                            <i class="bi bi-check-lg"></i>
+                        </a>
+                        <a href="{% url 'budget_reject' budget.pk %}" class="btn btn-sm btn-danger ms-1"
+                           onclick="return confirm('Reject this budget?')">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                       
+                        {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-5">
+                        <i class="bi bi-wallet2 fs-2 d-block mb-2"></i>
+                        No budgets found. <a href="{% url 'budget_create' %}">Create one</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    </div>
+</div>
+</div>
+
+<script>
+function toggleBudget(id) {
+    fetch(`/budget/toggle/${id}/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // simple refresh
+        }
+    });
+}
+</script>
+{% endblock %}

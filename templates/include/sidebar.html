@@ -1,5 +1,20 @@
 <!-- Sidebar -->
+<style>
+    /* Styling for active standalone links and sub-menu links */
+.nav-item .nav-link.active,
+.submenu .nav-link.active {
+   
+    background: linear-gradient(135deg, #87ceeb 0%, #6db4d4 100%);
+    color: #ffffff ;
+    font-weight: 600;
+}
 
+/* Optional: Styling for a parent dropdown button when one of its children is active */
+.nav-item button.nav-link.parent-active {
+    border-left: 4px solid #3B6D11;
+    font-weight: 600;
+}
+</style>
 <nav class="sidebar shadow" id="sidebar" aria-label="Sidebar Navigation">
 
     <div class="sidebar-nav">
@@ -268,13 +283,13 @@
         <div class="nav-item">
             <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#inventorySubmenu" aria-expanded="false" aria-controls="inventorySubmenu">
                 <i class="bi bi-graph-up-arrow"></i>
-                <span class="nav-text">Inventory</span>
+                <span class="nav-text">Point of Sale</span>
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="inventorySubmenu">
                 <a href="{% url 'inventory_home' %}" class="nav-link">
                     <i class="bi bi-speedometer2"></i>
-                    <span class="nav-text">Inventory Dashboard</span>
+                    <span class="nav-text"> Dashboard</span>
                 </a>
                 <a href="{% url 'receive_products' %}" class="nav-link">
                     <i class="bi bi-plus-circle"></i>
@@ -289,11 +304,65 @@
                     <i class="bi bi-tag"></i>
                     <span class="nav-text">Product List</span>
                 </a> 
+                <a href="{% url 'inventory-selling-plans_list' %}" class="nav-link">
+                    <i class="bi bi-tag"></i>
+                    <span class="nav-text">Selling List</span>
+                </a> 
                 <a href="{% url 'member_make_request' %}" class="nav-link">
                     <i class="bi bi-tag"></i>
                     <span class="nav-text">Make Request</span>
                 </a> 
+                <a href="{% url 'member_make_request_list' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Request List</span>
+                </a> 
+                <a href="{% url 'add_single_member_request_payment' %}" class="nav-link">
+                    <i class="bi bi-coin"></i>
+                    <span class="nav-text">Add Payment </span>
+                </a> 
                 <a href="{% url 'upload_payments_excel' %}" class="nav-link">
+                    <i class="bi bi-tag"></i>
+                    <span class="nav-text">Upload Payments </span>
+                </a> 
+            </div>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#ramSubmenu" aria-expanded="false" aria-controls="ramSubmenu">
+                <i class="bi bi-graph-up-arrow"></i>
+                <span class="nav-text">Ram</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="ramSubmenu">
+                <a href="{% url 'ram_dashboard' %}" class="nav-link">
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="nav-text">Ram Dashboard</span>
+                </a>
+                <a href="{% url 'budget_list' %}" class="nav-link">
+                    <i class="bi bi-plus-circle"></i>
+                    <span class="nav-text">Budget List</span>
+                </a>
+                <a href="{% url 'ram_request_list' %}" class="nav-link">
+                    <i class="bi bi-bag-check"></i>
+                    <span class="nav-text">Ram Request List</span>
+                </a>
+            
+                {% comment %} <a href="{% url 'product_list' %}" class="nav-link">
+                    <i class="bi bi-tag"></i>
+                    <span class="nav-text">Product List</span>
+                </a>  {% endcomment %}
+                <a href="{% url 'ram_request_create' %}" class="nav-link">
+                    <i class="bi bi-tag"></i>
+                    <span class="nav-text">Make Ram Request</span>
+                </a> 
+                {% comment %} <a href="{% url 'member_make_request_list' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Request List</span>
+                </a>  {% endcomment %}
+                 <a href="{% url 'ram_payment_list' %}" class="nav-link">
+                    <i class="bi bi-coin"></i>
+                    <span class="nav-text">Payment List </span>
+                </a>  
+                <a href="{% url 'payment_upload' %}" class="nav-link">
                     <i class="bi bi-tag"></i>
                     <span class="nav-text">Upload Payments </span>
                 </a> 
@@ -308,6 +377,10 @@
                 <i class="bi bi-chevron-down dropdown-arrow"></i>
             </button>
             <div class="collapse submenu" id="financeSubmenu">
+                <a href="{% url 'finance_dashboard' %}" class="nav-link">
+                    <i class="bi bi-folder2-open"></i>
+                    <span class="nav-text">Dashboard</span>
+                </a>
                 <a href="{% url 'application_list' %}" class="nav-link">
                     <i class="bi bi-folder2-open"></i>
                     <span class="nav-text">Applications List</span>
@@ -403,6 +476,27 @@
                 </a>
             </div>
         </div>
+          <div class="nav-item">
+            <button class="nav-link" data-bs-toggle="collapse" data-bs-target="#formsSubmenu" aria-expanded="false" aria-controls="formsSubmenu">
+                <i class="bi bi-wallet"></i>
+                <span class="nav-text">Manage Forms</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="collapse submenu" id="formsSubmenu">
+                <a href="{% url 'payment_type_list' %}" class="nav-link">
+                    <i class="bi bi-wallet-fill"></i>
+                    <span class="nav-text">Payment Types</span>
+                </a>
+                <a href="{% url 'request_form_payment_create' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Create Payment </span>
+                </a>
+                <a href="{% url 'request_form_payment_list' %}" class="nav-link">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-text">Payment List</span>
+                </a>
+            </div>
+        </div>
 
         <!-- Activity Logs & Messages -->
         <div class="nav-item">
@@ -420,17 +514,9 @@
                 <i class="bi bi-sliders"></i>
                 <span class="nav-text">Member Active Requests</span>
             </a>
-            <a href="{% url 'add_forms_type' %}" class="nav-link">
-                <i class="bi bi-sliders"></i>
-                <span class="nav-text">Manage Forms</span>
-            </a>
-             <div class="nav-item">
-            <a href="{% url 'savings_request_form_payment' %}" class="nav-link">
-                <i class="bi bi-wallet-fill"></i>
-                <span class="nav-text">Form Request</span>
-            </a>
+            
         </div>
-        </div>
+       
 
         <!-- My Info Dropdown (Admin's own account info) -->
         <div class="nav-item">
@@ -456,6 +542,17 @@
                     <i class="bi bi-folder"></i>
                     <span class="nav-text">My Project Finance</span>
                 </a>
+                
+                <a href="{% url 'member_items_request' %}" class="nav-link">
+                    <i class="bi bi-card-checklist"></i>
+                    <span class="nav-text">Phone & Other Items</span>
+                </a>
+                
+                <a href="{% url 'my_ram_request' %}" class="nav-link">
+                    <i class="bi bi-card-checklist"></i>
+                     <span class="nav-text">Ram</span>
+                </a>
+               
                 <a href="{% url 'my_partial_withdrawal_requests' %}" class="nav-link">
                     <i class="bi bi-wallet-fill"></i>
                     <span class="nav-text">Partial Withdrawal Request</span>
@@ -559,16 +656,21 @@
             </div>
         </div>
 
-        <!-- Savings -->
         <div class="nav-item">
-            <a href="{% url 'savings_request_form_payment' %}" class="nav-link">
-                <i class="bi bi-wallet-fill"></i>
-                <span class="nav-text"> Request Form Fee</span>
+            <a href="{% url 'request_form_payment_create' %}" class="nav-link">
+                <i class="bi bi-plus"></i>
+                <span class="nav-text">Forms Request</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'request_form_payment_list' %}" class="nav-link">
+                <i class="bi bi-list"></i>
+                <span class="nav-text">Forms Payment List</span>
             </a>
         </div>
         <div class="nav-item">
             <a href="{% url 'monthly_savings_uploads' %}" class="nav-link">
-                <i class="bi bi-bank2"></i>
+                <i class="bi bi-bank"></i>
                 <span class="nav-text">View Savings</span>
             </a>
         </div>
@@ -578,8 +680,6 @@
                 <span class="nav-text">Members Savings</span>
             </a>
         </div>
-
-        <!-- Loan -->
         <div class="nav-item">
             <a href="{% url 'loan_request_fee_payment' %}" class="nav-link">
                 <i class="bi bi-person"></i>
@@ -598,8 +698,6 @@
                 <span class="nav-text">Loan Settings</span>
             </a>
         </div>
-
-        <!-- Consumables -->
         <div class="nav-item">
             <a href="{% url 'consumable_fee' %}" class="nav-link">
                 <i class="bi bi-wallet2"></i>
@@ -610,6 +708,24 @@
             <a href="{% url 'admin_consumables_list' %}" class="nav-link">
                 <i class="bi bi-graph-up"></i>
                 <span class="nav-text">Consumable Requests List</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'member_make_request' %}" class="nav-link">
+                <i class="bi bi-plus"></i>
+                <span class="nav-text">Phone & Item Request</span>
+            </a> 
+       </div>
+        <div class="nav-item">
+            <a href="{% url 'member_make_request_list' %}" class="nav-link">
+                <i class="bi bi-list"></i>
+                <span class="nav-text">Phones & Items Request List</span>
+            </a> 
+        </div>
+         <div class="nav-item">
+            <a href="{% url 'ram_request_list' %}" class="nav-link">
+                <i class="bi bi-bag-check"></i>
+                <span class="nav-text">Ram Request List</span>
             </a>
         </div>
 
@@ -655,6 +771,19 @@
                 <span class="nav-text">Project Finance</span>
             </a>
         </div>
+        <div class="nav-item">
+            <a href="{% url 'member_items_request' %}" class="nav-link">
+               <i class="bi bi-card-checklist"></i>
+                <span class="nav-text">Other Items</span>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="{% url 'my_ram_request' %}" class="nav-link">
+               <i class="bi bi-card-checklist"></i>
+                <span class="nav-text">Ram</span>
+            </a>
+        </div>
+       
 
         <!-- Withdrawal Dropdown -->
         <div class="nav-item">
@@ -749,3 +878,39 @@
 
     </div>
 </nav>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    // 1. Get the current browser URL pathname (e.g., "/admin/dashboard/")
+    const currentUrl = window.location.pathname;
+
+    // 2. Select all sidebar links
+    const sidebarLinks = document.querySelectorAll("#sidebar .nav-link, #sidebar .submenu .nav-link");
+
+    sidebarLinks.forEach(link => {
+        // Get the link target path
+        const linkPath = link.getAttribute("href");
+
+        // Check if the current URL matches the link destination
+        if (linkPath && currentUrl === linkPath) {
+            // Add the active class to the current link
+            link.classList.add("active");
+
+            // 3. IF the link is inside a dropdown submenu, keep it expanded
+            const parentSubmenu = link.closest(".submenu");
+            if (parentSubmenu) {
+                // Add Bootstrap show class to keep dropdown open
+                parentSubmenu.classList.add("show");
+
+                // Find the dropdown button associated with this submenu and style it
+                const submenuId = parentSubmenu.getAttribute("id");
+                const dropdownBtn = document.querySelector(`[data-bs-target="#${submenuId}"]`);
+                if (dropdownBtn) {
+                    dropdownBtn.classList.add("parent-active");
+                    dropdownBtn.setAttribute("aria-expanded", "true");
+                }
+            }
+        }
+    });
+});
+</script>

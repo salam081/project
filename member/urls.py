@@ -37,7 +37,11 @@ urlpatterns = [
     path('project-finance-update/<int:id>/',views.update_project_finance_application,name='update_project_finance_application'),
     path('project_finance',views.project_finance_application,name='project_finance_application'),
     path('create_project_finance/<int:id>/',views.create_project_finance_request,name='create_project_finance_request'),
+    path('finance-request/<int:id>/detail/',views.project_finance_request_detail,name='project_finance_request_detail'),
     path('approve_guarantor_request/<int:id>/',views.approve_guarantor_request,name='approve_guarantor_request'),
+    
+    path('member_items_request/',views.member_items_request,name='member_items_request'),
+    path('my-ram-request/',views.my_ram_request,name='my_ram_request'),
 
 
 

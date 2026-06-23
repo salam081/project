@@ -1,0 +1,142 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Edit Selling Plan{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+
+   
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="{% url 'receive_item_selling_plan_detail' id=inventory_plan.id %}"
+           class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center"
+           style="width:34px;height:34px;padding:0;" aria-label="Back">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+          <p class="text-muted mb-0" style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;">Edit selling plan</p>
+          <p class="fw-medium mb-0" style="font-size:16px;">
+            {{ inventory_plan.received_item.brand }} {{ inventory_plan.received_item.model_name }}
+          </p>
+        </div>
+      </div>
+
+   
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="card border shadow-none rounded-3 mb-3">
+          <div class="card-body p-0">
+
+          
+            <div class="px-4 pt-3 pb-3 border-bottom">
+              <label for="selling_price_per_unit" class="form-label text-muted mb-1" style="font-size:12px;text-transform:uppercase;letter-spacing:.07em;">
+                Selling price / unit (₦)
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted" style="font-size:14px;">₦</span>
+                <input type="number"
+                       id="selling_price_per_unit"
+                       name="selling_price_per_unit"
+                       class="form-control border-start-0 ps-0"
+                       style="font-size:15px;"
+                       value="{{ inventory_plan.selling_price_per_unit }}"
+                       step="0.01"
+                       min="0.01"
+                       required>
+              </div>
+            </div>
+
+        
+            <div class="px-4 pt-3 pb-3 border-bottom">
+              <label for="quantity" class="form-label text-muted mb-1" style="font-size:12px;text-transform:uppercase;letter-spacing:.07em;">
+                Quantity
+              </label>
+              <input type="number"
+                     id="quantity"
+                     name="quantity"
+                     class="form-control"
+                     style="font-size:15px;"
+                     value="{{ inventory_plan.quantity }}"
+                     min="1"
+                     required>
+              {% if inventory_plan.received_item.net_quantity %}
+              <p class="text-muted mt-1 mb-0" style="font-size:12px;">
+                <i class="bi bi-info-circle me-1"></i>
+                {{ inventory_plan.received_item.net_quantity }} unit{{ inventory_plan.received_item.net_quantity|pluralize }} available after returns
+              </p>
+              {% endif %}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+              <div>
+                <p class="fw-medium mb-0" style="font-size:14px;">Include expenditure</p>
+                <p class="text-muted mb-0" style="font-size:12px;">Factor expenditure into profit calculation</p>
+              </div>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input"
+                       type="checkbox"
+                       role="switch"
+                       id="include_expenditure"
+                       name="include_expenditure"
+                       {% if inventory_plan.include_expenditure %}checked{% endif %}
+                       style="width:2.5em;height:1.3em;cursor:pointer;">
+              </div>
+            </div>
+
+     
+            <div class="d-flex justify-content-between align-items-center px-4 py-3">
+              <div>
+                <p class="fw-medium mb-0" style="font-size:14px;">Available for sale</p>
+                <p class="text-muted mb-0" style="font-size:12px;">Mark this plan as active and visible</p>
+              </div>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input"
+                       type="checkbox"
+                       role="switch"
+                       id="available"
+                       name="available"
+                       {% if inventory_plan.available %}checked{% endif %}
+                       style="width:2.5em;height:1.3em;cursor:pointer;">
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+     
+        <div class="mb-3">
+          <label for="notes" class="form-label text-muted mb-1" style="font-size:12px;text-transform:uppercase;letter-spacing:.07em;">
+            Notes <span class="text-muted fw-normal">(optional)</span>
+          </label>
+          <textarea id="notes"
+                    name="notes"
+                    class="form-control rounded-3"
+                    rows="3"
+                    placeholder="Add any notes about this selling plan…"
+                    style="font-size:14px;resize:none;">{{ inventory_plan.notes }}</textarea>
+        </div>
+
+   
+        <div class="row g-2">
+          <div class="col-6">
+            <button type="submit" class="btn btn-warning w-100 fw-medium rounded-3 d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-check-lg" style="font-size:14px;"></i> Save changes
+            </button>
+          </div>
+          <div class="col-6">
+            <a href="{% url 'receive_item_selling_plan_detail' id=inventory_plan.id %}"
+               class="btn btn-outline-secondary w-100 rounded-3 d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-x-lg" style="font-size:13px;"></i> Cancel
+            </a>
+          </div>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

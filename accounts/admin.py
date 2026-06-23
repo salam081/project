@@ -11,10 +11,12 @@ admin.site.register(NextOfKin)
 admin.site.register(MaritalStatus)
 
 
+@admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     
-    search_fields = ('first_name','last_name')
-admin.site.register(User,UserAdmin)
+    search_fields = ('first_name','last_name','phone1','member_number')
+    
+    list_display = ('first_name','last_name','phone1','member_number')
 
 
 @admin.register(PagePermission)

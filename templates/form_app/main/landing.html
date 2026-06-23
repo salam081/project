@@ -1,0 +1,92 @@
+{% if popup %}
+<div id="popup" class="popup">
+    <div class="popup-content">
+        <span class="close-btn" onclick="closePopup()">&times;</span>
+        <h2>{{ popup.title }}</h2>
+        <p>{{ popup.message }}</p>
+
+        {% if popup.link_url %}
+            <a href="{{ popup.link_url }}" class="popup-link" target="_blank">👉 {{ popup.link_text|default:"Learn More" }}</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<style>
+    .popup {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.popup-content {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+    max-width: 400px;
+    position: relative;
+    animation: fadeIn 0.5s ease;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    cursor: pointer;
+    font-size: 24px;
+    color: #555;
+}
+
+.popup-link {
+    display: inline-block;
+    margin-top: 1.5rem;
+    background: #667eea;
+    color: white;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.popup-link:hover {
+    background: #5a67d8;
+}
+
+@keyframes fadeIn {
+    from {opacity: 0; transform: scale(0.9);}
+    to {opacity: 1; transform: scale(1);}
+}
+
+</style>
+
+<script>
+        function closePopup() {
+            document.getElementById('popup').style.display = 'none';
+        }
+
+        // Show popup after 3 seconds (optional)
+        window.addEventListener('load', () => {
+            const popup = document.getElementById('popup');
+            if (popup) {
+                popup.style.display = 'none';
+                setTimeout(() => popup.style.display = 'flex', 3000);
+            }
+        });
+
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            const popup = document.getElementById('popup');
+            if (popup) popup.style.display = 'none';
+        }, 10000);
+</script>
+
+
+
+

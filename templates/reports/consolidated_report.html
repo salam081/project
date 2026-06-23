@@ -4,7 +4,7 @@
 
 {% block content %}
 
-    <div class="content-card">
+    <div class="container">
         <p class="fw-bold mb-2 text-center">
             <i class="bi bi-graph-up-arrow me-3 fs-4"></i>
             Consolidated Financial Report
@@ -12,7 +12,7 @@
         <p class="lead mb-0 text-center">Complete overview of income and expenditure</p>
     </div>
 
-    <div class="content-card">
+    <div class="container">
         <form method="GET" id="filterForm">
             <div class="row g-3 align-items-end">
                 <div class="col-md-4 col-sm-12">
@@ -59,7 +59,7 @@
     {% endif %}
 
     {% if not error %}
-        <div class="row g-4 mb-4">
+        <div class="row g-4 mb-4 mt-2">
             <div class="col-12 col-md-6 col-lg-4">
                 <div class="card shadow text-center" style="border-top: 2px solid green;">
                     <div class="card-body p-4">
@@ -230,7 +230,7 @@
                             <div class="bg-success text-white p-1 rounded-2 me-3" style="width:26px;height:26px;">
                                 <i class="bi bi-receipt"></i>
                             </div>
-                            <span class="fw-semibold text-dark">Savings Form Fees</span>
+                            <span class="fw-semibold text-dark">Forms Fees</span>
                         </div>
                         <span class="fw-bold text-success fs-5">₦{{ saving_form_fee_income|floatformat:2|intcomma|default:"0.00" }}</span>
                     </div>
@@ -247,6 +247,32 @@
                             <span class="fw-semibold text-dark">Consumable Form Fees</span>
                         </div>
                         <span class="fw-bold text-success fs-5">₦{{ form_fee_income|floatformat:2|intcomma|default:"0.00" }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card shadow rounded-3 text-center">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-success text-white p-1 rounded-2 me-3" style="width:26px;height:26px;">
+                                <i class="bi bi-list"></i>
+                            </div>
+                            <span class="fw-semibold text-dark">Phones & Other Items income</span>
+                        </div>
+                        <span class="fw-bold text-success fs-5">₦{{ item_income|floatformat:2|intcomma|default:"0.00" }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card shadow rounded-3 text-center">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-success text-white p-1 rounded-2 me-3" style="width:26px;height:26px;">
+                                <i class="bi bi-list"></i>
+                            </div>
+                            <span class="fw-semibold text-dark">Ram income</span>
+                        </div>
+                        <span class="fw-bold text-success fs-5">₦{{ ram_income|floatformat:2|intcomma|default:"0.00" }}</span>
                     </div>
                 </div>
             </div>
@@ -295,7 +321,7 @@
                             <div class="bg-danger text-white p-2 rounded-2 me-3" style="width:26px;height:26px;">
                                 <i class="bi bi-cash-stack"></i>
                             </div>
-                            <span class="fw-semibold text-dark">Loan Request Disbursements</span>
+                            <span class="fw-semibold text-dark">Loan Request Expenditure</span>
                         </div>
                         <span class="fw-bold text-danger fs-5">₦{{ loan_disbursements|floatformat:2|intcomma|default:"0.00" }}</span>
                     </div>
@@ -308,7 +334,7 @@
                             <div class="bg-danger text-white p-2 rounded-2 me-3" style="width:26px;height:26px;">
                                 <i class="bi bi-cash-stack"></i>
                             </div>
-                            <span class="fw-semibold text-dark">Target Savings Disbursements</span>
+                            <span class="fw-semibold text-dark">Target Savings Expenditure</span>
                         </div>
                         <span class="fw-bold text-danger fs-5">₦{{ target_savings_disbursements|floatformat:2|intcomma|default:"0.00" }}</span>
                     </div>
@@ -321,9 +347,35 @@
                             <div class="bg-danger text-white p-2 rounded-2 me-3" style="width:26px;height:26px;">
                                 <i class="bi bi-cash-stack"></i>
                             </div>
-                            <span class="fw-semibold text-dark">Special Savings Disbursements</span>
+                            <span class="fw-semibold text-dark">Special Savings Expenditure</span>
                         </div>
                         <span class="fw-bold text-danger fs-5">₦{{ special_savings_disbursements|floatformat:2|intcomma|default:"0.00" }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card shadow rounded-3 text-center">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-danger text-white p-2 rounded-2 me-3" style="width:26px;height:26px;">
+                                <i class="bi bi-cash-stack"></i>
+                            </div>
+                            <span class="fw-semibold text-dark">Phones & Other Items Expenditure</span>
+                        </div>
+                        <span class="fw-bold text-danger fs-5">₦{{ item_disbursements |floatformat:2|intcomma|default:"0.00" }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card shadow rounded-3 text-center">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-danger text-white p-2 rounded-2 me-3" style="width:26px;height:26px;">
+                                <i class="bi bi-cash-stack"></i>
+                            </div>
+                            <span class="fw-semibold text-dark">Ram Expenditure</span>
+                        </div>
+                        <span class="fw-bold text-danger fs-5">₦{{ ram_disbursements |floatformat:2|intcomma|default:"0.00" }}</span>
                     </div>
                 </div>
             </div>

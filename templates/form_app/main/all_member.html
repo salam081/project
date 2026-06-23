@@ -1,0 +1,73 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="content-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h2><i class="bi bi-folder2-open"></i> All Member</h2>
+                <p class="text-muted mb-0">Manage all members</p>
+            </div>
+            <a href="{% url 'register' %}" class="btn btn-primary mt-2 mt-md-0">
+                <i class="bi bi-plus"></i> New Member
+            </a>
+        </div>
+    </div>
+
+    <div class="card card-custom mt-3 shadow p-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Manage all Members</h5>
+        </div>
+        <div class="card-body p-0">
+            <!-- The table-responsive class makes the table horizontally scrollable on small screens -->
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Full Name</th>
+                            <th>Ippis</th>
+                            <th>Savings</th>
+                            <th>Username</th>
+                            <th>Phone</th>
+                            <th>Department</th>
+                            <th>Date Of Birth</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- This is the Django template for loop to iterate over the 'members' list from the view context -->
+                        {% for m in members %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ m.first_name }} {{ m.last_name }}</td>
+                            <td>
+                                {% if m.member and m.member.ippis %}
+                                    <span>{{ m.member.ippis }}</span>
+                                {% else %}
+                                    <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                            <td class="savings-amount">₦{{ m.savings|default:"0"|floatformat:2 }}</td>
+                            <td>{{ m.username }}</td>
+                            <td>{{ m.phone1 }}</td>
+                            <td>{{ m.department|default:"Not Set" }}</td>
+                            <td>{{ m.date_of_birth }}</td>
+                            <td>
+                                <!-- Example buttons with Django URL tags -->
+                                <a href="{% url 'member_details' m.pk %}" class="btn btn-outline-primary btn-sm mb-1 mb-md-0 d-block d-md-inline-block">View</a>
+                                <a href="" class="btn btn-outline-secondary btn-sm d-block d-md-inline-block">Edit</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">No members found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -1,135 +1,323 @@
-{% extends 'base/base.html' %}
+{% extends "base/base.html" %}
+{% load humanize %}
 
 {% block content %}
-<div class="container mt-4">
-    <h3>Create Member Request</h3>
+<div class="container py-3 ">
 
-    <form method="post" enctype="multipart/form-data" id="main-form">
-        {% csrf_token %}
-        
-        <div class="row mb-4">
-            <div class="col-md-4"><label>Guarantor IPPIS</label><input type="text" name="gaurantor_ippis" class="form-control" required></div>
-            <div class="col-md-4"><label>Payslip</label><input type="file" name="file_payslip" class="form-control" required></div>
-            <div class="col-md-4"><label>Passport</label><input type="file" name="passport_photo" class="form-control" ></div>
+    <!-- ── Header Block ── -->
+    <div class="row mb-3 mb-md-4">
+        <div class="col">
+            <h3 class="fw-bold text-dark mb-1 fs-4 fs-md-2">Create Member Request</h3>
+            <p class="text-muted mb-0 small">Add items on the left, review cart on the right.</p>
         </div>
+    </div>
 
-        <hr>
-        <h5>1. Click Items to Select</h5>
-        <div class="row mb-4">
-            {% for item in items %}
-            <div class="col-md-3 mb-3">
-                <div class="card item-card h-100 shadow-sm border p-2" 
-                     data-id="{{ item.id }}" 
-                     data-name="{{ item.brand }} {{ item.model_name }}"
-                     style="cursor:pointer;">
-                    <strong>{{ item.brand }}</strong>
-                    <p class="mb-1 text-muted">{{ item.model_name }}</p>
-                    <span class="status-badge bg-warning">Stock: {{ item.quantity }}</span>
+    <form method="POST" enctype="multipart/form-data" id="requestForm">
+        {% csrf_token %}
+        <input type="hidden" name="cart_data" id="cart_data">
+
+        <!-- ── Member Profile Summary Card (Stacked on mobile, row on desktop) ── -->
+        <div class="card border rounded-3 shadow-sm mb-3 bg-white overflow-hidden">
+            <div class="card-header bg-light py-2 px-3 border-bottom">
+                <span class="text-uppercase small text-secondary fw-bold font-monospace" style="font-size: 0.7rem;">Recipient Details</span>
+            </div>
+            <div class="card-body bg-light-subtle py-2 py-md-3">
+                <div class="row g-2 g-md-3">
+                    <div class="col-12 col-md-4">
+                        <small class="text-muted text-uppercase d-block" style="font-size: 10px; font-weight: 600;">Member Name</small>
+                        <div class="fw-bold text-dark text-truncate">{{ member.member.get_full_name }}</div>
+                    </div>
+                    <div class="col-6 col-md-4 border-start-md">
+                        <small class="text-muted text-uppercase d-block" style="font-size: 10px; font-weight: 600;">IPPIS Number</small>
+                        <div class="fw-bold text-secondary font-monospace text-truncate">{{ member.ippis }}</div>
+                    </div>
+                    <div class="col-6 col-md-4 border-start-md">
+                        <small class="text-muted text-uppercase d-block" style="font-size: 10px; font-weight: 600;">Department</small>
+                        <div class="fw-bold text-dark text-truncate">{{ member.member.department|default:"General Admin" }}</div>
+                    </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
 
-        <h5>2. Selected Items (Enter Quantity)</h5>
-        {{ formset.management_form }}
-        <div id="selected-items-list" class="mb-4">
+        <!-- ── File Uploads & Security Verification ── -->
+        <div class="row g-2 g-md-3 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="input-group input-group-sm shadow-sm">
+                    <span class="input-group-text bg-white text-muted"><i class="bi bi-shield-check"></i></span>
+                    <input type="text" name="guarantor_ippis" class="form-control" placeholder="Guarantor IPPIS">
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+                <div class="input-group input-group-sm shadow-sm">
+                    <span class="input-group-text bg-white text-muted" title="Payslip"><i class="bi bi-file-earmark-arrow-up"></i></span>
+                    <input type="file" name="file_payslip" class="form-control">
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-md-4">
+                <div class="input-group input-group-sm shadow-sm">
+                    <span class="input-group-text bg-white text-muted" title="Passport"><i class="bi bi-person-bounding-box"></i></span>
+                    <input type="file" name="passport_photo" class="form-control">
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Layout Workspace Splitter ── -->
+        <div class="row g-3 g-md-4">
+
+            <!-- LEFT SIDE: Store Catalog / Items Ledger -->
+            <div class="col-12 col-lg-8">
+                <div class="card border rounded-3 shadow-sm bg-white overflow-hidden">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark mb-0 fs-6"><i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Available Ledger Items</h5>
+                        <span class="badge bg-secondary-subtle text-secondary rounded-pill font-monospace">{{ items|length }} Items</span>
+                    </div>
+
+                    <!-- Desktop View Table (Hidden on small mobile viewscreens) -->
+                    <div class="table-responsive d-none d-md-block">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small text-uppercase text-secondary border-bottom">
+                                <tr>
+                                    <th class="ps-4 py-3">Product Description</th>
+                                    <th class="py-3">Unit Pricing</th>
+                                    <th class="py-3" style="max-width: 100px;">Qty</th>
+                                    <th class="pe-4 py-3 text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="fw-bold text-dark mb-0">{{ item.received_item.brand }} &middot; {{ item.received_item.model_name }}</div>
+                                        <small class="text-muted font-monospace fs-7">Available Stock: {{ item.quantity }}</small>
+                                    </td>
+                                    <td class="fw-bold text-dark">₦{{ item.selling_price_per_unit|intcomma }}</td>
+                                    <td>
+                                        <input type="number" id="qty_{{ item.id }}" class="form-control form-control-sm text-center fw-medium" value="1" min="1" max="{{ item.quantity }}">
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <button type="button" class="btn btn-outline-primary btn-sm px-3 fw-semibold"
+                                                onclick="addToCart({{ item.id }}, '{{ item.received_item.brand|escapejs }} {{ item.received_item.model_name|escapejs }}', {{ item.selling_price_per_unit }})">
+                                            <i class="bi bi-cart-plus"></i> Add
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Adaptive List View (Hidden on desktop systems) -->
+                    <div class="d-block d-md-none divide-y">
+                        {% for item in items %}
+                        <div class="p-3 border-bottom mobile-product-row">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div style="max-width: 70%;">
+                                    <div class="fw-bold text-dark lh-sm">{{ item.received_item.brand }} {{ item.received_item.model_name }}</div>
+                                    <small class="text-muted font-monospace d-block mt-0.5" style="font-size: 11px;">Stock Ceiling: {{ item.quantity }} units</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="fw-bold text-primary d-block">₦{{ item.selling_price_per_unit|intcomma }}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 align-items-center justify-content-between pt-1">
+                                <div class="d-flex align-items-center gap-2">
+                                    <small class="text-secondary small">Qty:</small>
+                                    <input type="number" id="mobile_qty_{{ item.id }}" class="form-control form-control-sm text-center fw-semibold rounded" value="1" min="1" max="{{ item.quantity }}" style="width: 65px;">
+                                </div>
+                                <button type="button" class="btn btn-primary btn-sm px-3 fw-medium d-flex align-items-center gap-1"
+                                        onclick="addMobileToCart({{ item.id }}, '{{ item.received_item.brand|escapejs }} {{ item.received_item.model_name|escapejs }}', {{ item.selling_price_per_unit }})">
+                                    <i class="bi bi-plus-lg"></i> Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-4 text-muted small">No items listed.</div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
 
-        <button type="submit" class="btn btn-success w-100 py-3">Submit All Requests</button>
+            <!-- RIGHT SIDE / MOBILE BOTTOM BAR: Checkout Panel Module -->
+            <div class="col-12 col-lg-4">
+                <!-- Standard Right Container Card (Hidden on mobile screens unless expanded via action drawer) -->
+                <div class="card border rounded-3 shadow-sm sticky-top bg-white overflow-hidden d-none d-lg-block" style="top:24px; z-index: 1020;">
+                    <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 fs-6 d-flex align-items-center gap-2"><i class="bi bi-cart3"></i> Checkout Cart</h5>
+                        <span class="badge bg-primary rounded-pill fw-bold font-monospace cart-badge-count">0</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="cart-empty-state text-center py-4 text-muted border border-dashed rounded-3 mb-3 bg-light-subtle">
+                            <i class="bi bi-basket3 fs-2 opacity-50 d-block mb-1"></i>
+                            <span class="small">Cart config is currently empty</span>
+                        </div>
+                        <ul class="list-group list-group-flush mb-3 overflow-auto cart-list" style="max-height: 280px;"></ul>
+                        <div class="cart-summary-block d-none">
+                            <div class="d-flex justify-content-between align-items-center py-2 border-top border-bottom mb-3 fw-bold text-dark">
+                                <span>Gross Total:</span>
+                                <span class="font-monospace text-primary cart-total-value">₦0.00</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold submitBtn" disabled>Submit Request</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── Mobile Sticky Footer Action Bar (Only displays on devices under 992px wide) ── -->
+        <div class="d-block d-lg-none mobile-sticky-footer bg-white border-top shadow-lg p-3 fixed-bottom">
+            <div class="d-flex align-items-center justify-content-between gap-2 max-container-width mx-auto">
+                <button type="button" class="btn btn-outline-dark border position-relative d-flex align-items-center gap-2 px-3 py-2" data-bs-toggle="offcanvas" data-bs-target="#mobileCartDrawer">
+                    <i class="bi bi-cart3 fs-5"></i>
+                    <span class="fw-bold small d-none d-sm-inline">View Cart</span>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger cart-badge-count font-monospace">0</span>
+                </button>
+                <div class="text-end flex-grow-1 px-2">
+                    <small class="text-muted d-block uppercase-heading" style="font-size: 9px;">Total Price</small>
+                    <span class="fw-bold text-dark font-monospace fs-5 cart-total-value">₦0.00</span>
+                </div>
+                <button type="submit" class="btn btn-primary px-4 py-2 fw-bold submitBtn" disabled>Submit</button>
+            </div>
+        </div>
+
+        <!-- ── Mobile Offcanvas Cart Sliding Sheet Drawer ── -->
+        <div class="offcanvas offcanvas-bottom rounded-top-4 h-75 d-lg-none" id="mobileCartDrawer" tabindex="-1">
+            <div class="offcanvas-header bg-light border-bottom py-3">
+                <h5 class="offcanvas-title fw-bold text-dark d-flex align-items-center gap-2"><i class="bi bi-cart3"></i> Cart Operations</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body p-3">
+                <div class="cart-empty-state text-center py-5 text-muted border border-dashed rounded-3 mb-3 bg-light-subtle">
+                    <i class="bi bi-basket3 display-6 opacity-50 d-block mb-1"></i>
+                    <span class="small fw-medium">No items added to configuration workflow lines</span>
+                </div>
+                <ul class="list-group list-group-flush mb-3 cart-list overflow-auto" style="max-height: calc(100% - 100px);"></ul>
+                <div class="cart-summary-block d-none">
+                    <div class="d-flex justify-content-between align-items-center py-3 border-top border-bottom mb-3 fw-bold text-dark fs-5">
+                        <span>Total Checkout Value:</span>
+                        <span class="font-monospace text-primary cart-total-value">₦0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </form>
 </div>
 
-<template id="form-row-template">
-    <div class="row align-items-center border rounded p-3 mb-2 bg-light form-row">
-        <div class="col-md-6">
-            <h6 class="mb-0 item-display-name text-primary"></h6>
-            <input type="hidden" name="memberrequestdetail_set-__prefix__-item" class="item-id-input">
-        </div>
-        <div class="col-md-4">
-            <div class="input-group">
-                <span class="input-group-text">Quantity</span>
-                <input type="number" name="memberrequestdetail_set-__prefix__-quantity" 
-                       class="form-control qty-input" min="1" value="1" required>
-            </div>
-        </div>
-        <div class="col-md-2 text-end">
-            <button type="button" class="btn btn-danger btn-sm remove-row-btn">Remove</button>
-        </div>
-    </div>
-</template>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const listContainer = document.getElementById('selected-items-list');
-    const totalForms = document.querySelector('[name$="-TOTAL_FORMS"]');
-    const template = document.getElementById('form-row-template');
-
-    // Click Item Card
-    document.querySelectorAll('.item-card').forEach(card => {
-        card.addEventListener('click', function() {
-            const itemId = this.getAttribute('data-id');
-            const itemName = this.getAttribute('data-name');
-
-            // Check if already in list
-            const alreadyAdded = document.querySelector(`.item-id-input[value="${itemId}"]`);
-            if (alreadyAdded) {
-                alert("This item is already in your request list.");
-                return;
-            }
-
-            // Create new row using template
-            const count = parseInt(totalForms.value);
-            const clone = template.content.cloneNode(true);
-            
-            // Update the index (__prefix__) for Django
-            const row = clone.querySelector('.form-row');
-            row.querySelectorAll('input').forEach(input => {
-                input.name = input.name.replace('__prefix__', count);
-                input.id = input.id.replace('__prefix__', count);
-            });
-
-            // Set Data
-            clone.querySelector('.item-display-name').textContent = itemName;
-            clone.querySelector('.item-id-input').value = itemId;
-
-            listContainer.appendChild(clone);
-            
-            // Update Management Form
-            totalForms.value = count + 1;
-            
-            // Highlight card
-            this.classList.add('border-success', 'bg-light');
-        });
-    });
-
-    // Remove Row
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('remove-row-btn')) {
-            const row = e.target.closest('.form-row');
-            const itemId = row.querySelector('.item-id-input').value;
-            
-            // Un-highlight card
-            const card = document.querySelector(`.item-card[data-id="${itemId}"]`);
-            if(card) card.classList.remove('border-success', 'bg-light');
-            
-            row.remove();
-            
-            // Re-index all rows so Django doesn't get confused
-            const remainingRows = document.querySelectorAll('.form-row');
-            totalForms.value = remainingRows.length;
-            
-            remainingRows.forEach((r, idx) => {
-                r.querySelectorAll('input').forEach(input => {
-                    input.name = input.name.replace(/-\d+-/, `-${idx}-`);
-                });
-            });
-        }
-    });
-});
-</script>
-
+<!-- Custom Page Layout Stylesheet Elements -->
 <style>
-    .item-card:hover { border: 1px solid #0d6efd !important; background-color: #f8f9fa; }
-    .item-card.border-success { border: 2px solid #198754 !important; }
+    body { background-color: #f8f9fa; padding-bottom: 75px !important; } /* Space for mobile sticky footer bar */
+    @media(min-width: 992px) { body { padding-bottom: 20px !important; } }
+    .card { border-radius: 12px; }
+    .border-dashed { border-style: dashed !important; }
+    .fs-7 { font-size: 0.75rem !important; }
+    .font-monospace { font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace !important; }
+    .uppercase-heading { letter-spacing: 0.5px; font-weight: 700; }
+    .rounded-top-4 { border-top-left-radius: 1rem !important; border-top-right-radius: 1rem !important; }
+    @media (min-width: 768px) {
+        .border-start-md { border-left: 1px solid #dee2e6 !important; }
+    }
 </style>
+
+<!-- ── Unified Dynamic Cart Logic Scripts ── -->
+<script>
+let cart = [];
+
+function addMobileToCart(id, name, price) {
+    const qtyInput = document.getElementById("mobile_qty_" + id);
+    processAddition(id, name, price, qtyInput);
+}
+
+function addToCart(id, name, price) {
+    const qtyInput = document.getElementById("qty_" + id);
+    processAddition(id, name, price, qtyInput);
+}
+
+function processAddition(id, name, price, qtyInput) {
+    let qty = parseInt(qtyInput.value);
+    const maxQty = parseInt(qtyInput.getAttribute('max')) || 9999;
+
+    if (isNaN(qty) || qty <= 0) {
+        alert("Please specify a valid numeric distribution quantity.");
+        return;
+    }
+
+    let existing = cart.find(i => i.id === id);
+    if (existing) {
+        if (existing.quantity + qty > maxQty) {
+            alert(`Requested totals cannot exceed the available stock ceiling limits of (${maxQty} units).`);
+            return;
+        }
+        existing.quantity += qty;
+    } else {
+        if (qty > maxQty) {
+            alert(`Requested totals cannot exceed the available stock ceiling limits of (${maxQty} units).`);
+            return;
+        }
+        cart.push({ id, name, price, quantity: qty });
+    }
+
+    qtyInput.value = "1";
+    renderCart();
+}
+
+function removeItem(index) {
+    cart.splice(index, 1);
+    renderCart();
+}
+
+function renderCart() {
+    const lists = document.querySelectorAll(".cart-list");
+    const emptyStates = document.querySelectorAll(".cart-empty-state");
+    const summaryBlocks = document.querySelectorAll(".cart-summary-block");
+    const badgeCounts = document.querySelectorAll(".cart-badge-count");
+    const totalDisplays = document.querySelectorAll(".cart-total-value");
+    const submitBtns = document.querySelectorAll(".submitBtn");
+
+    let totalValue = 0;
+    let totalItems = 0;
+
+    // Reset components uniformly across Desktop and Mobile targets
+    lists.forEach(l => l.innerHTML = "");
+
+    if (cart.length === 0) {
+        emptyStates.forEach(e => e.classList.remove("d-none"));
+        summaryBlocks.forEach(s => s.classList.add("d-none"));
+        submitBtns.forEach(b => b.setAttribute("disabled", "true"));
+        badgeCounts.forEach(bc => bc.innerText = "0");
+        totalDisplays.forEach(td => td.innerText = "₦0.00");
+    } else {
+        emptyStates.forEach(e => e.classList.add("d-none"));
+        summaryBlocks.forEach(s => s.classList.remove("d-none"));
+        submitBtns.forEach(b => b.removeAttribute("disabled"));
+
+        let itemsHtml = "";
+        cart.forEach((item, index) => {
+            let rowCost = item.price * item.quantity;
+            totalValue += rowCost;
+            totalItems += item.quantity;
+
+            itemsHtml += `
+                <li class="list-group-item d-flex justify-content-between align-items-start px-0 py-2.5 border-bottom">
+                    <div class="ms-2 me-auto min-width-0" style="max-width: 70%;">
+                        <div class="fw-bold text-dark text-truncate fs-7 mb-0">${item.name}</div>
+                        <span class="text-muted small font-monospace">${item.quantity} × ₦${item.price.toLocaleString()}</span>
+                    </div>
+                    <div class="text-end d-flex flex-column align-items-end gap-1">
+                        <span class="fw-semibold text-dark font-monospace small">₦${rowCost.toLocaleString()}</span>
+                        <button type="button" class="btn p-0 text-danger border-0 fs-7 opacity-75" onclick="removeItem(${index})">
+                            <i class="bi bi-trash3"></i> Remove
+                        </button>
+                    </div>
+                </li>
+            `;
+        });
+
+        lists.forEach(l => l.innerHTML = itemsHtml);
+        badgeCounts.forEach(bc => bc.innerText = totalItems);
+        totalDisplays.forEach(td => td.innerText = "₦" + totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+    }
+
+    document.getElementById("cart_data").value = JSON.stringify(cart);
+}
+</script>
 {% endblock %}

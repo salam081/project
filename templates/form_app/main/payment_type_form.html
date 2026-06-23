@@ -1,0 +1,43 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4" ">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">{% if payment_type %}Edit{% else %}Add{% endif %} Payment Type</h4>
+    <a href="{% url 'payment_type_list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+  </div>
+
+ 
+
+  <div class="card shadow">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Title</label>
+          <input type="text" name="title" class="form-control"
+            value="{{ payment_type.title|default:'' }}" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Request Fee (₦)</label>
+          <input type="number" name="request_fee" class="form-control" step="0.01" min="0"
+            value="{{ payment_type.request_fee|default:'0' }}" required>
+        </div>
+        <div class="mb-3 form-check">
+          <input type="checkbox" name="available" class="form-check-input" id="available"
+            {% if payment_type.available or not payment_type %}checked{% endif %}>
+          <label class="form-check-label" for="available">Available</label>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> Save
+          </button>
+          <a href="{% url 'payment_type_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,10 +1,9 @@
 from django.shortcuts import render,redirect,get_object_or_404
 import calendar
 from decimal import Decimal,DecimalException
-from datetime import datetime
 from django.db import transaction
 from django.http import HttpResponse
-from datetime import timedelta
+
 from django.db.models import Sum, F, DecimalField, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 
@@ -16,8 +15,9 @@ from django.db.models import Sum
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import datetime
+from django.db.models import Q
 from django.conf import settings
 from django.contrib import messages
 from django.db.models.functions import TruncMonth
@@ -44,16 +44,17 @@ from accounts.views import *
 from .forms import *
 
 
-
-
 @login_required
 @group_required(['admin'])
 def admin_dashboard(request):
     # Get the current year
     # current_year = datetime.now().year
+    # today = timezone.now().date()
+    # week_ago = today - timedelta(days=7)
+    # current_year = datetime.datetime.now().year
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
-    current_year = datetime.datetime.now().year
+    current_year = today.year
     
     daily_logins = UserActivity.objects.filter(
         action__icontains="logged in",
@@ -235,11 +236,47 @@ def is_admin(user):
 @login_required
 @group_required(['admin'])
 def list_withdrawal_requests(request):
-    requests = Withdrawal.objects.select_related('member', 'approved_by').all()
-    stats = get_cooperative_withdrawal_stats()
-    return render(request, 'main/list_withdrawal_requests.html', {'requests': requests, 'stats': stats, })
+    qs = (
+        Withdrawal.objects
+        .select_related('member', 'approved_by')
+        .only(
+            'id', 'status', 'total_withdrawn', 'date_requested',
+            'withdrawn_loanable', 'withdrawn_investment', 'reason',
+            'member__member__first_name', 'member__member__last_name', 'member__ippis',
+            'approved_by__first_name', 'approved_by__last_name',
+        )
+        .order_by('-date_requested')
+    )
 
+    status = request.GET.get('status')
+    if status:
+        qs = qs.filter(status=status)
 
+    # Single DB hit — covers both stats cards and total_withdrawal
+    stats = qs.aggregate(
+        total_count=Count('id'),
+        pending_count=Count('id', filter=Q(status='Pending')),
+        approved_count=Count('id', filter=Q(status='Approved')),
+        rejected_count=Count('id', filter=Q(status='Declined')),
+        total_withdrawn=Sum('total_withdrawn'),
+    )
+
+    # Pull total_withdrawal from stats dict — no extra DB hit
+    total_withdrawal = stats['total_withdrawn'] or Decimal('0')
+
+    paginator = Paginator(qs, 100)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+   
+    context = {
+        'page_obj': page_obj,
+        'requests': page_obj,
+        'stats': stats,
+        'total_withdrawal': total_withdrawal,
+        'current_status': status,
+    }
+    return render(request, 'main/list_withdrawal_requests.html', context)
 
 @login_required
 @group_required(['admin'])
@@ -285,6 +322,7 @@ def approve_withdrawal_request(request, pk):
         "active_loans": active_loans,
         "active_consumables": active_consumables,
         "active_project_finance": active_project_finance,
+        'ippis':ippis
     })
 
 
@@ -306,50 +344,94 @@ def decline_withdrawal_request(request, pk):
 
     return render(request, 'main/decline_withdrawal_request.html', {'request_obj': withdrawal_request})
 
-
-
-@login_required
 def partial_withdrawals_list(request):
     """List all partial withdrawal requests with filtering"""
-    # Get filter parameters
     status_filter = request.GET.get('status', '')
     search = request.GET.get('search', '')
-    
+
     # Base queryset
-    withdrawals = PartialWithdrawal.objects.select_related('member', 'approved_by').all()
-    
-    # Apply status filter
+    qs = PartialWithdrawal.objects.select_related('member', 'approved_by')
+
+    # Apply filters
     if status_filter:
-        withdrawals = withdrawals.filter(status=status_filter)
-    
-    # Apply search filter (member name or registration number)
+        qs = qs.filter(status=status_filter)
+
     if search:
-        withdrawals = withdrawals.filter(
+        qs = qs.filter(
             Q(member__member__first_name__icontains=search) |
             Q(member__member__last_name__icontains=search) |
             Q(member__ippis__icontains=search)
         )
-    
+
+    # Single aggregate from filtered qs — counts + total in one DB hit
+    stats = qs.aggregate(
+        total_count=Count('id'),
+        pending_count=Count('id', filter=Q(status='Pending')),
+        approved_count=Count('id', filter=Q(status='Approved')),
+        declined_count=Count('id', filter=Q(status='Declined')),
+        total_withdrawal=Sum('amount_requested'),
+    )
+
+    total_withdrawal = stats['total_withdrawal'] or Decimal('0')
+
     # Pagination
-    paginator = Paginator(withdrawals, 20)
+    paginator = Paginator(qs, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
-    # Get counts for status badges
-    status_counts = {
-        'pending': PartialWithdrawal.objects.filter(status='Pending').count(),
-        'approved': PartialWithdrawal.objects.filter(status='Approved').count(),
-        'declined': PartialWithdrawal.objects.filter(status='Declined').count(),
-    }
-    
+
     context = {
         'page_obj': page_obj,
         'status_filter': status_filter,
         'search': search,
-        'status_counts': status_counts,
+        'stats': stats,
+        'total_withdrawal': total_withdrawal,
     }
-    
+
     return render(request, 'main/partial_withdrawal_list.html', context)
+
+# @login_required
+# def partial_withdrawals_list(request):
+#     """List all partial withdrawal requests with filtering"""
+#     # Get filter parameters
+#     status_filter = request.GET.get('status', '')
+#     search = request.GET.get('search', '')
+    
+#     # Base queryset
+#     withdrawals = PartialWithdrawal.objects.select_related('member', 'approved_by').all()
+    
+#     # Apply status filter
+#     if status_filter:
+#         withdrawals = withdrawals.filter(status=status_filter)
+    
+#     # Apply search filter (member name or registration number)
+#     if search:
+#         withdrawals = withdrawals.filter(
+#             Q(member__member__first_name__icontains=search) |
+#             Q(member__member__last_name__icontains=search) |
+#             Q(member__ippis__icontains=search)
+#         )
+#     total_withdrawal = status_filter['total_withdrawn'] or Decimal('0')
+#     # Pagination
+#     paginator = Paginator(withdrawals, 20)
+#     page_number = request.GET.get('page')
+#     page_obj = paginator.get_page(page_number)
+    
+#     # Get counts for status badges
+#     status_counts = {
+#         'pending': PartialWithdrawal.objects.filter(status='Pending').count(),
+#         'approved': PartialWithdrawal.objects.filter(status='Approved').count(),
+#         'declined': PartialWithdrawal.objects.filter(status='Declined').count(),
+#     }
+    
+#     context = {
+#         'page_obj': page_obj,
+#         'status_filter': status_filter,
+#         'search': search,
+#         'status_counts': status_counts,
+#         'total_withdrawal': total_withdrawal,
+#     }
+    
+#     return render(request, 'main/partial_withdrawal_list.html', context)
 
 
 @login_required
@@ -376,30 +458,6 @@ def partial_withdrawal_detail(request, pk):
     
     return render(request, 'main/partial_withdrawal_detail.html', context)
 
-
-# @login_required
-# def partial_withdrawal_approve(request, pk):
-#     """Approve a withdrawal request"""
-#     withdrawal = get_object_or_404(PartialWithdrawal, pk=pk)
-    
-#     # Check if already processed
-#     if withdrawal.status != 'Pending':
-#         messages.warning(request, f'This withdrawal has already been {withdrawal.status.lower()}.')
-#         return redirect('partial_withdrawal_detail', pk=pk)
-    
-#     if request.method == 'POST':
-#         try:
-#             withdrawal.approve(request.user)
-#             messages.success(request,f'Withdrawal of ₦{withdrawal.amount_requested:,.2f} for {withdrawal.member} approved successfully.')
-#             return redirect('partial_withdrawals_list')
-#         except ValueError as e:
-#             messages.error(request, f'Approval failed: {str(e)}')
-#             return redirect('partial_withdrawal_detail', pk=pk)
-#         except Exception as e:
-#             messages.error(request, f'An error occurred: {str(e)}')
-#             return redirect('partial_withdrawal_detail', pk=pk)
-#     from decimal import Decimal
-# from django.db.models import Sum
 
 @login_required
 def partial_withdrawal_approve(request, pk):
@@ -1188,224 +1246,6 @@ def dividend_report(request):
     return render(request, "main/dividends_report.html", context)
 
 
-# # ===inline  Dividend Distribution Form === #
-# class ProfitForm(forms.Form):
-#     start_date = forms.DateField(
-#         label="Savings Start Date",
-#         widget=forms.DateInput(attrs={'type': 'date'}),
-#         required=True
-#     )
-#     end_date = forms.DateField(
-#         label="Savings End Date",
-#         widget=forms.DateInput(attrs={'type': 'date'}),
-#         required=True
-#     )
-#     profit = forms.DecimalField(
-#         label="Enter Profit",
-#         decimal_places=2,
-#         max_digits=15,
-#         required=False
-#     )
-#     distribution_date = forms.DateField(
-#         label="Distribution Date",
-#         widget=forms.DateInput(attrs={'type': 'date'}),
-#         required=False
-#     )
-# #=== Dividend Distribution Form End === #
-
-
-# @login_required
-# @group_required(['admin'])
-# def dividend_report(request):
-#     # ✅ FIX 1: Read filter params from GET so pagination preserves them
-#     start_date = None
-#     end_date = None
-#     show_profit_section = False
-#     profit = None
-#     unit_profit = None
-#     members = []
-#     total_savings = Decimal("0.00")
-#     total_shares = Decimal("0.00")
-
-#     # ✅ Get last recorded unit profit (if any)
-#     last_dividend = Dividend.objects.order_by('-created_at').first()
-#     if last_dividend:
-#         unit_profit = last_dividend.unit_profit
-
-#     # ✅ FIX 2: Persist filter via GET params after POST redirect
-#     if request.method == "POST" and "filter" in request.POST:
-#         form = ProfitForm(request.POST)
-#         if form.is_valid():
-#             start_date = form.cleaned_data["start_date"]
-#             end_date = form.cleaned_data["end_date"]
-#             # Redirect to GET so pagination works
-#             return redirect(
-#                 f"{request.path}?start_date={start_date}&end_date={end_date}&filtered=1"
-#             )
-
-#     elif request.method == "POST" and "distribute" in request.POST:
-#         form = ProfitForm(request.POST)
-#         if form.is_valid():
-#             start_date = form.cleaned_data["start_date"]
-#             end_date = form.cleaned_data["end_date"]
-#             profit = form.cleaned_data["profit"]
-#             distribution_date = form.cleaned_data["distribution_date"]
-
-#             # ✅ FIX 3: Use __date lookup to include full end_date day
-#             savings_sum = (
-#                 Savings.objects.filter(
-#                     member=OuterRef("pk"),
-#                     date_created__date__gte=start_date,
-#                     date_created__date__lte=end_date,  # ← FIX: includes full end day
-#                 )
-#                 .values("member")
-#                 .annotate(total=Sum("month_saving", output_field=DecimalField()))
-#                 .values("total")
-#             )
-
-#             members = (
-#                 Member.objects.annotate(
-#                     period_savings=Subquery(savings_sum, output_field=DecimalField())
-#                 )
-#                 .filter(period_savings__gt=0)
-#             )
-
-#             total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
-#             total_shares = total_savings / Decimal("1000") if total_savings > 0 else Decimal("0.00")
-
-#             if profit and distribution_date and total_shares > 0:
-#                 new_unit_profit = profit / total_shares
-
-#                 if unit_profit:
-#                     unit_profit += new_unit_profit
-#                 else:
-#                     unit_profit = new_unit_profit
-
-#                 with transaction.atomic():
-#                     dividends_to_create = []
-#                     members_to_update = []
-
-#                     for member in members:
-#                         member_savings = member.period_savings or Decimal("0.00")
-#                         member_shares = member_savings / Decimal("1000")
-#                         dividend_amount = member_shares * new_unit_profit
-
-#                         dividends_to_create.append(
-#                             Dividend(
-#                                 member=member,
-#                                 profit=profit,
-#                                 unit_profit=new_unit_profit,
-#                                 dividend_amount=dividend_amount,
-#                                 distribution_date=distribution_date,
-#                                 created_by=request.user,
-#                             )
-#                         )
-
-#                         if member.total_profit is None:
-#                             member.total_profit = Decimal("0.00")
-#                         member.total_profit += dividend_amount
-#                         members_to_update.append(member)
-
-#                     Dividend.objects.bulk_create(dividends_to_create)
-#                     Member.objects.bulk_update(members_to_update, ["total_profit"])
-
-#                 return redirect("distribute_dividends")
-
-#             show_profit_section = True
-
-#     else:
-#         form = ProfitForm()
-
-#     # ✅ FIX 4: On GET, read filter params from query string (supports pagination)
-#     if request.method == "GET":
-#         start_date_str = request.GET.get("start_date")
-#         end_date_str = request.GET.get("end_date")
-#         filtered = request.GET.get("filtered")
-
-#         if start_date_str and end_date_str:
-#             try:
-#                 from datetime import date
-#                 start_date = date.fromisoformat(start_date_str)
-#                 end_date = date.fromisoformat(end_date_str)
-#                 show_profit_section = bool(filtered)
-
-#                 savings_sum = (
-#                     Savings.objects.filter(
-#                         member=OuterRef("pk"),
-#                         date_created__date__gte=start_date,
-#                         date_created__date__lte=end_date,
-#                     )
-#                     .values("member")
-#                     .annotate(total=Sum("month_saving", output_field=DecimalField()))
-#                     .values("total")
-#                 )
-
-#                 members = (
-#                     Member.objects.annotate(
-#                         period_savings=Subquery(savings_sum, output_field=DecimalField())
-#                     )
-#                     .filter(period_savings__gt=0)
-#                 )
-
-#                 total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
-#                 total_shares = total_savings / Decimal("1000") if total_savings > 0 else Decimal("0.00")
-
-#                 # Pre-fill form with GET params
-#                 form = ProfitForm(initial={"start_date": start_date, "end_date": end_date})
-
-#             except ValueError:
-#                 pass
-
-#     # ✅ Default: show all members if no filter applied
-#     if not members and not start_date:
-#         savings_sum = (
-#             Savings.objects.filter(member=OuterRef("pk"))
-#             .values("member")
-#             .annotate(total=Sum("month_saving", output_field=DecimalField()))
-#             .values("total")
-#         )
-#         members = Member.objects.annotate(
-#             period_savings=Subquery(savings_sum, output_field=DecimalField())
-#         )
-#         total_savings = sum([m.period_savings or Decimal("0.00") for m in members])
-#         total_shares = total_savings / Decimal("1000") if total_savings > 0 else Decimal("0.00")
-
-#     # ✅ Step 3: Prepare enriched data for template
-#     enriched_members = []
-#     for idx, m in enumerate(members, start=1):
-#         savings = m.period_savings or Decimal("0.00")
-#         share = savings / Decimal("1000")
-#         current_dividend = share * (unit_profit or Decimal("0.00"))
-
-#         enriched_members.append({
-#             "sn": idx,
-#             "name": str(m),
-#             "ippis": getattr(m, "ippis", ""),
-#             "savings": savings,
-#             "share": share,
-#             "unit_profit": unit_profit or Decimal("0.00"),
-#             "dividend_amount": current_dividend,
-#             "total_profit": m.total_profit or Decimal("0.00"),
-#         })
-
-#     paginator = Paginator(enriched_members, 80)
-#     page_number = request.GET.get("page", 1)
-#     shares = paginator.get_page(page_number)
-
-#     context = {
-#         "form": form,
-#         "shares": shares,
-#         "total_savings": total_savings,
-#         "total_shares": total_shares,
-#         "unit_profit": unit_profit,
-#         "profit": profit,
-#         "show_profit_section": show_profit_section,
-#         "start_date": start_date,
-#         "end_date": end_date,
-#     }
-
-#     return render(request, "main/dividends_report.html", context)
-
 @login_required
 @group_required(['admin'])
 def delete_dividend_round_bulk(request, profit_amount):
@@ -1692,3 +1532,11 @@ def delete_user_activity(request, pk):
         return redirect("user_activity_list")
 
     return render(request, "main/delete_user_activity.html", {"activity": activity})
+
+
+
+
+# ── PAYMENT TYPE VIEWS ─────────────────────────────────────────────────────────
+
+
+

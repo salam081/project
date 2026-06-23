@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trust Cooperative - Building Futures Together</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <style>
+        /* =============================================
+           BRAND TOKENS — single source of truth
+        ============================================= */
+        :root {
+            --tc-navy:   #0f172a;
+            --tc-navy2:  #1e293b;
+            --tc-lime:   #b8df4b;
+            --tc-lime-dim: rgba(184, 223, 75, 0.15);
+            --tc-lime-border: rgba(184, 223, 75, 0.35);
+            --tc-white:  #ffffff;
+            --tc-muted:  rgba(255, 255, 255, 0.75);
+            --tc-text:   #1e293b;
+            --transition: all 0.3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--tc-text);
+            background-color: #ffffff;
+        }
+
+        /* =============================================
+           TICKER — dark to match navbar, no jarring white
+        ============================================= */
+        .ticker-container {
+            background: var(--tc-navy);
+            height: 38px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            border-bottom: 1px solid var(--tc-lime-border);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1001; /* above navbar */
+        }
+
+        .ticker-title {
+            /* FIX: was red (#990404) — changed to brand lime for consistency */
+            background: var(--tc-lime);
+            color: var(--tc-navy);
+            padding: 0 20px 0 16px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font-weight: 800;
+            font-size: 0.72rem;
+            letter-spacing: 1.5px;
+            white-space: nowrap;
+            clip-path: polygon(0 0, 92% 0, 100% 100%, 0% 100%);
+            flex-shrink: 0;
+        }
+
+        .ticker-content {
+            flex-grow: 1;
+            font-size: 0.85rem;
+            /* FIX: was #444 on white — changed to off-white on dark */
+            color: var(--tc-muted);
+            padding: 0 8px;
+        }
+
+        .ticker-item { margin-right: 60px; }
+
+        /* =============================================
+           HEADER / NAVBAR
+        ============================================= */
+        .header {
+            background: var(--tc-navy);
+            color: white;
+            padding: 0.5rem;
+            position: fixed;
+            width: 100%;
+            /* Sits below ticker */
+            top: 38px;
+            z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+            border-bottom: 2px solid var(--tc-lime);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo { font-size: 1.8rem; font-weight: bold; }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover { color: var(--tc-lime); }
+
+        /* FIX: was solid lime fill — changed to outlined for refinement */
+        .login-btn {
+            color: var(--tc-lime) !important;
+            border: 1.5px solid var(--tc-lime);
+            padding: 0.5rem 1.6rem;
+            border-radius: 6px;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+            transition: var(--transition);
+            background: transparent;
+        }
+
+        .login-btn:hover {
+            background: var(--tc-lime);
+            color: var(--tc-navy) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(184,223,75,0.3);
+        }
+
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 5px;
+        }
+
+        .menu-toggle span {
+            width: 25px;
+            height: 3px;
+            background: white;
+            transition: 0.3s;
+        }
+
+        /* =============================================
+           HERO CAROUSEL
+           — offset by ticker height (38px) + navbar height (~60px)
+        ============================================= */
+        .hero {
+            position: relative;
+            margin-top: 98px; /* ticker 38 + navbar ~60 */
+            height: calc(100vh - 98px);
+            overflow: hidden;
+        }
+
+        .hero-messages {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        #heroCarousel { height: 100%; }
+        .carousel-inner, .carousel-item { height: 100%; }
+
+        .carousel-item .slide-bg {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            transition: transform 8s ease;
+        }
+
+        .carousel-item.active .slide-bg { transform: scale(1.04); }
+
+        /* FIX: overlay now left-heavy for left-aligned text (more editorial) */
+        .carousel-item::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right,
+                rgba(15,23,42,0.92) 0%,
+                rgba(15,23,42,0.55) 55%,
+                rgba(15,23,42,0.15) 100%);
+            z-index: 1;
+        }
+
+        /* FIX: content is now left-aligned, not centered — reads better */
+        .slide-content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            color: white;
+            padding: 2rem 5rem;
+            max-width: 700px;
+        }
+
+        .slide-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            animation: bounceIn 0.8s ease;
+        }
+
+        .slide-content h1 {
+            font-size: 3.2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: #ffffff;
+            text-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            margin-bottom: 0.75rem;
+            line-height: 1.15;
+        }
+
+        .slide-content p {
+            font-size: 1.15rem;
+            color: var(--tc-muted);
+            font-weight: 400;
+            margin-bottom: 1.8rem;
+            max-width: 520px;
+        }
+
+        /* FIX: slide badge — was solid lime, now frosted for a premium feel */
+        .slide-badge {
+            background: var(--tc-lime-dim);
+            color: var(--tc-lime);
+            border: 1px solid var(--tc-lime-border);
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            padding: 5px 14px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+
+        /* FIX: CTA button was purple (#667eea) — replaced with brand lime */
+        .cta-button {
+            background: var(--tc-lime);
+            color: var(--tc-navy);
+            padding: 0.9rem 2.4rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: fadeInUp 0.9s ease 0.3s both;
+        }
+
+        .cta-button:hover {
+            background: #ffffff;
+            color: var(--tc-navy);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(184,223,75,0.3);
+        }
+
+        /* Carousel controls */
+        .carousel-control-prev,
+        .carousel-control-next {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.12);
+            border: 1.5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: background 0.3s, transform 0.3s;
+            opacity: 1;
+        }
+
+        .carousel-control-prev { left: 2rem; }
+        .carousel-control-next { right: 2rem; }
+
+        .carousel-control-prev:hover,
+        .carousel-control-next:hover {
+            background: rgba(184,223,75,0.2);
+            border-color: var(--tc-lime);
+            transform: translateY(-50%) scale(1.08);
+        }
+
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon { width: 18px; height: 18px; }
+
+        /* Indicators */
+        .carousel-indicators { bottom: 2.5rem; gap: 8px; }
+
+        .carousel-indicators [data-bs-target] {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.4);
+            border: none;
+            transition: all 0.3s;
+        }
+
+        .carousel-indicators .active {
+            background: var(--tc-lime);
+            width: 28px;
+            border-radius: 5px;
+        }
+
+        /* Progress bar */
+        .slide-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: var(--tc-lime);
+            z-index: 10;
+            width: 0%;
+            transition: width linear;
+            opacity: 0.85;
+        }
+
+        /* =============================================
+           SECTIONS
+        ============================================= */
+        .section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 2rem;
+        }
+
+        .section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            text-align: center;
+            color: var(--tc-navy);
+            font-weight: 800;
+            position: relative;
+        }
+
+        .section h2::after {
+            content: "";
+            display: block;
+            width: 55px;
+            height: 4px;
+            background: var(--tc-lime);
+            margin: 10px auto 0;
+            border-radius: 2px;
+        }
+
+        /* Feature cards */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2.5rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: var(--transition);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 40px rgba(184,223,75,0.15);
+            border-color: var(--tc-lime-border);
+        }
+
+        .feature-icon { font-size: 2.8rem; margin-bottom: 1rem; }
+
+        .feature-card h3 {
+            color: var(--tc-navy);
+            margin-bottom: 0.75rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .feature-card p { color: #64748b; line-height: 1.7; }
+
+        /* About section */
+        .about { background: #f8fafc; }
+
+        .mission-vision {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .mission-card, .vision-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            border-left: 4px solid var(--tc-lime);
+            transition: var(--transition);
+        }
+
+        .mission-card:hover, .vision-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(184,223,75,0.12);
+        }
+
+        .mission-card h3, .vision-card h3 {
+            color: var(--tc-navy);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--tc-lime);
+            display: inline-block;
+        }
+
+        .mission-card p, .vision-card p { color: #64748b; margin-bottom: 0.75rem; }
+
+        .values-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            margin-bottom: 2.5rem;
+            border-left: 4px solid var(--tc-lime);
+        }
+
+        .values-section h3 {
+            color: var(--tc-navy);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--tc-lime);
+            display: inline-block;
+        }
+
+        .values-section p { color: #64748b; line-height: 2; }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            transition: var(--transition);
+            border-bottom: 3px solid var(--tc-lime);
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(184,223,75,0.15);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            color: var(--tc-navy);
+            font-weight: 800;
+            letter-spacing: -2px;
+        }
+
+        /* FIX: stat numbers were lime — hard to read. Now navy with lime accent on bottom border */
+        .stat-number span { color: var(--tc-lime); }
+
+        .stat-label {
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+            letter-spacing: 1.5px;
+            margin-top: 4px;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--tc-navy);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            border-top: 3px solid var(--tc-lime);
+        }
+
+        .footer-content { max-width: 1200px; margin: 0 auto; }
+
+        .footer h2 {
+            color: var(--tc-lime);
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+        }
+
+        .footer p { color: var(--tc-muted); line-height: 1.8; }
+
+        /* Popup */
+        .popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .popup-content {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: left;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+            animation: fadeIn 0.25s ease;
+            border-top: 4px solid var(--tc-lime);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            cursor: pointer;
+            font-size: 22px;
+            color: #94a3b8;
+            transition: color 0.3s;
+            line-height: 1;
+        }
+
+        .close-btn:hover { color: var(--tc-navy); }
+
+        .popup-content h2 {
+            color: var(--tc-navy);
+            margin-bottom: 1rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .popup-content p { color: #64748b; margin-bottom: 0.75rem; }
+
+        .popup-link {
+            display: inline-block;
+            margin-top: 1.5rem;
+            background: var(--tc-lime);
+            color: var(--tc-navy);
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 800;
+            transition: var(--transition);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        .popup-link:hover {
+            background: var(--tc-navy);
+            color: var(--tc-lime);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.94); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes bounceIn {
+            0%   { transform: scale(0); opacity: 0; }
+            60%  { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        /* =============================================
+           RESPONSIVE
+        ============================================= */
+        @media (max-width: 768px) {
+            .slide-content {
+                padding: 2rem 1.5rem;
+                align-items: center;
+                text-align: center;
+                max-width: 100%;
+            }
+
+            .slide-content h1   { font-size: 1.8rem; }
+            .slide-content p    { font-size: 0.95rem; }
+
+            .carousel-control-prev { left: 0.5rem; }
+            .carousel-control-next { right: 0.5rem; }
+
+            .mission-vision { grid-template-columns: 1fr; }
+            .stats { grid-template-columns: 1fr; }
+
+            .menu-toggle { display: flex; }
+
+            .nav-links {
+                position: absolute;
+                top: 60px;
+                left: -100%;
+                width: 100%;
+                background: var(--tc-navy);
+                flex-direction: column;
+                padding: 2rem;
+                gap: 1rem;
+                transition: left 0.3s;
+                box-shadow: 5px 5px 20px rgba(0,0,0,0.3);
+                border-radius: 0 0 12px 0;
+                border-top: 1px solid var(--tc-lime-border);
+            }
+
+            .nav-links.active { left: 0; }
+            .login-btn { text-align: center; }
+
+            .section { padding: 60px 1.5rem; }
+            .section h2 { font-size: 2rem; }
+
+            .nav-container { padding: 0 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+
+    {% if popup %}
+    <div id="popup" class="popup" style="display:none;">
+        <div class="popup-content">
+            <span class="close-btn" onclick="closePopup()">&times;</span>
+            <h2 style="text-align:center;">{{ popup.title }}</h2>
+            <p>{{ popup.message }}</p>
+            {% if popup.link_url %}
+                <a href="{{ popup.link_url }}" class="popup-link">
+                    {{ popup.link_text|default:"Click here" }} →
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+
+    <!-- =============================================
+         TICKER (fixed at very top)
+    ============================================= -->
+    <div class="ticker-container">
+        <div class="ticker-title">UPDATES</div>
+        <div class="ticker-content">
+            <marquee behavior="scroll" direction="left"
+                     onmouseover="this.stop();" onmouseout="this.start();">
+                {% for news in news_updates %}
+                    <span class="ticker-item">
+                        <i class="bi bi-check-circle me-2" style="color:var(--tc-lime);"></i>
+                        {{ news.message }}
+                    </span>
+                {% empty %}
+                    <span class="ticker-item">
+                        <i class="bi bi-info-circle me-2" style="color:var(--tc-lime);"></i>
+                        Welcome to Trust Cooperative.
+                    </span>
+                    <span class="ticker-item">
+                        <i class="bi bi-clock me-2" style="color:var(--tc-lime);"></i>
+                        Building Stronger Communities Through Shared Success — access competitive savings plans and flexible loan options.
+                    </span>
+                {% endfor %}
+            </marquee>
+        </div>
+    </div>
+
+
+    <!-- =============================================
+         NAVBAR
+    ============================================= -->
+    <header class="header">
+        <nav class="nav-container">
+            <div class="logo">
+                <a href="" class="navbar-brand d-flex align-items-center text-decoration-none">
+                    <img src="{% static 'assets/images/tmcsl.png' %}"
+                         alt="Trust Cooperative logo"
+                         style="height:45px;width:auto;object-fit:contain;margin-right:10px;">
+                    <span style="color:var(--tc-lime);font-size:1.15rem;font-weight:800;">Trust</span>
+                </a>
+            </div>
+            <div class="menu-toggle" onclick="toggleMenu()">
+                <span></span><span></span><span></span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#about">About Us</a></li>
+                <li><a href="#contact">Contact Us</a></li>
+                <li><a href="{% url 'login' %}" class="login-btn">Login</a></li>
+            </ul>
+        </nav>
+    </header>
+
+
+    <!-- =============================================
+         HERO CAROUSEL
+    ============================================= -->
+    <section class="hero" id="home">
+
+        <div class="hero-messages">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show py-3" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% block content %}{% endblock %}
+        </div>
+
+        <div id="heroCarousel" class="carousel slide carousel-fade"
+             data-bs-ride="carousel" data-bs-interval="5000">
+
+            <div class="carousel-indicators">
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active" aria-label="Slide 1"></button>
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="3" aria-label="Slide 4"></button>
+            </div>
+
+            <div class="carousel-inner">
+
+                <div class="carousel-item active">
+                    <div class="slide-bg" style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);"></div>
+                    <div class="slide-content">
+                        <span class="slide-badge">🏦 Est. Since 2015</span>
+                        <div class="slide-icon">🤝</div>
+                        <h1>Welcome to Trust Cooperative</h1>
+                        <p>Building Stronger Communities Through Shared Success</p>
+                        <a href="{% url 'login' %}" class="cta-button">Get Started Today</a>
+                    </div>
+                    <div class="slide-progress" id="progress-0"></div>
+                </div>
+
+                <div class="carousel-item">
+                    <div class="slide-bg" style="background:linear-gradient(135deg,#0d1b2a 0%,#1b4332 50%,#2d6a4f 100%);"></div>
+                    <div class="slide-content">
+                        <span class="slide-badge">💰 Financial Services</span>
+                        <div class="slide-icon">📈</div>
+                        <h1>Grow Your Savings With Us</h1>
+                        <p>Access competitive savings plans and flexible loan options designed to help you achieve your financial goals with ease.</p>
+                        <a href="{% url 'login' %}" class="cta-button">Explore Plans</a>
+                    </div>
+                    <div class="slide-progress" id="progress-1"></div>
+                </div>
+
+                <div class="carousel-item">
+                    <div class="slide-bg" style="background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#312e81 100%);"></div>
+                    <div class="slide-content">
+                        <span class="slide-badge">🌍 Community First</span>
+                        <div class="slide-icon">🌟</div>
+                        <h1>1,353+ Members & Growing</h1>
+                        <p>Join a trusted network where members support each other's growth and prosperity through collective strength and shared values.</p>
+                        <a href="{% url 'login' %}" class="cta-button">Join Our Community</a>
+                    </div>
+                    <div class="slide-progress" id="progress-2"></div>
+                </div>
+
+                <div class="carousel-item">
+                    <div class="slide-bg" style="background:linear-gradient(135deg,#1a0a00 0%,#3d1a00 50%,#7c3700 100%);"></div>
+                    <div class="slide-content">
+                        <span class="slide-badge">🔒 Bank-Level Security</span>
+                        <div class="slide-icon">🛡️</div>
+                        <h1>Your Money Is Safe With Us</h1>
+                        <p>Your financial information is protected with bank-level security, ensuring peace of mind with every transaction you make.</p>
+                        <a href="{% url 'login' %}" class="cta-button">Learn More</a>
+                    </div>
+                    <div class="slide-progress" id="progress-3"></div>
+                </div>
+
+            </div>
+
+            <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         FEATURES
+    ============================================= -->
+    <section class="section" id="features">
+        <h2>Why Choose Trust?</h2>
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <h3>Savings & Loans</h3>
+                <p>Access competitive savings plans and flexible loan options designed to help you achieve your financial goals with ease.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🤝</div>
+                <h3>Community Support</h3>
+                <p>Be part of a trusted network where members support each other's growth and prosperity through collective strength.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3>Financial Growth</h3>
+                <p>Benefit from dividends and investment opportunities that help your money work harder for you.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Secure Platform</h3>
+                <p>Your financial information is protected with bank-level security, ensuring peace of mind with every transaction.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <h3>Easy Access</h3>
+                <p>Manage your cooperative account anytime, anywhere through our user-friendly web platform.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Financial Education</h3>
+                <p>Access resources, workshops, and guidance to improve your financial literacy and make informed decisions.</p>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         ABOUT
+    ============================================= -->
+    <section class="section about" id="about">
+        <h2>About Trust Cooperative</h2>
+
+        <div class="mission-vision">
+            <div class="mission-card">
+                <h3>Our Mission</h3>
+                <p>At Trust Cooperative, we believe in the power of community and mutual support. Our mission is to provide accessible financial services that empower our members to achieve their dreams and build a secure future.</p>
+                <p>Founded on principles of transparency, integrity, and shared prosperity, we've grown into a thriving community of individuals working together toward common goals.</p>
+            </div>
+            <div class="vision-card">
+                <h3>Our Vision</h3>
+                <p>To be the leading cooperative society that transforms lives through financial empowerment, creating a community where every member has the opportunity to thrive and achieve lasting prosperity.</p>
+                <p>We envision a future where financial security is accessible to all, built on trust, collaboration, and shared success.</p>
+            </div>
+        </div>
+
+        <div class="values-section">
+            <h3>Our Values</h3>
+            <p>
+                • Member-focused service<br>
+                • Financial inclusion<br>
+                • Transparency and accountability<br>
+                • Sustainable growth<br>
+                • Community empowerment
+            </p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">1,353+</div>
+                <div class="stat-label">Active Members</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">₦500M+</div>
+                <div class="stat-label">Total Savings</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">7+</div>
+                <div class="stat-label">Years of Trust</div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- =============================================
+         FOOTER
+    ============================================= -->
+    <footer class="footer" id="contact">
+        <div class="footer-content">
+            <h2>Get in Touch</h2>
+            <p>Ready to start your journey with Trust Cooperative?</p>
+            <p style="margin-top:1rem;">
+                Email: tmcs1425@gmail.com &nbsp;|&nbsp;
+                Phone: +2348036983318 &nbsp;|&nbsp; +2347035597705 &nbsp;|&nbsp; +2348073902488
+            </p>
+            <p style="margin-top:2rem;opacity:0.6;font-size:0.85rem;">
+                &copy; <span id="year"></span> Trust Cooperative. All rights reserved.
+                Designed by <strong style="color:var(--tc-lime);">Al-Salam F-Tech</strong>
+            </p>
+        </div>
+    </footer>
+
+
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script>
+
+        function toggleMenu() {
+            document.getElementById('navLinks').classList.toggle('active');
+        }
+
+        function closePopup() {
+            const popup = document.getElementById('popup');
+            if (popup) popup.style.display = 'none';
+        }
+
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                document.getElementById('navLinks').classList.remove('active');
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            const navLinks = document.getElementById('navLinks');
+            const menuToggle = document.querySelector('.menu-toggle');
+            if (!navLinks.contains(e.target) && !menuToggle.contains(e.target)) {
+                navLinks.classList.remove('active');
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const yearEl = document.getElementById("year");
+            if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+            document.querySelectorAll('.alert').forEach(function (alert) {
+                setTimeout(function () {
+                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                }, 3000);
+            });
+
+            // Carousel progress bar
+            const INTERVAL = 5000;
+            const carousel = document.getElementById('heroCarousel');
+
+            if (carousel) {
+                new bootstrap.Carousel(carousel, {
+                    interval: INTERVAL,
+                    ride: 'carousel',
+                    pause: 'hover'
+                });
+
+                function getActiveIndex() {
+                    return Array.from(
+                        carousel.querySelectorAll('.carousel-item')
+                    ).findIndex(item => item.classList.contains('active'));
+                }
+
+                function startProgress(index) {
+                    document.querySelectorAll('.slide-progress').forEach(bar => {
+                        bar.style.transition = 'none';
+                        bar.style.width = '0%';
+                    });
+                    void carousel.offsetWidth;
+                    const bar = document.getElementById('progress-' + index);
+                    if (!bar) return;
+                    bar.style.transition = `width ${INTERVAL}ms linear`;
+                    bar.style.width = '100%';
+                }
+
+                startProgress(getActiveIndex());
+
+                carousel.addEventListener('slid.bs.carousel', e => startProgress(e.to));
+
+                carousel.addEventListener('mouseenter', () => {
+                    const bar = document.getElementById('progress-' + getActiveIndex());
+                    if (bar) {
+                        bar.style.transition = 'none';
+                        bar.style.width = getComputedStyle(bar).width;
+                    }
+                });
+
+                carousel.addEventListener('mouseleave', () => startProgress(getActiveIndex()));
+            }
+
+            // Popup
+            {% if popup %}
+            const popup = document.getElementById('popup');
+            if (popup) {
+                setTimeout(() => {
+                    popup.style.display = 'flex';
+                    setTimeout(() => closePopup(), 10000);
+                }, 2000);
+                popup.addEventListener('click', e => {
+                    if (e.target === popup) closePopup();
+                });
+            }
+            {% endif %}
+
+        });
+    </script>
+</body>
+</html>

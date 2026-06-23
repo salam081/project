@@ -1,0 +1,243 @@
+{% extends "base/base.html" %}
+
+{% block title %}New RAM Request{% endblock %}
+{% block page_title %}New RAM Request{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-list-check me-2"></i> New RAM Request
+            </div>
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data" id="requestForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_type" id="request_type" value="member">
+
+                    <!-- Budget -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Select Budget <span class="text-danger">*</span></label>
+                        <select name="budget" class="form-select" required>
+                            <option value="">-- Select an approved budget --</option>
+                            {% for budget in budgets %}
+                            <option value="{{ budget.pk }}"
+                                    {% if budget.remaining_amount <= 0 %}disabled{% endif %}>
+                                {{ budget.name }} — ₦{{ budget.remaining_amount|floatformat:2 }} remaining
+                            </option>
+                            {% empty %}
+                            <option disabled>No approved budgets available</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs mb-0" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="member-tab" data-bs-toggle="tab"
+                                data-bs-target="#memberTab" type="button" role="tab">
+                                <i class="bi bi-person-badge me-1"></i> Member
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="guest-tab" data-bs-toggle="tab"
+                                data-bs-target="#guestTab" type="button" role="tab">
+                                <i class="bi bi-person-plus me-1"></i> Guest
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Contents -->
+                    <div class="tab-content border border-top-0 rounded-bottom p-4 mb-4 bg-light">
+
+                        <!-- Member Tab -->
+                        <div class="tab-pane fade show active" id="memberTab" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-semibold">Member IPPIS <span class="text-danger">*</span></label>
+                                    <input type="number" name="member_ippis" id="member_ippis"
+                                        class="form-control" placeholder="Enter member IPPIS number">
+                                    <small class="text-muted">System will look up member from database</small>
+                                </div>
+                                {% comment %} <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Guarantor IPPIS</label>
+                                    <input type="number" name="guarantor_ippis"
+                                        class="form-control" placeholder="Enter guarantor IPPIS (optional)">
+                                </div> {% endcomment %}
+                            </div>
+                        </div>
+
+                        <!-- Guest Tab -->
+                        <div class="tab-pane fade" id="guestTab" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Guest Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="guest_name" class="form-control" placeholder="Full name">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Guest Phone</label>
+                                    <input type="text" name="guest_phone" class="form-control" placeholder="Phone number">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Guest IPPIS</label>
+                                    <input type="number" name="guest_ippis" class="form-control" placeholder="IPPIS number">
+                                </div>
+                                {% comment %} <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Guarantor IPPIS</label>
+                                    <input type="number" name="guarantor_ippis" class="form-control" placeholder="Guarantor IPPIS (optional)">
+                                </div> {% endcomment %}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Payslip Upload -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Payslip Upload</label>
+                        <input type="file" name="file_payslip" class="form-control" accept="image/*">
+                        <small class="text-muted">Upload payslip image (optional)</small>
+                    </div>
+
+                    <!-- Items -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-semibold mb-0">RAM Items <span class="text-danger">*</span></label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="addItemBtn">
+                                <i class="bi bi-plus-lg me-1"></i> Add Item
+                            </button>
+                        </div>
+                        <div id="itemsContainer">
+                            <div class="item-row border rounded p-3 mb-2 bg-light">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Item Name</label>
+                                        <input type="text" name="item_name" class="form-control" placeholder="Enter Item Name" required>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <label class="form-label small">Qty</label>
+                                        <input type="number" name="quantity" class="form-control" value="1" min="1" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Cost Price (₦)</label>
+                                        <input type="number" name="cost_price" class="form-control cost-price" placeholder="0.00" step="0.01" min="0" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Markup (%)</label>
+                                        <select name="selling_plan" class="form-select selling-plan">
+                                            <option value="" data-percent="0">-- Markup --</option>
+                                            {% for plan in selling_plans %}
+                                            <option value="{{ plan.pk }}" data-percent="{{ plan.percentage }}">
+                                                {{ plan.name }} ({{ plan.percentage }}%)
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Selling Price</label>
+                                        <input type="text" class="form-control selling-price bg-white" placeholder="Auto" readonly>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Duration (Months)</label>
+                                        <input type="number" name="duration_months" class="form-control" placeholder="Enter Duration" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total -->
+                    <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+                        <span><i class="bi bi-info-circle me-2"></i> Selling price calculated from selected plan</span>
+                        <span class="fw-bold">Total Member Pays: ₦<span id="grandTotal">0.00</span></span>
+                    </div>
+
+                    <!-- Note -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Note (optional)</label>
+                        <textarea name="note" class="form-control" rows="3" placeholder="Any additional information..."></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-send me-1"></i> Submit Request
+                        </button>
+                        <a href="{% url 'ram_request_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('member-tab').addEventListener('shown.bs.tab', function () {
+        document.getElementById('request_type').value = 'member';
+        document.getElementById('member_ippis').required = true;
+    });
+
+    document.getElementById('guest-tab').addEventListener('shown.bs.tab', function () {
+        document.getElementById('request_type').value = 'guest';
+        document.getElementById('member_ippis').required = false;
+    });
+
+    document.getElementById('addItemBtn').addEventListener('click', function () {
+        const container = document.getElementById('itemsContainer');
+        const firstRow = container.querySelector('.item-row');
+        const newRow = firstRow.cloneNode(true);
+        newRow.querySelectorAll('input').forEach(i => {
+            if (i.name === 'quantity') i.value = 1;
+            else if (i.name === 'duration_months') i.value = 1;
+            else i.value = '';
+        });
+        // reset selling plan select
+        newRow.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+        const removeBtn = document.createElement('div');
+        removeBtn.className = 'text-end mt-2';
+        removeBtn.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i> Remove</button>';
+        newRow.appendChild(removeBtn);
+        container.appendChild(newRow);
+        attachListeners(newRow);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-row')) {
+            e.target.closest('.item-row').remove();
+            calculateTotal();
+        }
+    });
+
+    function attachListeners(row) {
+        const costInput = row.querySelector('.cost-price');
+        const planSelect = row.querySelector('.selling-plan');
+        const sellingInput = row.querySelector('.selling-price');
+
+        function recalculate() {
+            const cost = parseFloat(costInput.value) || 0;
+            const percent = parseFloat(planSelect.options[planSelect.selectedIndex]?.dataset.percent) || 0;
+            const selling = cost * (1 + percent / 100);
+            sellingInput.value = selling > 0 ? '₦' + selling.toFixed(2) : '';
+            calculateTotal();
+        }
+
+        costInput.addEventListener('input', recalculate);
+        planSelect.addEventListener('change', recalculate);
+    }
+
+    function calculateTotal() {
+        let total = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const cost = parseFloat(row.querySelector('.cost-price').value) || 0;
+            const qty = parseInt(row.querySelector('[name="quantity"]').value) || 1;
+            const percent = parseFloat(row.querySelector('.selling-plan').options[row.querySelector('.selling-plan').selectedIndex]?.dataset.percent) || 0;
+            total += (cost * (1 + percent / 100)) * qty;
+        });
+        document.getElementById('grandTotal').textContent = total.toFixed(2);
+    }
+
+    attachListeners(document.querySelector('.item-row'));
+    document.addEventListener('input', function (e) {
+        if (e.target.name === 'quantity') calculateTotal();
+    });
+</script>
+{% endblock %}

@@ -143,7 +143,7 @@ def user_registration(request):
         phone1 = request.POST.get("phone1")
 
         if Member.objects.filter(ippis=ippis).exists():
-            messages.error(request, "This student code is already taken.")
+            messages.error(request, "This Member code is already taken.")
             return redirect("register")
 
         try:
@@ -447,21 +447,25 @@ def logout_view(request):
 @group_required(['admin', 'staff'])
 def all_members(request):
     search_name = request.GET.get("name", "").strip()
-    
-    members_list = User.objects.all()
-     # Filter by member name
+
+    members_list = User.objects.select_related('member').order_by('-id')
+
     if search_name:
         members_list = members_list.filter(
             Q(first_name__icontains=search_name) |
-            Q(last_name__icontains=search_name)|
+            Q(last_name__icontains=search_name) |
             Q(member__ippis__icontains=search_name) |
             Q(phone1__icontains=search_name)
         )
-    paginator = Paginator(members_list, 150)  # Show 150 members per page
+
+    paginator = Paginator(members_list, 150)
+
     page_number = request.GET.get("page")
     members = paginator.get_page(page_number)
 
-    return render(request, "accounts/all_members.html", {"members": members})
+    return render(request, "accounts/all_members.html", {
+        "members": members
+    })
 
 @login_required
 @group_required(['admin'])

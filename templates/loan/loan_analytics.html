@@ -7,11 +7,11 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center">
                     <h1 class="h3 mb-0 text-dark">
-                        <i class="fas fa-chart-line text-primary me-2"></i>
+                        <i class="bi bi-chart-line text-primary me-2"></i>
                         Loan Payment Dashboard
                     </h1>
                     <div class="text-muted">
-                        <i class="fas fa-calendar me-1"></i>
+                        <i class="bi bi-calendar me-1"></i>
                         Last Updated: {{ today|date:"M d, Y" }}
                     </div>
                 </div>
@@ -20,16 +20,16 @@
 
         <!-- Summary Cards -->
         <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card border-0 shadow">
+            <div class="col-md-3 ">
+                <div class="card border-0 shadow mt-2">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <h6 class="text-muted mb-1">Total Payments</h6>
-                                <h4 class="mb-0">₦{{ total_all_payments|floatformat:2 }}</h4>
+                                <h6 class="mb-0 text-primary">₦{{ total_all_payments|floatformat:2 }}</h6>
                             </div>
                             <div class="text-primary">
-                                {% comment %} <i class="fas fa-money-bill-wave fa-2x"></i> {% endcomment %}
+                                 <i class="bi bi-bank "></i>
                             </div>
                         </div>
                     </div>
@@ -41,10 +41,10 @@
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <h6 class="text-muted mb-1">Active Loan Types</h6>
-                                <h4 class="mb-0">{{ loan_type_totals|length }}</h4>
+                                <h6 class="mb-0 text-success">{{ loan_type_totals|length }}</h6>
                             </div>
-                            <div class="text-success">
-                                {% comment %} <i class="fas fa-list fa-2x"></i> {% endcomment %}
+                            <div class="text-success fw-bold">
+                                 <i class="bi bi-wallet "></i>
                             </div>
                         </div>
                     </div>
@@ -56,10 +56,10 @@
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <h6 class="text-muted mb-1">Total Transactions</h6>
-                                <h4 class="mb-0">{{ total_transactions }}</h4>
+                                <h6 class="mb-0 text-danger">{{ total_transactions }}</h6>
                             </div>
-                            <div class="text-info">
-                                {% comment %} <i class="fas fa-exchange-alt fa-2x"></i> {% endcomment %}
+                            <div class="text-danger">
+                                 <i class="bi bi-list fa-2x"></i> 
                             </div>
                         </div>
                     </div>
@@ -71,10 +71,10 @@
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <h6 class="text-muted mb-1">This Month</h6>
-                                <h4 class="mb-0">₦{{ current_month_total|floatformat:2 }}</h4>
+                                <h6 class="mb-0 text-warning">₦{{ current_month_total|floatformat:2 }}</h6>
                             </div>
                             <div class="text-warning">
-                                {% comment %} <i class="fas fa-calendar-check fa-2x"></i> {% endcomment %}
+                                <i class="bi bi-calendar-check fa-2x"></i>
                             </div>
                         </div>
                     </div>
@@ -88,7 +88,7 @@
                 <div class="card border-0 shadow">
                     <div class="card-header bg-white py-3">
                         <h5 class="mb-0">
-                            <i class="fas fa-chart-bar text-primary me-2"></i>
+                            <i class="bi bi-calendar text-primary me-2"></i>
                             Monthly Payments Overview
                         </h5>
                     </div>
@@ -130,7 +130,7 @@
                         </div>
                         {% else %}
                         <div class="text-center py-5 text-muted">
-                            <i class="fas fa-chart-line fa-3x mb-3"></i>
+                            <i class="bi bi-chart-line fa-3x mb-3"></i>
                             <p class="mb-0">No monthly payment data available</p>
                         </div>
                         {% endif %}
@@ -168,7 +168,7 @@
             {% endfor %}
             {% else %}
             <div class="text-center py-4 text-muted">
-                <i class="fas fa-list fa-2x mb-2"></i>
+                <i class="bi bi-list fa-2x mb-2"></i>
                 <p class="mb-0">No loan type data available</p>
             </div>
             {% endif %}
@@ -206,7 +206,7 @@
                                         <th class="text-nowrap text-truncate" style="max-width: 270px;">Total Amount</th>
                                         <th class="text-nowrap text-truncate" style="max-width: 270px;">Payment Count</th>
                                         <th class="text-nowrap text-truncate" style="max-width: 270px;">Average Payment</th>
-                                        {% comment %} <th>Action</th> {% endcomment %}
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -235,11 +235,16 @@
                                                 ₦{% widthratio item.total_amount item.payment_count 1 %}
                                             </span>
                                         </td>
+                                        <td>
+                                            <span class="text-muted">
+                                                {{item.repayment_date}}
+                                            </span>
+                                        </td>
                                         {% comment %} <td>
                                             <button class="btn btn-outline-info btn-sm" title="">
                                                 <i class="fas fa-eye"></i> 
                                             </button>
-                                        </td> {% endcomment %}
+                                        </td>  {% endcomment %}
                                     </tr>
                                     {% endfor %}
                                 </tbody>

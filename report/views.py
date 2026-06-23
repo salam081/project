@@ -27,11 +27,14 @@ import csv
 from openpyxl import Workbook
 from django.http import HttpResponse
 from loan.models import *
+from ram_app.models import *
+from form_app.models import *
 from savings.models import *
 from special_savings.models import *
 from main.models import *
 from PurchasedItems.models import *
 from member.models import *
+from inventory_app.models import *
 from projectfinance.models import *
 from django.db.models.functions import Coalesce, ExtractYear
 from django.core.paginator import Paginator
@@ -41,14 +44,15 @@ from django.db.models import Q, Sum, F, DecimalField, ExpressionWrapper
 from django.db.models.functions import Coalesce
 import logging
 from openpyxl import Workbook
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,date
+import datetime
 from django.db.models.functions import TruncMonth, TruncWeek
 
 
 User = get_user_model()
-# from accounts.decorator import group_required
+from accounts.decorators import group_required
 
-from datetime import date
+
 
 
 @login_required
@@ -1202,64 +1206,55 @@ def report_api_data(request):
 logger = logging.getLogger(__name__)
 
 @login_required
+@group_required(['admin'])
 def consolidated_report(request):
-    start_month_str = request.GET.get('start_month', '').strip()
-    end_month_str = request.GET.get('end_month', '').strip()
+    """Generate consolidated financial report with date filtering"""
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
 
     parsed_date_from = None
     parsed_date_to = None
 
-    def parse_month_str(value):
-        """Handle both '2026-01' and '2026-01-01' formats, return first day of month"""
-        value = value[:7]  # take only 'YYYY-MM' part regardless of format
-        return datetime.strptime(value, '%Y-%m').date().replace(day=1)
-
-    if start_month_str:
+    if date_from:
         try:
-            parsed_date_from = parse_month_str(start_month_str)
+            parsed_date_from = parse_date(date_from)
+            if not parsed_date_from:
+                raise ValueError("Invalid date format")
         except (ValueError, TypeError):
             context = {
-                'error': 'Invalid start month format.',
-                'start_month': start_month_str,
-                'end_month': end_month_str,
+                'error': 'Invalid start date format. Please use YYYY-MM-DD format.',
+                'date_from': date_from,
+                'date_to': date_to,
             }
             return render(request, "reports/consolidated_report.html", context)
 
-    if end_month_str:
+    if date_to:
         try:
-            end_parsed = parse_month_str(end_month_str)
-            last_day = calendar.monthrange(end_parsed.year, end_parsed.month)[1]
-            parsed_date_to = end_parsed.replace(day=last_day)
+            parsed_date_to = parse_date(date_to)
+            if not parsed_date_to:
+                raise ValueError("Invalid date format")
         except (ValueError, TypeError):
             context = {
-                'error': 'Invalid end month format.',
-                'start_month': start_month_str,
-                'end_month': end_month_str,
+                'error': 'Invalid end date format. Please use YYYY-MM-DD format.',
+                'date_from': date_from,
+                'date_to': date_to,
             }
             return render(request, "reports/consolidated_report.html", context)
 
     if parsed_date_from and parsed_date_to and parsed_date_from > parsed_date_to:
         context = {
-            'error': 'Start month cannot be later than end month.',
-            'start_month': start_month_str,
-            'end_month': end_month_str,
+            'error': 'Start date cannot be later than end date',
+            'date_from': date_from,
+            'date_to': date_to,
         }
         return render(request, "reports/consolidated_report.html", context)
 
     try:
-       
         filters = {}
         if parsed_date_from:
-            filters['date_from'] = django_timezone.make_aware(
-                datetime.combine(parsed_date_from, time.min)
-            )
+            filters['date_from'] = timezone.make_aware(datetime.combine(parsed_date_from, time.min))
         if parsed_date_to:
-            filters['date_to'] = django_timezone.make_aware(
-                datetime.combine(parsed_date_to, time.max)
-            )
-
-        print(f"DEBUG: parsed_date_from={parsed_date_from}, parsed_date_to={parsed_date_to}")
-        print(f"DEBUG: filters={filters}")
+            filters['date_to'] = timezone.make_aware(datetime.combine(parsed_date_to, time.max))
 
         expenditure_data = calculate_total_expenditure(filters)
         income_data = calculate_total_income(filters)
@@ -1272,47 +1267,42 @@ def consolidated_report(request):
             total_income = Decimal('0')
 
         net_position = total_income - total_expenditure
-        filters_applied = bool(start_month_str or end_month_str)
-
-        # ✅ Normalize display value to 'YYYY-MM' for template input
-        display_start = start_month_str[:7] if start_month_str else ''
-        display_end = end_month_str[:7] if end_month_str else ''
+        filters_applied = bool(date_from or date_to)
 
         context = {
             'total_expenditure': total_expenditure,
             'total_income': total_income,
             'net_position': net_position,
-            'start_month': display_start,
-            'end_month': display_end,
+            'date_from': date_from,
+            'date_to': date_to,
             'filters_applied': filters_applied,
             **expenditure_data,
             **income_data,
         }
-
         return render(request, "reports/consolidated_report.html", context)
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         logger.error(f"Error generating consolidated report: {str(e)}", exc_info=True)
         context = {
-            'error': f'An error occurred: {str(e)}',
-            'start_month': start_month_str,
-            'end_month': end_month_str,
+            'error': 'An error occurred while generating the report. Please try again.',
+            'date_from': date_from,
+            'date_to': date_to,
         }
         return render(request, "reports/consolidated_report.html", context)
 
 
 def calculate_total_expenditure(filters):
+    """Calculate total expenditure with proper error handling"""
     date_from = filters.get('date_from')
     date_to = filters.get('date_to')
-    print(f"DEBUG expenditure: date_from={date_from}, date_to={date_to}")
 
     purchase_filter = Q()
     finance_expenditure_filter = Q()
     loan_disbursement_filter = Q()
     target_savings_disbursement_filter = Q()
     special_savings_disbursement_filter = Q()
+    item_filter = Q()
+    ram_filter = Q()
 
     if date_from:
         purchase_filter &= Q(date_added__gte=date_from)
@@ -1320,6 +1310,8 @@ def calculate_total_expenditure(filters):
         loan_disbursement_filter &= Q(date_created__gte=date_from)
         target_savings_disbursement_filter &= Q(requested_at__gte=date_from)
         special_savings_disbursement_filter &= Q(requested_at__gte=date_from)
+        item_filter &= Q(request__created_at__gte=date_from)   # FIX: was Q(received_at__gte=...)
+        ram_filter &= Q(request__date_requested__gte=date_from) # FIX: was Q(date_requested__gte=...)
 
     if date_to:
         purchase_filter &= Q(date_added__lte=date_to)
@@ -1327,31 +1319,29 @@ def calculate_total_expenditure(filters):
         loan_disbursement_filter &= Q(date_created__lte=date_to)
         target_savings_disbursement_filter &= Q(requested_at__lte=date_to)
         special_savings_disbursement_filter &= Q(requested_at__lte=date_to)
+        item_filter &= Q(request__created_at__lte=date_to)     # FIX: was Q(received_at__lte=...)
+        ram_filter &= Q(request__date_requested__lte=date_to)  # FIX: was Q(date_requested__lte=...)
 
-    def safe_sum(queryset, field):
+    def safe_sum(queryset, field, output_field=None):
         try:
-            return queryset.aggregate(total=Sum(field))['total'] or Decimal('0')
+            kwargs = {}
+            if output_field:
+                kwargs['output_field'] = output_field
+            return queryset.aggregate(
+                total=Sum(field, **kwargs)
+            )['total'] or Decimal('0')
         except Exception as e:
-            logger.error(f"Error calculating {field}: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"Error calculating sum: {str(e)}")
             return Decimal('0')
 
-    try:
-        staff_purchases = PurchasedItem.objects.filter(purchase_filter).aggregate(
-            total=Sum(
-                ExpressionWrapper(
-                    F('unit_price') * F('quantity') + F('expenditure_amount'),
-                    output_field=DecimalField()
-                )
-            )
-        )['total'] or Decimal('0')
-    except Exception as e:
-        logger.error(f"Error calculating staff_purchases: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        staff_purchases = Decimal('0')
+    # 1. Staff purchases — FIX: added output_field to F() expression
+    staff_purchases = safe_sum(
+        PurchasedItem.objects.filter(purchase_filter),
+        F('unit_price') * F('quantity') + F('expenditure_amount'),
+        output_field=DecimalField(max_digits=15, decimal_places=2)
+    )
 
+    # 2. Project finance disbursed
     member_finance_loans = safe_sum(
         ProjectFinanceRequest.objects.filter(
             finance_expenditure_filter,
@@ -1360,6 +1350,7 @@ def calculate_total_expenditure(filters):
         'requested_amount'
     )
 
+    # 3. Loan disbursements
     loan_disbursements = safe_sum(
         LoanRequest.objects.filter(
             loan_disbursement_filter,
@@ -1368,22 +1359,54 @@ def calculate_total_expenditure(filters):
         ),
         'approved_amount'
     )
+
+    # 4. Target savings disbursements
     target_savings_disbursements = safe_sum(
-    TargetSavingsWithdrawal.objects.filter(
-        target_savings_disbursement_filter,
-        status='approved',
-        amount__isnull=False
-    ),
-    'amount'
-)
+        TargetSavingsWithdrawal.objects.filter(
+            target_savings_disbursement_filter,
+            status='approved',
+            amount__isnull=False
+        ),
+        'amount'
+    )
+
+    # 5. Special savings disbursements
     special_savings_disbursements = safe_sum(
-    SpecialSavingsWithdrawal.objects.filter(
-        special_savings_disbursement_filter,
-        status='approved',
-        amount__isnull=False
-    ),
-    'amount'
-)
+        SpecialSavingsWithdrawal.objects.filter(
+            special_savings_disbursement_filter,
+            status='approved',
+            amount__isnull=False
+        ),
+        'amount'
+    )
+
+    # 6. Item disbursements — FIX: now applies item_filter
+    item_disbursements = MemberRequestDetail.objects.filter(
+        item_filter,
+        request__status__in=['ItemPicked', 'Fully Paid']
+    ).aggregate(
+        total=Coalesce(
+            Sum(
+                F('item_price') * Coalesce(F('approved_quantity'), F('quantity')),
+                output_field=DecimalField(max_digits=15, decimal_places=2)
+            ),
+            Decimal('0.00')
+        )
+    )['total']
+
+    # 7. RAM disbursements — FIX: now applies ram_filter
+    ram_disbursements = RamRequestDetails.objects.filter(
+        ram_filter,
+        request__status__in=['approved', 'fully Paid']
+    ).aggregate(
+        total=Coalesce(
+            Sum(
+                F('cost_price') * F('quantity'),
+                output_field=DecimalField(max_digits=15, decimal_places=2)
+            ),
+            Decimal('0.00')
+        )
+    )['total']
 
     return {
         'staff_purchases': staff_purchases,
@@ -1391,68 +1414,49 @@ def calculate_total_expenditure(filters):
         'loan_disbursements': loan_disbursements,
         'target_savings_disbursements': target_savings_disbursements,
         'special_savings_disbursements': special_savings_disbursements,
+        'item_disbursements': item_disbursements,
+        'ram_disbursements': ram_disbursements,
     }
 
 
 def calculate_total_income(filters):
+    """Calculate total income with proper filtering and error handling"""
     date_from = filters.get('date_from')
     date_to = filters.get('date_to')
 
+    def safe_agg(model, q_filter, field):
+        try:
+            return model.objects.filter(q_filter).aggregate(
+                total=Sum(field)
+            )['total'] or Decimal('0')
+        except Exception as e:
+            logger.error(f"Error aggregating {model.__name__}.{field}: {str(e)}")
+            return Decimal('0')
+
+    def make_filter(field):
+        q = Q()
+        if date_from:
+            q &= Q(**{f"{field}__gte": date_from})
+        if date_to:
+            q &= Q(**{f"{field}__lte": date_to})
+        return q
+
     try:
-        def make_filter(date_field):
-            q = Q()
-            if date_from:
-                q &= Q(**{f"{date_field}__gte": date_from})
-            if date_to:
-                q &= Q(**{f"{date_field}__lte": date_to})
-            return q
+        saving_income = safe_agg(Savings, make_filter('date_created'), 'month_saving')
+        saving_form_fee_income = safe_agg(SpecialSavingsTergetSavingsRequestForm, make_filter('date_created'), 'form_fee')
+        special_saving_income = safe_agg(SpecialSavings, make_filter('date_created'), 'month_savings')
+        target_saving_income = safe_agg(TargetSavings, make_filter('date_created'), 'month_savings')
+        admin_fee_income = safe_agg(Interest, make_filter('date_deducted'), 'amount_deducted')
+        consumable_payback_income = safe_agg(PaybackConsumable, make_filter('repayment_date'), 'amount_paid')
 
-        def safe_agg(model, q_filter, field):
-            try:
-                result = model.objects.filter(q_filter).aggregate(
-                    total=Sum(field)
-                )['total'] or Decimal('0')
-                print(f"DEBUG {model.__name__}.{field} = {result}")
-                return result
-            except Exception as e:
-                logger.error(f"Error aggregating {model.__name__}.{field}: {str(e)}")
-                import traceback
-                traceback.print_exc()
-                return Decimal('0')
+        # FIX: was incorrectly filtering on amount_paid__gte=date_from instead of created_at__gte
+        finance_payback_income = safe_agg(ProjectFinancePayment, make_filter('created_at'), 'amount_paid')
 
-        # ✅ Savings — filter by 'month' (DateField)
-        saving_income = safe_agg(
-            Savings, make_filter('month'), 'month_saving'
-        )
-        # ✅ Interest — filter by 'month' (DateField)
-        admin_fee_income = safe_agg(
-            Interest, make_filter('month'), 'amount_deducted'
-        )
-        # ✅ These models need you to share their fields — using date_created for now
-        saving_form_fee_income = safe_agg(
-            SpecialSavingsTergetSavingsRequestForm, make_filter('date_created'), 'form_fee'
-        )
-        special_saving_income = safe_agg(
-            SpecialSavings, make_filter('date_created'), 'month_savings'
-        )
-        target_saving_income = safe_agg(
-            TargetSavings, make_filter('date_created'), 'month_savings'
-        )
-        consumable_payback_income = safe_agg(
-            PaybackConsumable, make_filter('repayment_date'), 'amount_paid'
-        )
-        finance_payback_income = safe_agg(
-            ProjectFinancePayment, make_filter('created_at'), 'amount_paid'
-        )
-        form_fee_income = safe_agg(
-            ConsumableFormFee, make_filter('created_at'), 'form_fee'
-        )
-        loan_payback_income = safe_agg(
-            LoanRepayback, make_filter('repayment_date'), 'amount_paid'
-        )
-        loan_form_fee_income = safe_agg(
-            LoanRequestFee, make_filter('created_at'), 'form_fee'
-        )
+        form_fee_income = safe_agg(ConsumableFormFee, make_filter('created_at'), 'form_fee')
+        loan_payback_income = safe_agg(LoanRepayback, make_filter('repayment_date'), 'amount_paid')
+        loan_form_fee_income = safe_agg(LoanRequestFee, make_filter('created_at'), 'form_fee')
+        item_income = safe_agg(MemberRequestPayback, make_filter('created_at'), 'amount_paid')
+        ram_income = safe_agg(Payment, make_filter('date_paid'), 'amount')
 
         return {
             'saving_income': saving_income,
@@ -1465,11 +1469,11 @@ def calculate_total_income(filters):
             'form_fee_income': form_fee_income,
             'loan_payback_income': loan_payback_income,
             'loan_form_fee_income': loan_form_fee_income,
+            'item_income': item_income,
+            'ram_income': ram_income,
         }
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         logger.error(f"Error in calculate_total_income: {str(e)}", exc_info=True)
         return {
             'saving_income': Decimal('0'),
@@ -1482,135 +1486,167 @@ def calculate_total_income(filters):
             'form_fee_income': Decimal('0'),
             'loan_payback_income': Decimal('0'),
             'loan_form_fee_income': Decimal('0'),
+            'item_income': Decimal('0'),
+            'ram_income': Decimal('0'),
         }
-
-# logger = logging.getLogger(__name__)
 
 # @login_required
 # def consolidated_report(request):
-#     """Generate consolidated financial report with date filtering"""
-#     date_from = request.GET.get('date_from')
-#     date_to = request.GET.get('date_to')
-    
+#     start_month_str = request.GET.get('start_month', '').strip()
+#     end_month_str = request.GET.get('end_month', '').strip()
+
 #     parsed_date_from = None
 #     parsed_date_to = None
-    
-#     # Parse start date
-#     if date_from:
+
+#     def parse_month_str(value):
+#         """Handle both '2026-01' and '2026-01-01' formats, return first day of month"""
+#         value = value[:7]  # take only 'YYYY-MM' part regardless of format
+#         return datetime.strptime(value, '%Y-%m').date().replace(day=1)
+
+#     if start_month_str:
 #         try:
-#             parsed_date_from = parse_date(date_from)
-#             if not parsed_date_from:
-#                 raise ValueError("Invalid date format")
+#             parsed_date_from = parse_month_str(start_month_str)
 #         except (ValueError, TypeError):
 #             context = {
-#                 'error': 'Invalid start date format. Please use YYYY-MM-DD format.',
-#                 'date_from': date_from,
-#                 'date_to': date_to,
-#             }
-#             return render(request, "reports/consolidated_report.html", context)
-    
-#     # Parse end date
-#     if date_to:
-#         try:
-#             parsed_date_to = parse_date(date_to)
-#             if not parsed_date_to:
-#                 raise ValueError("Invalid date format")
-#         except (ValueError, TypeError):
-#             context = {
-#                 'error': 'Invalid end date format. Please use YYYY-MM-DD format.',
-#                 'date_from': date_from,
-#                 'date_to': date_to,
+#                 'error': 'Invalid start month format.',
+#                 'start_month': start_month_str,
+#                 'end_month': end_month_str,
 #             }
 #             return render(request, "reports/consolidated_report.html", context)
 
-#     # Check if start date > end date
+#     if end_month_str:
+#         try:
+#             end_parsed = parse_month_str(end_month_str)
+#             last_day = calendar.monthrange(end_parsed.year, end_parsed.month)[1]
+#             parsed_date_to = end_parsed.replace(day=last_day)
+#         except (ValueError, TypeError):
+#             context = {
+#                 'error': 'Invalid end month format.',
+#                 'start_month': start_month_str,
+#                 'end_month': end_month_str,
+#             }
+#             return render(request, "reports/consolidated_report.html", context)
+
 #     if parsed_date_from and parsed_date_to and parsed_date_from > parsed_date_to:
 #         context = {
-#             'error': 'Start date cannot be later than end date',
-#             'date_from': date_from,
-#             'date_to': date_to,
+#             'error': 'Start month cannot be later than end month.',
+#             'start_month': start_month_str,
+#             'end_month': end_month_str,
 #         }
 #         return render(request, "reports/consolidated_report.html", context)
 
 #     try:
+       
 #         filters = {}
 #         if parsed_date_from:
-#             filters['date_from'] = timezone.make_aware(datetime.combine(parsed_date_from, time.min))
+#             filters['date_from'] = django_timezone.make_aware(
+#                 datetime.combine(parsed_date_from, time.min)
+#             )
 #         if parsed_date_to:
-#             filters['date_to'] = timezone.make_aware(datetime.combine(parsed_date_to, time.max))
+#             filters['date_to'] = django_timezone.make_aware(
+#                 datetime.combine(parsed_date_to, time.max)
+#             )
 
-#         # Calculate totals
+#         print(f"DEBUG: parsed_date_from={parsed_date_from}, parsed_date_to={parsed_date_to}")
+#         print(f"DEBUG: filters={filters}")
+
 #         expenditure_data = calculate_total_expenditure(filters)
 #         income_data = calculate_total_income(filters)
-        
-#         # Handle potential errors
+
 #         try:
 #             total_expenditure = sum(expenditure_data.values())
 #             total_income = sum(income_data.values())
 #         except (TypeError, ValueError):
 #             total_expenditure = Decimal('0')
 #             total_income = Decimal('0')
-        
+
 #         net_position = total_income - total_expenditure
-#         filters_applied = bool(date_from or date_to)
+#         filters_applied = bool(start_month_str or end_month_str)
+
+#         # ✅ Normalize display value to 'YYYY-MM' for template input
+#         display_start = start_month_str[:7] if start_month_str else ''
+#         display_end = end_month_str[:7] if end_month_str else ''
 
 #         context = {
 #             'total_expenditure': total_expenditure,
 #             'total_income': total_income,
 #             'net_position': net_position,
-#             'date_from': date_from,
-#             'date_to': date_to,
+#             'start_month': display_start,
+#             'end_month': display_end,
 #             'filters_applied': filters_applied,
 #             **expenditure_data,
 #             **income_data,
 #         }
-        
+
 #         return render(request, "reports/consolidated_report.html", context)
 
 #     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
 #         logger.error(f"Error generating consolidated report: {str(e)}", exc_info=True)
 #         context = {
-#             'error': 'An error occurred while generating the report. Please try again.',
-#             'date_from': date_from,
-#             'date_to': date_to,
+#             'error': f'An error occurred: {str(e)}',
+#             'start_month': start_month_str,
+#             'end_month': end_month_str,
 #         }
 #         return render(request, "reports/consolidated_report.html", context)
 
 
 # def calculate_total_expenditure(filters):
-#     """Calculate total expenditure with proper error handling (consumable expenditure removed)"""
 #     date_from = filters.get('date_from')
 #     date_to = filters.get('date_to')
+#     print(f"DEBUG expenditure: date_from={date_from}, date_to={date_to}")
 
-#     # Build Q objects for filtering
 #     purchase_filter = Q()
 #     finance_expenditure_filter = Q()
 #     loan_disbursement_filter = Q()
+#     target_savings_disbursement_filter = Q()
+#     special_savings_disbursement_filter = Q()
+#     item_filter = Q()
+#     ram_filter = Q()
 
 #     if date_from:
 #         purchase_filter &= Q(date_added__gte=date_from)
 #         finance_expenditure_filter &= Q(created_at__gte=date_from)
 #         loan_disbursement_filter &= Q(date_created__gte=date_from)
+#         target_savings_disbursement_filter &= Q(requested_at__gte=date_from)
+#         special_savings_disbursement_filter &= Q(requested_at__gte=date_from)
+#         item_filter &= Q(received_at__gte=date_from)
+#         ram_filter &= Q(date_requested__gte=date_from)
 
 #     if date_to:
 #         purchase_filter &= Q(date_added__lte=date_to)
 #         finance_expenditure_filter &= Q(created_at__lte=date_to)
 #         loan_disbursement_filter &= Q(date_created__lte=date_to)
+#         target_savings_disbursement_filter &= Q(requested_at__lte=date_to)
+#         special_savings_disbursement_filter &= Q(requested_at__lte=date_to)
+#         item_filter &= Q(received_at__lte=date_to)
+#         ram_filter &= Q(date_requested__lte=date_to)
 
 #     def safe_sum(queryset, field):
 #         try:
 #             return queryset.aggregate(total=Sum(field))['total'] or Decimal('0')
 #         except Exception as e:
 #             logger.error(f"Error calculating {field}: {str(e)}")
+#             import traceback
+#             traceback.print_exc()
 #             return Decimal('0')
 
-#     # 1. Staff purchases
-#     staff_purchases = safe_sum(
-#         PurchasedItem.objects.filter(purchase_filter),
-#         F('unit_price') * F('quantity') + F('expenditure_amount')
-#     )
+#     try:
+#         staff_purchases = PurchasedItem.objects.filter(purchase_filter).aggregate(
+#             total=Sum(
+#                 ExpressionWrapper(
+#                     F('unit_price') * F('quantity') + F('expenditure_amount'),
+#                     output_field=DecimalField()
+#                 )
+#             )
+#         )['total'] or Decimal('0')
+#     except Exception as e:
+#         logger.error(f"Error calculating staff_purchases: {str(e)}")
+#         import traceback
+#         traceback.print_exc()
+#         staff_purchases = Decimal('0')
 
-#     # 2. Project finance disbursed
 #     member_finance_loans = safe_sum(
 #         ProjectFinanceRequest.objects.filter(
 #             finance_expenditure_filter,
@@ -1619,7 +1655,6 @@ def calculate_total_income(filters):
 #         'requested_amount'
 #     )
 
-#     # 3. Member loan disbursements
 #     loan_disbursements = safe_sum(
 #         LoanRequest.objects.filter(
 #             loan_disbursement_filter,
@@ -1628,184 +1663,148 @@ def calculate_total_income(filters):
 #         ),
 #         'approved_amount'
 #     )
+#     target_savings_disbursements = safe_sum(
+#     TargetSavingsWithdrawal.objects.filter(
+#         target_savings_disbursement_filter,
+#         status='approved',
+#         amount__isnull=False
+#     ),
+#     'amount'
+# )
+#     special_savings_disbursements = safe_sum(
+#     SpecialSavingsWithdrawal.objects.filter(
+#         special_savings_disbursement_filter,
+#         status='approved',
+#         amount__isnull=False
+#     ),
+#     'amount'
+# )
+  
+#     item_disbursements = MemberRequestDetail.objects.filter( 
+#         request__status__in=['ItemPicked', 'Fully Paid']
+#     ).aggregate(
+#         total=Coalesce(
+#             Sum(
+#                 F('item_price') *
+#                 Coalesce(F('approved_quantity'), F('quantity')),
+#                 output_field=DecimalField(max_digits=15, decimal_places=2)
+#             ),
+#             Decimal('0.00')
+#         )
+#     )['total']
+#     ram_disbursements = RamRequestDetails.objects.filter(
+#         request__status__in=['approved', 'fully Paid']
+#     ).aggregate(
+#         total=Coalesce(
+#             Sum(
+#                 F('cost_price') * F('quantity'),
+#                 output_field=DecimalField(max_digits=15, decimal_places=2)
+#             ),
+#             Decimal('0.00')
+#         )
+#     )['total']
 
+   
 #     return {
 #         'staff_purchases': staff_purchases,
 #         'member_finance_loans': member_finance_loans,
 #         'loan_disbursements': loan_disbursements,
+#         'target_savings_disbursements': target_savings_disbursements,
+#         'special_savings_disbursements': special_savings_disbursements,
+#         'item_disbursements':item_disbursements,
+#         'ram_disbursements':ram_disbursements,
 #     }
 
+
 # def calculate_total_income(filters):
-#     """Calculate total income with proper filtering and error handling"""
 #     date_from = filters.get('date_from')
 #     date_to = filters.get('date_to')
-    
+
 #     try:
-#         # Build Q objects for filtering
-#         admin_fee_filter = Q()
-#         saving_filter = Q()
-#         saving_form_fee_filter = Q()
-#         special_saving_filter = Q()
-#         target_saving_filter = Q()
-#         member_payback_filter = Q()
-#         member_finance_payback_filter = Q()
-#         member_fees_filter = Q()
-#         loan_payback_filter = Q()
-#         loan_fee_filter = Q()
+#         def make_filter(date_field):
+#             q = Q()
+#             if date_from:
+#                 q &= Q(**{f"{date_field}__gte": date_from})
+#             if date_to:
+#                 q &= Q(**{f"{date_field}__lte": date_to})
+#             return q
+
+#         def safe_agg(model, q_filter, field):
+#             try:
+#                 result = model.objects.filter(q_filter).aggregate(
+#                     total=Sum(field)
+#                 )['total'] or Decimal('0')
+#                 print(f"DEBUG {model.__name__}.{field} = {result}")
+#                 return result
+#             except Exception as e:
+#                 logger.error(f"Error aggregating {model.__name__}.{field}: {str(e)}")
+#                 import traceback
+#                 traceback.print_exc()
+#                 return Decimal('0')
+
+#         # ✅ Savings — filter by 'month' (DateField)
+#         saving_income = safe_agg(
+#             Savings, make_filter('month'), 'month_saving'
+#         )
+#         # ✅ Interest — filter by 'month' (DateField)
+#         admin_fee_income = safe_agg(
+#             Interest, make_filter('month'), 'amount_deducted'
+#         )
+#         # ✅ These models need you to share their fields — using date_created for now
+#         form_fee_income = safe_agg(
+#             RequestFormPayment, make_filter('date_created'), 'payment_type__request_fee'
+#         )
+#         special_saving_income = safe_agg(
+#             SpecialSavings, make_filter('date_created'), 'month_savings'
+#         )
+#         target_saving_income = safe_agg(
+#             TargetSavings, make_filter('date_created'), 'month_savings'
+#         )
+#         consumable_payback_income = safe_agg(
+#             PaybackConsumable, make_filter('repayment_date'), 'amount_paid'
+#         )
+#         finance_payback_income = safe_agg(
+#             ProjectFinancePayment, make_filter('created_at'), 'amount_paid'
+#         )
+#         form_fee_income = safe_agg(
+#             ConsumableFormFee, make_filter('created_at'), 'form_fee'
+#         )
+#         loan_payback_income = safe_agg(
+#             LoanRepayback, make_filter('repayment_date'), 'amount_paid'
+#         )
+#         loan_form_fee_income = safe_agg(
+#             LoanRequestFee, make_filter('created_at'), 'form_fee'
+#         )
+#         item_income = safe_agg(
+#             MemberRequestPayback, make_filter('created_at'), 'amount_paid'
+#         )
+#         ram_income = safe_agg(
+#             Payment, make_filter('date_paid'), 'amount'
+#         )
         
-#         if date_from:
-#             admin_fee_filter &= Q(date_deducted__gte=date_from)
-#             saving_form_fee_filter &= Q(date_created__gte=date_from)
-#             saving_filter &= Q(date_created__gte=date_from)
-#             special_saving_filter &= Q(date_created__gte=date_from)
-#             target_saving_filter &= Q(date_created__gte=date_from)
-#             member_payback_filter &= Q(repayment_date__gte=date_from)
-#             member_finance_payback_filter &= Q(amount_paid__gte=date_from)
-#             member_fees_filter &= Q(created_at__gte=date_from)
-#             loan_payback_filter &= Q(repayment_date__gte=date_from)
-#             loan_fee_filter &= Q(created_at__gte=date_from)
-
-#         if date_to:
-#             admin_fee_filter &= Q(date_deducted__lte=date_to)
-#             saving_filter &= Q(date_created__lte=date_to)
-#             saving_form_fee_filter &= Q(date_created__lte=date_to)
-#             special_saving_filter &= Q(date_created__lte=date_to)
-#             target_saving_filter &= Q(date_created__lte=date_to)
-#             member_payback_filter &= Q(repayment_date__lte=date_to)
-#             member_finance_payback_filter &= Q(created_at__lte=date_to)
-#             member_fees_filter &= Q(created_at__lte=date_to)
-#             loan_payback_filter &= Q(repayment_date__lte=date_to)
-#             loan_fee_filter &= Q(created_at__lte=date_to)
-
-#         # 1. Income from saving items
-#         try:
-#             saving_income = Savings.objects.filter(
-#                 saving_filter
-#             ).aggregate(
-#                 total=Sum('month_saving')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating saving income: {str(e)}")
-#             saving_income = Decimal('0')
-            
-#         # 1. Income from saving items
-#         try:
-#             saving_form_fee_income = SpecialSavingsTergetSavingsRequestForm.objects.filter(
-#                 saving_form_fee_filter
-#             ).aggregate(
-#                 total=Sum('form_fee')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating saving form fee income: {str(e)}")
-#             saving_form_fee_income = Decimal('0')
-            
-#         # 2. Income from special saving items
-#         try:
-#             special_saving_income = SpecialSavings.objects.filter(
-#                 special_saving_filter
-#             ).aggregate(
-#                 total=Sum('month_savings')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating special saving income: {str(e)}")
-#             special_saving_income = Decimal('0')
-            
-            
-#         # 3. Income from target saving items
-#         try:
-#             target_saving_income = TargetSavings.objects.filter(
-#                 target_saving_filter
-#             ).aggregate(
-#                 total=Sum('month_savings')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating target saving income: {str(e)}")
-#             target_saving_income = Decimal('0')
-
-#         # 4. Income from Admin fee items
-#         try:
-#             admin_fee_income = Interest.objects.filter(
-#                 admin_fee_filter
-#             ).aggregate(
-#                 total=Sum('amount_deducted')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating admin fee income: {str(e)}")
-#             admin_fee_income = Decimal('0')
-
-#         # 5. Member repayments for consumables
-#         try:
-#             consumable_payback_income = PaybackConsumable.objects.filter(
-#                 member_payback_filter
-#             ).aggregate(
-#                 total=Sum('amount_paid')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating consumable payback income: {str(e)}")
-#             consumable_payback_income = Decimal('0')
-
-#         # 6. Member repayments for project finance
-#         try:
-#             finance_payback_income = ProjectFinancePayment.objects.filter(
-#                 member_finance_payback_filter
-#             ).aggregate(
-#                 total=Sum('amount_paid')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating finance payback income: {str(e)}")
-#             finance_payback_income = Decimal('0')
-#             print('finance_payback_income',finance_payback_income)
-#         # 7. Income from consumable form fees
-#         try:
-#             form_fee_income = ConsumableFormFee.objects.filter(
-#                 member_fees_filter
-#             ).aggregate(
-#                 total=Sum('form_fee')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating form fee income: {str(e)}")
-#             form_fee_income = Decimal('0')
-            
-#         # 8. Member repayments for loans
-#         try:
-#             loan_payback_income = LoanRepayback.objects.filter(
-#                 loan_payback_filter
-#             ).aggregate(
-#                 total=Sum('amount_paid')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating loan payback income: {str(e)}")
-#             loan_payback_income = Decimal('0')
-
-#         # 9. Income from loan form fees
-#         try:
-#             loan_form_fee_income = LoanRequestFee.objects.filter(
-#                 loan_fee_filter
-#             ).aggregate(
-#                 total=Sum('form_fee')
-#             )['total'] or Decimal('0')
-#         except Exception as e:
-#             logger.error(f"Error calculating loan form fee income: {str(e)}")
-#             loan_form_fee_income = Decimal('0')
 
 #         return {
 #             'saving_income': saving_income,
-#             'saving_form_fee_income': saving_form_fee_income,
-#             'special_saving_income':special_saving_income,
-#             'target_saving_income':target_saving_income,
+#             'form_fee_income': form_fee_income,
+#             'special_saving_income': special_saving_income,
+#             'target_saving_income': target_saving_income,
 #             'admin_fee_income': admin_fee_income,
 #             'consumable_payback_income': consumable_payback_income,
 #             'finance_payback_income': finance_payback_income,
 #             'form_fee_income': form_fee_income,
 #             'loan_payback_income': loan_payback_income,
 #             'loan_form_fee_income': loan_form_fee_income,
+#             'item_income': item_income,
+#             'ram_income': ram_income,
 #         }
-        
+
 #     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
 #         logger.error(f"Error in calculate_total_income: {str(e)}", exc_info=True)
 #         return {
 #             'saving_income': Decimal('0'),
-#             'saving_form_fee_income': Decimal('0'),
+#             'form_fee_income': Decimal('0'),
 #             'special_saving_income': Decimal('0'),
 #             'target_saving_income': Decimal('0'),
 #             'admin_fee_income': Decimal('0'),
@@ -1814,6 +1813,8 @@ def calculate_total_income(filters):
 #             'form_fee_income': Decimal('0'),
 #             'loan_payback_income': Decimal('0'),
 #             'loan_form_fee_income': Decimal('0'),
+#             'item_income': Decimal('0'),
+#             'ram_income': Decimal('0'),
 #         }
 
 

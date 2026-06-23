@@ -1,0 +1,284 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Inventory Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Inventory &amp; Member Request Report</h4>
+    <p class="text-muted small mb-0">Full overview of stock, requests, and repayments</p>
+  </div>
+
+  <!-- METRICS -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 bg-light h-100">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Total stock value</p>
+          <h5 class="fw-semibold mb-1">₦{{ total_stock_cost|intcomma }}</h5>
+          <p class="text-muted small mb-0">Net after returns: ₦{{ total_stock_net|intcomma }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 bg-light h-100">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Total requested value</p>
+          <h5 class="fw-semibold mb-1">₦{{ total_requested|intcomma }}</h5>
+          <p class="text-muted small mb-0">{{ member_requests.paginator.count }} requests total</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 bg-light h-100">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Total repaid</p>
+          <h5 class="fw-semibold mb-1">₦{{ total_repaid|intcomma }}</h5>
+          <p class="text-muted small mb-0">{{ repayments.paginator.count }} payment records</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 bg-light h-100">
+        <div class="card-body">
+          <p class="text-muted small mb-1">Outstanding balance</p>
+          <h5 class="fw-semibold mb-1">₦{{ total_outstanding|intcomma }}</h5>
+          <p class="text-muted small mb-0">{{ fully_paid_count }} fully paid</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <ul class="nav nav-tabs mb-3" id="reportTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="stock-tab" data-bs-toggle="tab" data-bs-target="#tab-stock" type="button" role="tab">
+        Stock &amp; Inventory
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#tab-requests" type="button" role="tab">
+        Member Requests
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="repayments-tab" data-bs-toggle="tab" data-bs-target="#tab-repayments" type="button" role="tab">
+        Repayments
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="reportTabsContent">
+
+    <!-- ── STOCK TAB ── -->
+    <div class="tab-pane fade show active" id="tab-stock" role="tabpanel">
+      <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <input type="text" class="form-control form-control-sm w-auto" placeholder="Search supplier or note..." oninput="filterTable('stock-table', this.value)">
+        <button class="btn btn-sm btn-dark ms-auto" onclick="exportExcel('stock-table', 'Stock_In_Report')">
+          <i class="bi bi-download me-1"></i> Download Excel
+        </button>
+      </div>
+      <div class="card border">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm align-middle mb-0" id="stock-table">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Supplier</th>
+                <th>Note</th>
+                <th>Received at</th>
+                <th>Received by</th>
+                <th class="text-end">Total cost</th>
+                <th class="text-end">Net value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in stock_ins %}
+              <tr>
+                <td>{{ s.pk }}</td>
+                <td>{{ s.supplier.name }}</td>
+                <td class="text-muted">{{ s.note|default:"-" }}</td>
+                <td>{{ s.received_at|date:"Y-m-d" }}</td>
+                <td>{{ s.received_by.get_full_name|default:s.received_by.username }}</td>
+                <td class="text-end">₦{{ s.get_total_cost|intcomma }}</td>
+                <td class="text-end">₦{{ s.net_voucher_value|intcomma }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" class="text-center text-muted py-4">No stock records found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% include "inventory_app/_pagination.html" with page_obj=stock_ins param="stock_page" %}
+    </div>
+
+    <!-- ── REQUESTS TAB ── -->
+    <div class="tab-pane fade" id="tab-requests" role="tabpanel">
+      <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <input type="text" class="form-control form-control-sm w-auto" placeholder="Search member..." oninput="filterTable('requests-table', this.value)">
+        <select class="form-select form-select-sm w-auto" onchange="filterByStatus(this.value)">
+          <option value="">All statuses</option>
+          <option>Pending</option>
+          <option>Approved</option>
+          <option>Declined</option>
+          <option>ItemPicked</option>
+          <option>Fully Paid</option>
+        </select>
+        <button class="btn btn-sm btn-dark ms-auto" onclick="exportExcel('requests-table', 'Member_Requests_Report')">
+          <i class="bi bi-download me-1"></i> Download Excel
+        </button>
+      </div>
+      <div class="card border">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm align-middle mb-0" id="requests-table">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Member</th>
+                <th>Status</th>
+                <th>Duration</th>
+                <th class="text-end">Total price</th>
+                <th class="text-end">Paid</th>
+                <th class="text-end">Balance</th>
+                <th>Progress</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in member_requests %}
+              <tr data-status="{{ r.status }}">
+                <td>{{ r.pk }}</td>
+                <td>{% if r.member %}{{ r.member }}{% else %}{{ r.guest_name }}{% endif %}</td>
+                <td>
+                  {% if r.status == 'Pending' %}
+                    <span class="badge text-bg-warning">Pending</span>
+                  {% elif r.status == 'Approved' %}
+                    <span class="badge text-bg-success">Approved</span>
+                  {% elif r.status == 'Declined' %}
+                    <span class="badge text-bg-danger">Declined</span>
+                  {% elif r.status == 'ItemPicked' %}
+                    <span class="badge text-bg-info">Item Picked</span>
+                  {% elif r.status == 'Fully Paid' %}
+                    <span class="badge text-bg-primary">Fully Paid</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% with first=r.details.first %}
+                    {% if first %}{{ first.duration_months }} mo{% else %}-{% endif %}
+                  {% endwith %}
+                </td>
+                <td class="text-end">₦{{ r.calculate_total_price|intcomma }}</td>
+                <td class="text-end">₦{{ r.total_paid|intcomma }}</td>
+                <td class="text-end">₦{{ r.balance|intcomma }}</td>
+                <td style="min-width:120px">
+                  {% with total=r.calculate_total_price paid=r.total_paid %}
+                    {% if total > 0 %}
+                      {% widthratio paid total 100 as pct %}
+                      <div class="progress" style="height:6px;">
+                        <div class="progress-bar bg-success" style="width:{{ pct }}%"></div>
+                      </div>
+                      <small class="text-muted">{{ pct }}%</small>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  {% endwith %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="8" class="text-center text-muted py-4">No requests found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% include "inventory/_pagination.html" with page_obj=member_requests param="req_page" %}
+    </div>
+
+    <!-- ── REPAYMENTS TAB ── -->
+    <div class="tab-pane fade" id="tab-repayments" role="tabpanel">
+      <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <input type="text" class="form-control form-control-sm w-auto" placeholder="Search member or request..." oninput="filterTable('repayments-table', this.value)">
+        <button class="btn btn-sm btn-dark ms-auto" onclick="exportExcel('repayments-table', 'Repayments_Report')">
+          <i class="bi bi-download me-1"></i> Download Excel
+        </button>
+      </div>
+      <div class="card border">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm align-middle mb-0" id="repayments-table">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Request #</th>
+                <th>Member</th>
+                <th>Date</th>
+                <th class="text-end">Amount paid</th>
+                <th class="text-end">Balance after</th>
+                <th>Recorded by</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in repayments %}
+              <tr>
+                <td>{{ p.pk }}</td>
+                <td>{{ p.member_request.pk }}</td>
+                <td>
+                  {% if p.member_request.member %}{{ p.member_request.member }}
+                  {% else %}{{ p.member_request.guest_name }}{% endif %}
+                </td>
+                <td>{{ p.repayment_date|date:"Y-m-d" }}</td>
+                <td class="text-end">₦{{ p.amount_paid|intcomma }}</td>
+                <td class="text-end">₦{{ p.balance_remaining|default:0|intcomma }}</td>
+                <td>{{ p.created_by.get_full_name|default:p.created_by.username }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" class="text-center text-muted py-4">No repayment records found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% include "inventory/_pagination.html" with page_obj=repayments param="repay_page" %}
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+function filterTable(tableId, query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function filterByStatus(status) {
+  document.querySelectorAll('#requests-table tbody tr').forEach(row => {
+    row.style.display = (!status || row.dataset.status === status) ? '' : 'none';
+  });
+}
+
+function exportExcel(tableId, filename) {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(document.getElementById(tableId));
+  XLSX.utils.book_append_sheet(wb, ws, filename);
+  XLSX.writeFile(wb, filename + '.xlsx');
+}
+
+// Restore active tab from URL on page load
+const activeTab = new URLSearchParams(window.location.search).get('tab') || 'stock';
+const tabEl = document.querySelector(`#${activeTab}-tab`);
+if (tabEl) bootstrap.Tab.getOrCreateInstance(tabEl).show();
+
+// Save active tab to URL when switching
+document.querySelectorAll('#reportTabs button').forEach(btn => {
+  btn.addEventListener('shown.bs.tab', () => {
+    const url = new URL(window.location);
+    url.searchParams.set('tab', btn.id.replace('-tab', ''));
+    window.history.replaceState({}, '', url);
+  });
+});
+</script>
+{% endblock %}

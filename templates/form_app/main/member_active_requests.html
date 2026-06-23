@@ -1,0 +1,348 @@
+
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<style>
+    /* Styles for the responsive form layout */
+    @media (max-width: 767.98px) {
+        /* On mobile, stack all form elements vertically */
+        .g-2.align-items-end {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+
+        /* Ensure form groups and buttons take full width */
+        .g-2 .col-md-6,
+        .g-2 .col-md-auto {
+            width: 100%;
+            margin-bottom: 10px; /* Add space between stacked items */
+        }
+        
+        /* Make the input field and buttons full width */
+        .g-2 .form-control,
+        .g-2 .btn {
+            width: 100%;
+        }
+        
+        /* Remove extra bottom margin from the last item */
+        .g-2 .col-md-auto:last-of-type {
+            margin-bottom: 0;
+        }
+    }
+</style>
+<div class="container py-2">
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <h4 class="card-title mb-3 text-primary">Search Member Active Requests</h4>
+            <form method="get" class="row g-2 align-items-end mb-3">
+                <div class="col-md-6">
+                    <label for="ippis" class="form-label">IPPIS Number:</label>
+                    <input type="text" name="ippis" id="ippis" value="{{ request.GET.ippis }}" class="form-control" required>
+                </div>
+                <div class="col-md-auto">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+                <div class="col-md-auto">
+                    <a href="{% url 'member_active_requests' %}" class="btn btn-secondary">Reset</a>
+                </div>
+            </form>
+
+            {% if member %}
+                <div class="alert alert-info mb-3">
+                    <strong>Results for:</strong> {{ member.member.first_name }} {{ member.member.last_name }} {{ member.ippis }}
+                </div>
+
+               
+                <hr>
+               
+{% if has_active %}
+
+<!-- 🟦 Loans -->
+<h6 class="text-primary fw-bold">Loans</h6>
+
+{% if active_loans %}
+<div class="table-responsive">
+  <table class="table table-bordered table-hover align-middle">
+    
+    <thead class="bg-light">
+      <tr>
+        <th>#</th>
+        <th>Loan Type</th>
+        <th class="text-end">Requested</th>
+        <th class="text-end">Approved</th>
+        <th class="text-end">Monthly</th>
+        <th class="text-end">Paid</th>
+        <th class="text-end">Balance</th>
+        <th>Term</th>
+        <th>Last Payment</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for loan in active_loans %}
+      <tr>
+        <!-- Index -->
+        <td>{{ forloop.counter }}</td>
+
+        <!-- Loan Type (SAFE) -->
+        <td>
+          {% if loan.loan_type %}
+            {{ loan.loan_type.name }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+
+        <!-- Requested -->
+        <td class="text-end">
+          ₦{{ loan.amount|floatformat:2 }}
+        </td>
+
+        <!-- Approved -->
+        <td class="text-end">
+          ₦{{ loan.approved_amount|default:loan.amount|floatformat:2 }}
+        </td>
+
+        <!-- Monthly -->
+        <td class="text-end">
+          {% if loan.monthly_payment %}
+            ₦{{ loan.monthly_payment|floatformat:2 }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+
+        <!-- Paid -->
+        <td class="text-end text-success">
+          ₦{{ loan.total_repaid|floatformat:2 }}
+        </td>
+
+        <!-- Balance -->
+        <td class="text-end {% if loan.balance > 0 %}text-danger{% else %}text-success{% endif %}">
+          ₦{{ loan.balance|floatformat:2 }}
+        </td>
+
+        <!-- Term -->
+        <td>{{ loan.loan_term_months }} months</td>
+
+        <!-- Last Payment -->
+        <td>
+          {{ loan.last_payment_date|date:"M d, Y"|default:"—" }}
+        </td>
+
+        <!-- Status -->
+        <td>
+          {% if loan.balance <= 0 %}
+            <span class="status-badge bg-success">Completed</span>
+          {% elif loan.total_repaid == 0 %}
+            <span class="status-badge bg-danger">Not Started</span>
+          {% else %}
+            <span class="status-badge bg-warning text-dark">Ongoing</span>
+          {% endif %}
+        </td>
+      </tr>
+
+      <!-- 🔽 Expandable Repayment Details -->
+      <tr>
+        <td colspan="10">
+          <details>
+            <summary class="text-primary">View Repayments</summary>
+
+            {% if loan.repaybacks.all %}
+            <table class="table table-sm mt-2">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Balance After</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in loan.repaybacks.all %}
+                <tr>
+                  <td>{{ r.repayment_date|date:"M d, Y" }}</td>
+                  <td>₦{{ r.amount_paid|floatformat:2 }}</td>
+                  <td>₦{{ r.balance_remaining|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+              <p class="text-muted mb-0">No repayments yet</p>
+            {% endif %}
+
+          </details>
+        </td>
+      </tr>
+
+      {% endfor %}
+
+      <!-- ✅ TOTAL ROW (FIXED ALIGNMENT) -->
+      <tr class="fw-bold bg-light">
+        <td colspan="2">Total</td>
+        <td class="text-end">₦{{ loan_total|floatformat:2 }}</td>
+        <td></td>
+        <td></td>
+        <td class="text-end text-success">₦{{ loan_paid|floatformat:2 }}</td>
+        <td class="text-end text-danger">₦{{ loan_balance|floatformat:2 }}</td>
+        <td colspan="3"></td>
+      </tr>
+
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+  <p>No active loans.</p>
+{% endif %}
+
+
+
+  <!-- 🟨 Consumables -->
+  <h6 class="text-primary  fw-bold">Consumables</h6>
+  {% if active_consumables %}
+   <div class="table-responsive">
+    <table class="table table-bordered">
+      <thead class="bg-light">
+        <tr>
+          <th>Description</th>
+          <th>Items Total Amount</th>
+          <th>Amount Paid</th>
+          <th>Balance Remaining</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in active_consumables %}
+        <tr>
+          <td>
+            {% for d in c.details.all %}
+              {{ d.selling_item.purchased_item.item_name }} (x{{ d.quantity }}){% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </td>
+          <td>₦{{ c.total_amount_agg|floatformat:2 }}</td>
+          <td>₦{{ c.total_paid_agg|default:"0.00" }}</td>
+          <td>₦{{ c.balance_agg|floatformat:2 }}</td>
+          <td>{{ c.status }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="fw-bold bg-light">
+          <td>Total</td>
+          <td>₦{{ consumable_total|floatformat:2 }}</td>
+          <td>₦{{ consumable_paid|floatformat:2 }}</td>
+          <td>₦{{ consumable_balance|floatformat:2 }}</td>
+          <td></td>
+        </tr> 
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p>No active consumable requests.</p>
+  {% endif %}
+
+  <!-- 🟧 Project Finance -->
+  <h6 class="text-primary  fw-bold">Project Finance</h6>
+  {% if active_project_finances %}
+   <div class="table-responsive">
+    <table class="table table-bordered">
+      <thead class="bg-light">
+        <tr>
+          <th>Project</th>
+          <th>Amount</th>
+          <th>Paid</th>
+          <th>Balance</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in active_project_finances %}
+        <tr>
+          <td>{{ p.project_name }}</td>
+          <td>₦{{ p.requested_amount|floatformat:2 }}</td>
+          <td>₦{{ p.total_repayment_amount|default:"0.00" }}</td>
+          <td>₦{{ p.balance|floatformat:2 }}</td>
+          <td>{{ p.status }}</td>
+        </tr>
+        {% endfor %}
+         <tr class="fw-bold bg-light">
+          <td>Total</td>
+          <td>₦{{ project_total|floatformat:2 }}</td>
+          <td>₦{{ project_paid|floatformat:2 }}</td>
+          <td>₦{{ project_balance|floatformat:2 }}</td>
+          <td></td>
+        </tr> 
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p>No active project finance requests.</p>
+  {% endif %}
+
+  <!-- 🟩 Withdrawals -->
+  <h6 class="text-primary  fw-bold">Withdrawals</h6>
+  {% if withdrawals %}
+   <div class="table-responsive">
+    <table class="table table-bordered">
+      <thead class="bg-light">
+        <tr>
+          <th>Amount</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in withdrawals %}
+        <tr>
+          <td>₦{{ w.total_withdrawn|floatformat:2 }}</td>
+          <td>{{ w.status }}</td>
+        </tr>
+        {% endfor %}
+         <tr class="fw-bold bg-light">
+          <td>Total: ₦{{ withdrawal_total|floatformat:2 }}</td>
+          <td></td>
+        </tr> 
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p>No withdrawals found.</p>
+  {% endif %}
+
+  <hr>
+
+  <!-- 🧮 Overall Summary -->
+  <h6 class="text-danger text-center  fw-bold">Overall Total Summary</h6>
+   <div class="table-responsive">
+  <table class="table table-bordered">
+    <thead class="bg-light">
+      <tr>
+        <th>Category</th>
+        <th>Total</th>
+        <th>Paid</th>
+        <th>Balance</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Loans</td><td>₦{{ loan_total|floatformat:2 }}</td><td>₦{{ loan_paid|floatformat:2 }}</td><td>₦{{ loan_balance|floatformat:2 }}</td></tr>
+      <tr><td>Consumables</td><td>₦{{ consumable_total|floatformat:2 }}</td><td>₦{{ consumable_paid|floatformat:2 }}</td><td>₦{{ consumable_balance|floatformat:2 }}</td></tr>
+      <tr><td>Project Finance</td><td>₦{{ project_total|floatformat:2 }}</td><td>₦{{ project_paid|floatformat:2 }}</td><td>₦{{ project_balance|floatformat:2 }}</td></tr>
+      <tr class="fw-bold bg-light">
+        <td>Grand Total</td>
+        <td>₦{{ grand_total|floatformat:2 }}</td>
+        <td>₦{{ grand_paid|floatformat:2 }}</td>
+        <td>₦{{ grand_balance|floatformat:2 }}</td>
+      </tr>
+    </tbody>
+  </table>
+   </div>
+{% else %}
+  <p>No active Requests found for this member.</p>
+{% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

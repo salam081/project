@@ -1,0 +1,231 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container py-4">
+
+  {# HEADER #}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h6 class="fw-bold mb-1">Project Finance Requests</h6>
+      <p class="text-muted mb-0">Review and manage all member requests</p>
+    </div>
+    <div>
+      <span class="status-badge bg-primary fs-6 px-3 py-2 rounded-pill">
+        {{ page_obj.paginator.count }} request{{ page_obj.paginator.count|pluralize }}
+      </span>
+    </div>
+  </div>
+
+  {# STATUS CARDS #}
+ 
+ <div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+
+    <table class="table table-hover align-middle mb-0">
+
+      <thead class="table-light">
+        <tr>
+          <th>Status</th>
+          <th class="text-center">All Requests</th>
+          <th class="text-center">Total Requested Amount</th>
+          <th class="text-center">Total Markup</th>
+          <th class="text-center">All Balance</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {# ALL #}
+        <tr class="{% if not selected_status %}table-active{% endif %}">
+          <td>
+            <a href="?ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+              <span class="status-badge bg-secondary text-white">All</span>
+            </a>
+          </td>
+
+          <td class="text-center fw-bold">{{ grand.count }}</td>
+          <td class="text-center">₦{{ grand.sum_requested|floatformat:2|intcomma }}</td>
+          <td class="text-center text-primary">₦{{ grand.sum_markup|floatformat:2|intcomma }}</td>
+          <td class="text-center text-danger">₦{{ grand.sum_balance|floatformat:2|intcomma }}</td>
+        </tr>
+
+        {# PENDING #}
+        <tr class="{% if selected_status == 'Pending' %}table-warning{% endif %}">
+          <td>
+            <a href="?status=Pending&ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+              <span class="status-badge bg-warning text-white">Pending</span>
+            </a>
+          </td>
+
+          <td class="text-center fw-bold">{{ pending.count }}</td>
+          <td class="text-center">₦{{ pending.sum_requested|floatformat:2|intcomma }}</td>
+          <td class="text-center text-primary">₦{{ pending.sum_markup|floatformat:2|intcomma }}</td>
+          <td class="text-center text-danger">₦{{ pending.sum_balance|floatformat:2|intcomma }}</td>
+        </tr>
+
+        {# APPROVED #}
+        <tr class="{% if selected_status == 'Approved' %}table-success{% endif %}">
+          <td>
+            <a href="?status=Approved&ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+              <span class="status-badge bg-success text-white">Approved</span>
+            </a>
+          </td>
+
+          <td class="text-center fw-bold">{{ approved.count }}</td>
+          <td class="text-center">₦{{ approved.sum_requested|floatformat:2|intcomma }}</td>
+          <td class="text-center text-primary">₦{{ approved.sum_markup|floatformat:2|intcomma }}</td>
+          <td class="text-center text-danger">₦{{ approved.sum_balance|floatformat:2|intcomma }}</td>
+        </tr>
+
+        {# DECLINED #}
+        <tr class="{% if selected_status == 'Declined' %}table-danger{% endif %}">
+          <td>
+            <a href="?status=Declined&ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+              <span class="status-badge bg-danger text-white">Declined</span>
+            </a>
+          </td>
+
+          <td class="text-center fw-bold">{{ declined.count }}</td>
+          <td class="text-center">₦{{ declined.sum_requested|floatformat:2|intcomma }}</td>
+          <td class="text-center text-primary">₦{{ declined.sum_markup|floatformat:2|intcomma }}</td>
+          <td class="text-center text-danger">₦{{ declined.sum_balance|floatformat:2|intcomma }}</td>
+        </tr>
+
+        {# FULLY PAID #}
+        <tr class="{% if selected_status == 'FullyPaid' %}table-primary{% endif %}">
+          <td>
+            <a href="?status=FullyPaid&ippis={{ ippis_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="text-decoration-none">
+              <span class="status-badge bg-primary text-white">Fully Paid</span>
+            </a>
+          </td>
+
+          <td class="text-center fw-bold">{{ fullypaid.count }}</td>
+          <td class="text-center">₦{{ fullypaid.sum_requested|floatformat:2|intcomma }}</td>
+          <td class="text-center text-primary">₦{{ fullypaid.sum_markup|floatformat:2|intcomma }}</td>
+          <td class="text-center text-danger">₦{{ fullypaid.sum_balance|floatformat:2|intcomma }}</td>
+        </tr>
+
+      </tbody>
+
+    </table>
+
+  </div>
+</div>
+
+  {# TOTAL SUMMARY BAR #}
+  <div class="card border-0 shadow mb-4 bg-light mt-3">
+    <div class="card-body py-2 px-3">
+      <div class="d-flex flex-wrap gap-4 justify-content-between align-items-center  fw-bold text-dark">
+        <div><span class="text-dark">Filtered Count:</span> {{ active_totals.count }}</div>
+        <div><span class="text-dark">Requested:</span> ₦{{ active_totals.sum_requested|floatformat:2|intcomma }}</div>
+        <div><span class="text-dark">Total Profit (Markup):</span> <span class="text-primary">₦{{ active_totals.sum_markup|floatformat:2|intcomma }}</span></div>
+         <div><span class="text-dark">Repayment:</span> ₦{{ active_totals.sum_repayment|floatformat:2|intcomma }}</div>
+        <div><span class="text-dark">Remaining Balance:</span> <span class="text-danger">₦{{ active_totals.sum_balance|floatformat:2|intcomma }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  {# FILTERS FORM #}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-bold text-muted mb-1">Status</label>
+          <select name="status" class="form-select">
+            <option value="">All Statuses</option>
+            <option value="Pending" {% if selected_status == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Approved" {% if selected_status == 'Approved' %}selected{% endif %}>Approved</option>
+            <option value="Declined" {% if selected_status == 'Declined' %}selected{% endif %}>Declined</option>
+            <option value="Completed" {% if selected_status == 'Completed' %}selected{% endif %}>Completed</option>
+            <option value="FullyPaid" {% if selected_status == 'FullyPaid' %}selected{% endif %}>Fully Paid</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-bold text-muted mb-1">IPPIS</label>
+          <input type="text" name="ippis" value="{{ ippis_filter }}" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-bold text-muted mb-1">From Date</label>
+          <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-bold text-muted mb-1">To Date</label>
+          <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+          <a href="{% url 'admin_project_finance_requests' %}" class="btn btn-outline-secondary w-100">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# DATA TABLE #}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Member Details</th>
+            <th class="text-end">Requested Amount</th>
+            <th class="text-center">Markup Rate</th>
+            <th class="text-end">Profit (Markup)</th> <th class="text-end">Total Repayment</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in requests %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <div class="fw-semibold">
+                {{ req.application.member.member.first_name }} {{ req.application.member.member.last_name }}
+              </div>
+              <small class="text-muted">{{ req.product }}</small>
+            </td>
+            <td class="text-end fw-semibold">₦{{ req.requested_amount|intcomma }}</td>
+            <td class="text-center">{{ req.markup_rate|default:"—" }}{% if req.markup_rate %}%{% endif %}</td>
+            <td class="text-end text-primary fw-medium">₦{{ req.markup_amount|floatformat:2|intcomma }}</td> <td class="text-end text-success fw-semibold">₦{{ req.total_repayment_amount|default:"0"|floatformat:2|intcomma }}</td>
+            <td class="text-center">
+              <span class="status-badge bg-secondary">{{ req.status }}</span>
+            </td>
+            <td class="text-center">
+              <a href="{% url 'project_finance_request_detail' req.id %}" class="btn btn-sm btn-light border">View Details</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">No matching finance requests found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# PAGINATION #}
+  {% if page_obj.has_other_pages %}
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ querystring }}">Previous</a>
+      </li>
+      {% endif %}
+      <li class="page-item active">
+        <span class="page-link">{{ page_obj.number }}</span>
+      </li>
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ querystring }}">Next</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+</div>
+{% endblock %}

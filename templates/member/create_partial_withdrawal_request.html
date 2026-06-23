@@ -7,15 +7,16 @@
           <div class="card-header text-dark bg-light">
             <h6><i class="bi bi-cash-coin"></i> Request Partial Withdrawal</h6>
           </div>
-           <div class="alert alert-warning">
-            <small><strong>Note:</strong> Your withdrawal will be deducted equally from your Loanable (50%) and Investment (50%) accounts.</small>
-          </div> 
+      
           <div class="card-body">
             <!-- Account Summary -->
-            <div class="alert alert-info">
-              {% comment %} <h6>Your Current Balance</h6> {% endcomment %}
+             <div class="bg-warning-subtle p-2">
               <h6 class="mb-0"><strong>Your Current Total Savings:</strong> ₦{{ total_savings|floatformat:2|default:'0.00' }}</h6>
             </div>
+            <div class="bg-success-subtle p-2 mt-2">
+            <h6><strong>The Max Amount You Can Withdraw is: </strong> ₦{{max_withdrawal}}</h6>
+          </div> 
+           
 
             <!-- Withdrawal Form -->
             <form method="post">

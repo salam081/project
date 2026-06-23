@@ -1,0 +1,90 @@
+{% extends "base/base.html" %}
+
+{% block title %}Payment History{% endblock %}
+{% block page_title %}Payment History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">Payments for {{ ram_request.member.member.get_full_name }}</h4>
+        <small class="text-muted">IPPIS: {{ ram_request.member.ippis }} &bull; {{ ram_request.budget.name }}</small>
+    </div>
+    <div class="d-flex gap-2">
+        {% if user.is_staff and ram_request.status == 'approved' and not ram_request.is_fully_paid %}
+        <a href="{% url 'payment_add' ram_request.pk %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Add Payment
+        </a>
+        {% endif %}
+        <a href="" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card orange p-3">
+            <small class="text-muted">Total Owed</small>
+            <h5 class="fw-bold text-warning mb-0">₦{{ ram_request.total_selling_price|floatformat:2 }}</h5>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card green p-3">
+            <small class="text-muted">Total Paid</small>
+            <h5 class="fw-bold text-success mb-0">₦{{ ram_request.total_paid|floatformat:2 }}</h5>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card red p-3">
+            <small class="text-muted">Balance Remaining</small>
+            <h5 class="fw-bold text-danger mb-0">₦{{ ram_request.balance_remaining|floatformat:2 }}</h5>
+        </div>
+    </div>
+</div>
+
+{% if ram_request.is_fully_paid %}
+<div class="alert alert-success mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i> This request has been <strong>fully paid</strong>.
+</div>
+{% endif %}
+
+<!-- Payments Table -->
+<div class="card">
+    <div class="card-header bg-light d-flex justify-content-between">
+        <span>All Payments</span>
+        <span class="badge bg-secondary">{{ payments.count }} payment(s)</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">#</th>
+                    <th>Amount</th>
+                    <th>Received By</th>
+                    <th>Date & Time</th>
+                    <th class="pe-4">Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td class="ps-4">{{ forloop.counter }}</td>
+                    <td class="text-success fw-semibold">₦{{ payment.amount|floatformat:2 }}</td>
+                    <td>{{ payment.received_by.get_full_name|default:payment.received_by.username }}</td>
+                    <td>{{ payment.date_paid|date:"d M Y, H:i" }}</td>
+                    <td class="pe-4">{{ payment.note|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-5">
+                        <i class="bi bi-cash-stack fs-2 d-block mb-2"></i>
+                        No payments recorded yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

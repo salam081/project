@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'report',
     'projectfinance',
     'inventory_app',
+    'ram_app',
+    'form_app',
 ]
 
 

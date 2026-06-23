@@ -1,0 +1,36 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 480px;">
+  <div class="card shadow-sm border-danger">
+    <div class="card-header bg-danger text-white">
+      <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Confirm Delete</h5>
+    </div>
+    <div class="card-body">
+      <p>Are you sure you want to delete this payment?</p>
+      <ul class="list-unstyled text-muted small">
+        <li><strong>Type:</strong> {{ payment.payment_type.title }}</li>
+        <li><strong>Amount:</strong> ₦{{ payment.amount|intcomma }}</li>
+        <li>
+          <strong>For:</strong>
+          {% if payment.member %}
+            {{ payment.member.member.first_name }} {{ payment.member.member.last_name }}
+          {% else %}
+            {{ payment.guest_name|default:"Guest" }}
+          {% endif %}
+        </li>
+        <li><strong>Status:</strong> {{ payment.get_status_display }}</li>
+      </ul>
+      <p class="text-danger small">This action cannot be undone.</p>
+      <form method="post" class="d-flex gap-2">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+          <i class="bi bi-trash"></i> Yes, Delete
+        </button>
+        <a href="{% url 'request_form_payment_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

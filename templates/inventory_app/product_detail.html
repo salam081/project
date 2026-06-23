@@ -8,6 +8,7 @@
             <li class="breadcrumb-item active">Batch #{{ product.id }}</li>
         </ol>
     </nav>
+    
 
     <div class="row g-4">
         <div class="col-lg-8">
@@ -17,6 +18,7 @@
                         <h3 class="fw-bold text-primary mb-0">{{ product.brand }} {{ product.model_name }}</h3>
                         {# FIX: added text-white so ID is readable on dark bg #}
                         <span class="status-badge bg-dark text-white">ID: {{ product.id }}</span>
+                         
                     </div>
                     <hr>
                     <div class="row mt-4">
@@ -137,7 +139,7 @@
                 </div>
             </div>
 
-            {# NEW: zero-stock warning card #}
+           
             {% if product.net_quantity == 0 %}
             <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>

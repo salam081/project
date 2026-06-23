@@ -1,0 +1,107 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Withdrawal Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h6 class="mb-4">Withdrawal Details</h6>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <!-- 🔹 Member Info -->
+            <h6>Member Information</h6>
+            <hr>
+            <p><strong>Name:</strong> {{ withdrawal.member.member.first_name }} {{ withdrawal.member.member.last_name }}</p>
+            <p><strong>IPPIS:</strong> {{ withdrawal.member.ippis }}</p>
+
+            <!-- 🔹 Withdrawal Info -->
+            <h6 class="mt-4">Withdrawal Information</h6>
+            <hr>
+
+            <p>
+                <strong>Amount Requested:</strong>
+                <span class="fw-bold text-primary">₦{{ withdrawal.amount_requested|intcomma }}</span>
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+                {% if withdrawal.status == "Pending" %}
+                    <span class="status-badge bg-warning text-dark">Pending</span>
+                {% elif withdrawal.status == "Approved" %}
+                    <span class="status-badge bg-success">Approved</span>
+                {% elif withdrawal.status == "Declined" %}
+                    <span class="status-badge bg-danger">Declined</span>
+                {% endif %}
+            </p>
+
+            <p><strong>Date Requested:</strong> {{ withdrawal.date_requested|date:"M d, Y H:i" }}</p>
+
+            {% if withdrawal.status == "Approved" %}
+                <p><strong>Approved By:</strong> {{ withdrawal.approved_by }}</p>
+                <p><strong>Date Approved:</strong> {{ withdrawal.updated_at|date:"M d, Y H:i" }}</p>
+            {% endif %}
+
+            {% if withdrawal.status == "Declined" %}
+                <p><strong>Declined Reason:</strong></p>
+                <div class="alert alert-danger">
+                    {{ withdrawal.decline_reason }}
+                </div>
+            {% endif %}
+
+            <!-- 🔹 Balances -->
+            <h6 class="mt-4">Member Balances</h6>
+            <hr>
+
+            <div class="row g-2">
+                <div class="col-12 col-md-4">
+                    <div class="p-3 border rounded bg-light">
+                        <small>Total Savings</small><br>
+                        <strong>₦{{ total_savings|intcomma }}</strong>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="p-3 border rounded bg-light">
+                        <small>Total Loanable</small><br>
+                        <strong>₦{{ total_loanable|intcomma }}</strong>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="p-3 border rounded bg-light">
+                        <small>Total Investment</small><br>
+                        <strong>₦{{ total_investment|intcomma }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔥 Actions -->
+            <div class="mt-4 d-flex flex-column flex-md-row gap-2">
+
+                {% if withdrawal.status == "Pending" %}
+                    <a href="{% url 'partial_withdrawal_approve' withdrawal.pk %}"
+                       class="btn btn-success w-100 w-md-auto text-white">
+                        Approve
+                    </a>
+
+                    <a href="{% url 'partial_withdrawal_decline' withdrawal.pk %}"
+                       class="btn btn-danger w-100 w-md-auto text-white">
+                        Decline
+                    </a>
+                {% endif %}
+
+                <a href="{% url 'partial_withdrawals_list' %}"
+                   class="btn btn-secondary w-100 w-md-auto text-white">
+                    Back
+                </a>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

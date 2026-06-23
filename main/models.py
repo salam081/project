@@ -9,6 +9,7 @@ from accounts.models import *
 from savings.models import *
 from loan.models import *
 from consumable.models import *
+from inventory_app.models import SellingPlan
 
 User = get_user_model()
 
@@ -328,4 +329,6 @@ class UserActivity(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} - {self.action} at {self.method} {self.timestamp}"
-    
+
+
+

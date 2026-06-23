@@ -1,0 +1,158 @@
+{% extends "base/base.html" %}
+
+{% block title %}Upload Payments{% endblock %}
+{% block page_title %}Upload Payments{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+
+        <!-- Upload Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-file-earmark-arrow-up me-2"></i> Upload Payment Excel
+            </div>
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3 mb-4">
+                        <!-- Payment Month -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Repayment Month <span class="text-danger">*</span></label>
+                            <input type="month" name="repayment_month" class="form-control" required>
+                            <small class="text-muted">This month applies to all rows in the file</small>
+                        </div>
+                        <!-- File Upload -->
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Select Excel File <span class="text-danger">*</span></label>
+                            <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+                            <small class="text-muted">Accepted formats: .xlsx, .xls</small>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-upload me-1"></i> Upload Payments
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Result Summary -->
+        {% if success_count is not None %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h2 class="fw-bold text-success mb-0">{{ success_count }}</h2>
+                        <small class="text-muted">Payment(s) uploaded successfully</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h2 class="fw-bold text-warning mb-0">{{ skipped_rows|length }}</h2>
+                        <small class="text-muted">Row(s) skipped</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Skipped Rows Table -->
+        {% if skipped_rows %}
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-exclamation-triangle me-2"></i> Skipped Rows ({{ skipped_rows|length }})</span>
+                <form method="post" class="mb-0">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="download_skipped">
+                    <button type="submit" class="btn btn-sm btn-dark">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Download Skipped
+                    </button>
+                </form>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Row</th>
+                                <th>IPPIS</th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Month</th>
+                                <th class="pe-3">Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in skipped_rows %}
+                            <tr>
+                                <td class="ps-3">{{ item.row }}</td>
+                                <td>{{ item.ippis }}</td>
+                                <td class="fw-semibold">{{ item.name }}</td>
+                                            <td><span class="badge {% if item.type == 'Member' %}bg-primary{% elif item.type == 'Guest' %}bg-secondary{% else %}bg-light text-dark{% endif %}">{{ item.type }}</span></td>
+                                <td>{{ item.amount }}</td>
+                                <td>{{ item.month }}</td>
+                                <td class="pe-3 text-danger">{{ item.reason }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Format Guide -->
+        <div class="card mb-4">
+            <div class="card-header bg-light fw-semibold">
+                <i class="bi bi-info-circle me-2"></i> Excel Format Guide
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Column A</th>
+                            <th class="pe-3">Column B</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="ps-3"><code>ippis</code></td>
+                            <td class="pe-3"><code>amount</code></td>
+                        </tr>
+                        <tr class="table-light">
+                            <td class="ps-3">123456</td>
+                            <td class="pe-3">5000.00</td>
+                        </tr>
+                        <tr>
+                            <td class="ps-3">789012</td>
+                            <td class="pe-3">3000.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Rules -->
+        <div class="card">
+            <div class="card-header bg-light fw-semibold">
+                <i class="bi bi-shield-check me-2"></i> Upload Rules
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li class="mb-2">Row 1 is the <strong>header row</strong> — skipped automatically</li>
+                    <li class="mb-2">Select the <strong>repayment month</strong> from the form — it applies to all rows</li>
+                    <li class="mb-2">System looks up the member by <strong>IPPIS</strong> and finds their active approved request</li>
+                    <li class="mb-2"><strong>Duplicate payments</strong> for the same member in the same month are skipped</li>
+                    <li class="mb-2">Payments for <strong>fully paid</strong> requests are not allowed</li>
+                    <li class="mb-2">Only requests with status <strong>Approved</strong> can receive payments</li>
+                    <li class="mb-2">If a payment clears the balance, status auto-updates to <strong>Fully Paid</strong></li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

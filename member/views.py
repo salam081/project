@@ -1,22 +1,28 @@
 
 from email.mime import application
+from itertools import count
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from dateutil.relativedelta import relativedelta  
-from datetime import date
+from datetime import date 
+import time
 from accounts.decorators import *
 from django.core.exceptions import ValidationError
-from django.db.models import Sum, DecimalField, F, Q
+from django.db.models import Sum, DecimalField, F, Q, Value,Count
+from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator
 from django.db.models import Sum
 from django.db import transaction
 from decimal import Decimal
+from decimal import Decimal
+from django.core.cache import cache
 from django.urls import reverse 
 from django.contrib import messages
 from django.db.models import Prefetch
 from django.utils import timezone
 import datetime
+import json
 from django.http import JsonResponse
 from datetime import date
 from datetime import datetime
@@ -25,13 +31,18 @@ from projectfinance.forms import ProjectFinanceRequestForm
 from main.models import *
 from loan.models import *
 from accounts.models import *
+from inventory_app.models import *
 from consumable.models import *
 from consumable.models import *
 from projectfinance.models import *
 from .models import *
+from form_app.models import *
+from ram_app.models import *
+from inventory_app.models import *
 from special_savings.models import *
 
 
+    
 @login_required(login_url='login')
 @group_required(['members'])
 def member_dashboard(request):
@@ -45,8 +56,14 @@ def member_dashboard(request):
         guarantor=member,
         guarantor_status='Pending'
     ).order_by('-created_at').select_related('application__member__member')
-
-
+    
+    
+    inventory_pending_guarantor_requests = MemberRequest.objects.filter(
+        guarantor=member,
+        guarantor_accepted=False,
+        status="Pending"
+    ).select_related('member__member', 'guarantor')
+    
     pending_guarantor_loans = LoanRequest.objects.filter(
         guarantor=member,
         guarantor_accepted=False,
@@ -56,7 +73,7 @@ def member_dashboard(request):
     total_savings = Savings.objects.filter(member=member).aggregate(
         total=Sum('month_saving')
     )['total'] or 0
-    print(total_savings)
+    # print(total_savings)
 
     loanable_total = Loanable.objects.filter(member=member).aggregate(
         total=Sum('amount')
@@ -105,7 +122,7 @@ def member_dashboard(request):
         loan_paid = repaybacks.aggregate(total=Sum('amount_paid'))['total'] or 0
         loan_balance = active_loan.approved_amount - loan_paid
         monthly_payment = active_loan.monthly_payment
-        print(monthly_payment,monthly_payment)
+        # print(monthly_payment,monthly_payment)
     loan_types = LoanType.objects.all()
     
     consumable_requests = ConsumableRequest.objects.filter(user=request.user) \
@@ -138,7 +155,79 @@ def member_dashboard(request):
             'balance': balance,
             'monthly_payment': monthly_payment,
         })
+        # ← loop ends here
+       
+   # ── item requests block ──
+    item_requests = MemberRequest.objects.none()
+    approved_item_requests = MemberRequest.objects.none()
+    item_data = []
+    item_total_remaining = Decimal('0.00')
+    total_items_value = Decimal('0.00')
+    total_paid_all = Decimal('0.00')
 
+    item_requests = MemberRequest.objects.filter(member=member) \
+        .prefetch_related('details__item__received_item') \
+        .order_by('-date_created')[:5]
+
+    approved_item_requests = MemberRequest.objects.filter(
+        member=member, status='ItemPicked'
+    ).prefetch_related(
+        'details__item__received_item',
+        'repayments'
+    ).order_by('-date_created')
+
+    for item in approved_item_requests:
+        approved_amount = item.calculate_total_price()
+        total_paid = item.total_paid
+        balance = approved_amount - total_paid
+        item_total_remaining += balance
+
+        details = list(item.details.all())  # ← force evaluate once
+
+        monthly_payment = sum(
+            d.total_price / d.duration_months
+            for d in details
+            if d.duration_months
+        ) if details else Decimal('0.00')
+
+        paid_count = item.repayments.count()
+        total_months = sum(
+            d.duration_months for d in details if d.duration_months
+        )
+        remaining_count = max(total_months - paid_count, 0)
+        # collect per-detail markup info for display
+        detail_breakdown = [
+            {
+                'brand': d.item.received_item.brand,
+                'model': d.item.received_item.model_name,
+                'quantity': d.quantity,
+                'original_price': d.item.selling_price_per_unit,   # before markup
+                'item_price': d.item_price,                         # after markup
+                'markup_rate': d.markup_rate,                       # e.g. Decimal('5.00')
+                'duration_months': d.duration_months,
+                'total_price': d.total_price,
+            }
+            for d in details
+        ]
+
+        item_data.append({
+            'item': item,
+            'approved_amount': approved_amount,
+            'total_paid': total_paid,
+            'balance': balance,
+            'monthly_payment': monthly_payment,
+            'detail_breakdown': detail_breakdown,          # ← new
+            'has_markup': any(d['markup_rate'] for d in detail_breakdown),  # ← new
+            'paid_count': paid_count,               # ← new
+            'remaining_count': remaining_count,     # ← new
+            'total_months': total_months,           # ← new
+        })
+
+    total_items_value = sum(e['approved_amount'] for e in item_data)
+    total_paid_all = sum(e['total_paid'] for e in item_data)
+    total_paid_count = sum(e['paid_count'] for e in item_data)          # ← new
+    total_remaining_count = sum(e['remaining_count'] for e in item_data) # ← new
+   
     context = {
         'member': member,
         'total_savings': total_savings,
@@ -151,12 +240,24 @@ def member_dashboard(request):
         'loan_types': loan_types,
         'consumable_requests': consumable_requests,
         'approved_consumable': consumable_data,
+        'item_requests': item_requests,
+        'approved_item_requests': approved_item_requests,
+        'item_data': item_data,
+        'item_total_remaining': item_total_remaining,
+        'total_items_value': total_items_value,
+        'total_paid_all': total_paid_all,
+        'item_total_remaining': item_total_remaining,
+        'total_paid_count': total_paid_count,
+        'total_remaining_count': total_remaining_count,
+        
+        
         'loanable_total': loanable_total,
         'investment_total': investment_total,
         'approved_consumable': consumable_data,
         'total_remaining': total_remaining,
         "pending_guarantor_loans": pending_guarantor_loans,
-        'pending_guarantor_requests':pending_guarantor_requests
+        'pending_guarantor_requests':pending_guarantor_requests,
+        'inventory_pending_guarantor_requests': inventory_pending_guarantor_requests,
     }
 
     return render(request, 'member/member_dashboard.html', context)
@@ -200,41 +301,6 @@ def member_savings(request):
 
     return render(request, 'member/member_savings.html', context)
 
-# @login_required
-# @group_required(['members','non staff member','admin'])
-# def member_savings(request):
-#     try:
-#         member = Member.objects.get(member=request.user)
-#     except Member.DoesNotExist:
-#         return HttpResponse("Access Denied: You don't have a member profile.")
-
-#     # Allow everyone who has a Member record — regardless of group
-#     # (Users without Member record are denied above)
-
-#     # Fetch all savings for this member
-#     savings = Savings.objects.filter(member=member)
-
-#     # Total savings BEFORE deductions
-#     total_savings = savings.aggregate(total=Sum('month_saving'))['total'] or 0
-
-#     # Get subscription fee from Interest table if available
-#     subscription_fee = member.interest.amount if hasattr(member, 'interest') and member.interest else 0
-
-#     # Deduct subscription fee only once per month
-#     net_savings = total_savings - subscription_fee
-
-#     # Correctly calculate Investment and Loanable from net savings
-#     total_investment = net_savings / 2
-#     total_loanable = net_savings / 2
-
-#     context = {
-#         'member': member,
-#         'savings': savings,
-#         'total_savings': total_savings,
-#         'total_investment': total_investment,
-#         'total_loanable': total_loanable,
-#     }
-#     return render(request, 'member/member_savings.html', context)
 
 # ===================== Special saving views =================
 
@@ -416,107 +482,97 @@ def my_target_savings_withdrawals(request):
         "withdrawals": withdrawals,
         "member": member,
     })
-# @login_required
-# def member_special_savings(request):
-#     try:
-#         member = Member.objects.get(member=request.user)
-#     except Member.DoesNotExist:
-#         return HttpResponse("Access Denied: You don't have a member profile.")
 
-#     special_savings = SpecialSavings.objects.filter(member=member)
-    
-#     total_special_saving = special_savings.aggregate(total=Sum('month_savings'))['total'] or 0
-   
-#      # Single summarized object instead of list
-#     context = {
-#         "member":member,
-#         'special_savings':special_savings,
-#         'total_special_saving':total_special_saving,
-#          }
-#     return render(request,'member/member_special_savings.html',context)
 
-# @login_required
-# def member_target_savings(request):
-#     try:
-#         member = Member.objects.get(member=request.user)
-#     except Member.DoesNotExist:
-#         return HttpResponse("Access Denied: You don't have a member profile.")
-
-#     target_savings = TargetSavings.objects.filter(member=member)
-    
-#     total_target_saving =target_savings.aggregate(total=Sum('month_savings'))['total'] or 0
-   
-#      # Single summarized object instead of list
-#     context = { "member":member,'target_savings':target_savings,'total_target_saving':total_target_saving,}
-#     return render(request,'member/member_target_savings.html',context)
 
 def ajax_load_bank_code(request):
     bank_id = request.GET.get('bank_id')
-    print(f"Received bank_id: {bank_id}")  
-    
-    try:
-        if bank_id:
-            bank_code = BankCode.objects.filter(bank_name_id=bank_id).first()
-            if bank_code:
-                response_data = {
-                    'code': bank_code.name,
-                    'id': bank_code.id
-                }
-                print(f"Returning: {response_data}")  
-                return JsonResponse(response_data)
-        
-        return JsonResponse({'code': '', 'id': ''})
-    except Exception as e:
-        print(f"Error in ajax_load_bank_code: {e}")  
-        return JsonResponse({'code': '', 'id': '', 'error': str(e)})
 
+    if not bank_id:
+        return JsonResponse({'code': '', 'id': ''})
+
+    # ✅ FIX 1: Cache per bank_id — same bank selected repeatedly won't hit DB
+    cache_key = f"bank_code_{bank_id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return JsonResponse(cached)
+
+    try:
+        # ✅ FIX 2: Use .only() to fetch just the fields you need
+        bank_code = BankCode.objects.only("id", "name").filter(bank_name_id=bank_id).first()
+
+        if bank_code:
+            response_data = {'code': bank_code.name, 'id': bank_code.id}
+        else:
+            response_data = {'code': '', 'id': ''}
+
+        # ✅ FIX 3: Cache the result for 10 minutes — bank codes rarely change
+        cache.set(cache_key, response_data, timeout=600)
+
+        return JsonResponse(response_data)
+
+    except Exception as e:
+        return JsonResponse({'code': '', 'id': '', 'error': str(e)})
 
 @login_required
 @group_required(['members','non staff member','admin','loan committee'])
 def loan_request_view(request):
-    settings = LoanSettings.objects.first()
+    start = time.time()
+    # Cache LoanSettings
+    settings = cache.get("loan_settings")
+    if not settings:
+        settings = LoanSettings.objects.first()
+        cache.set("loan_settings", settings, timeout=300)
+ 
+    loan_types = LoanType.objects.filter(available=True)
+ 
     if not settings or not settings.allow_loan_requests:
         return render(request, "member/loan_request.html", {
-            "loan_types": LoanType.objects.all(),
+            "loan_types": loan_types,
             "bank_names": BankName.objects.all(),
         })
-
-    # ✅ Try to get Member profile (optional)
+ 
+    bank_names = cache.get("bank_names")
+    if not bank_names:
+        bank_names = list(BankName.objects.all())
+        cache.set("bank_names", bank_names, timeout=600)
+ 
     member = getattr(request.user, "member", None)
-
-    loan_types = LoanType.objects.filter(available=True)
-    bank_names = BankName.objects.all()
-
-    # ✅ Handle loanable amount logic
+ 
+    loanable_amount = Decimal("0.00")
     if member:
-        loanable_amount = Loanable.objects.filter(member=member).aggregate(
-            total=Sum("amount")
-        )["total"] or Decimal("0.00")
-    else:
-        # Non-members (admin/staff/others) can still make requests
-        loanable_amount = Decimal("0.00")
-
-    # ✅ Pre-compute eligible amounts for all loan types
+        cache_key = f"loanable_amount_{member.pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            loanable_amount = cached
+        else:
+            loanable_amount = (
+                Loanable.objects.filter(member=member)
+                .aggregate(total=Sum("amount"))["total"]
+                or Decimal("0.00")
+            )
+            cache.set(cache_key, loanable_amount, timeout=120)
+ 
+    loan_types_list = list(loan_types)
+ 
     eligible_amounts = {}
-    for loan_type in loan_types:
+    for loan_type in loan_types_list:
         name_lower = loan_type.name.lower()
         if member:
-            if "short term" in name_lower:
+            if "short" in name_lower:
                 eligible = loanable_amount / 2
-            elif "long term" in name_lower:
+            elif "long" in name_lower:
                 eligible = loanable_amount * 2
             else:
                 eligible = loanable_amount
         else:
-            # Give staff/admins a default cap (you can adjust)
             eligible = loan_type.max_amount or Decimal("500000.00")
-
+ 
         if loan_type.max_amount and eligible > loan_type.max_amount:
             eligible = loan_type.max_amount
-
+ 
         eligible_amounts[loan_type.id] = eligible
-
-    # ✅ Handle POST request
+ 
     if request.method == "POST":
         loan_type_id = request.POST.get("loan_type")
         amount = request.POST.get("amount")
@@ -527,47 +583,40 @@ def loan_request_view(request):
         account_number = request.POST.get("account_number")
         account_name = request.POST.get("account_name")
         guarantor_ippis = request.POST.get("guarantor_ippis")
-
-        # Convert amount
+ 
         try:
             amount = Decimal(amount)
-        except:
+        except Exception:
             messages.error(request, "Invalid amount entered.")
             return redirect("loan_request")
-
-        # Validate loan type
-        try:
-            selected_loan_type = LoanType.objects.get(id=loan_type_id)
-        except LoanType.DoesNotExist:
+ 
+        selected_loan_type = next(
+            (lt for lt in loan_types_list if str(lt.id) == str(loan_type_id)), None
+        )
+        if not selected_loan_type:
             messages.error(request, "Invalid loan type selected.")
             return redirect("loan_request")
-
+ 
         selected_type_name = selected_loan_type.name.lower()
-
-        # ✅ Only apply these restrictions to real members
+ 
         if member:
-            active_loans = LoanRequest.objects.filter(
-                member=member, status__in=["pending", "approved"]
-            ).select_related("loan_type")
-
-            has_active_short = any("short term" in l.loan_type.name.lower() for l in active_loans)
-            has_active_long = any("long term" in l.loan_type.name.lower() for l in active_loans)
-
-            if "short term" in selected_type_name and (has_active_short or has_active_long):
-                messages.error(
-                    request,
-                    "You cannot request a SHORT TERM loan while you have an active Short or Long Term loan."
-                )
+            active_loans = list(
+                LoanRequest.objects.filter(
+                    member=member, status__in=["pending", "approved"]
+                ).select_related("loan_type")
+            )
+ 
+            has_active_short = any("short" in l.loan_type.name.lower() for l in active_loans)
+            has_active_long = any("long" in l.loan_type.name.lower() for l in active_loans)
+ 
+            if "short" in selected_type_name and (has_active_short or has_active_long):
+                messages.error(request, "You cannot request a SHORT TERM loan while you have an active Short or Long Term loan.")
                 return redirect("loan_request")
-
-            if "long term" in selected_type_name and has_active_long:
-                messages.error(
-                    request,
-                    "You cannot request a LONG TERM loan while you have an active Long Term loan."
-                )
+ 
+            if "long" in selected_type_name and has_active_long:
+                messages.error(request, "You cannot request a LONG TERM loan while you have an active Long Term loan.")
                 return redirect("loan_request")
-
-            # Check loan request fee
+ 
             try:
                 fee = LoanRequestFee.objects.get(
                     member=member,
@@ -575,42 +624,31 @@ def loan_request_view(request):
                     status="paid",
                 )
             except LoanRequestFee.DoesNotExist:
-                messages.error(
-                    request,
-                    f"You must pay the request fee for {selected_loan_type.name} before requesting this loan.",
-                )
+                messages.error(request, f"You must pay the request fee for {selected_loan_type.name} before requesting this loan.")
                 return redirect("loan_request")
-
-            # ✅ Guarantor validation (skip for short term)
+ 
             guarantor_member = None
-            if "short term" not in selected_type_name:
+            if "short" not in selected_type_name:
                 try:
-                    guarantor_member = Member.objects.get(ippis=guarantor_ippis)
+                    guarantor_member = Member.objects.only("id", "ippis").get(ippis=guarantor_ippis)
                 except Member.DoesNotExist:
                     messages.error(request, "Guarantor IPPIS is not registered.")
                     return redirect("loan_request")
-
+ 
                 if guarantor_member == member:
                     messages.error(request, "You cannot be your own guarantor.")
                     return redirect("loan_request")
-
         else:
-            # For staff/admins — skip member-only checks
             fee = None
             guarantor_member = None
-
-        # ✅ Eligible amount validation
+ 
         eligible_amount = eligible_amounts.get(selected_loan_type.id, loanable_amount)
         if amount > eligible_amount:
-            messages.error(
-                request,
-                f"You cannot request more than ₦{eligible_amount:,.2f} for this loan type.",
-            )
+            messages.error(request, f"You cannot request more than ₦{eligible_amount:,.2f} for this loan type.")
             return redirect("loan_request")
-
-        # ✅ Create the loan request
+ 
         LoanRequest.objects.create(
-            member=member,  # May be None for staff/admins
+            member=member,
             loan_type=selected_loan_type,
             amount=amount,
             loan_term_months=loan_term_months,
@@ -623,25 +661,29 @@ def loan_request_view(request):
             guarantor=guarantor_member,
             created_by=request.user,
         )
-
+ 
         if fee:
             fee.status = "used"
             fee.save()
-
+ 
+        if member:
+            cache.delete(f"loanable_amount_{member.pk}")
+ 
         messages.success(request, "Loan request submitted successfully!")
-        return redirect("my_loan_requests")
-
-    # ✅ Render page
+        return redirect("loan_request")
+ 
     context = {
-        "loan_types": loan_types,
-        "bank_names": bank_names,
-        "settings": settings,
-        "loanable": loanable_amount,
-        "eligible_amounts": eligible_amounts,
-    }
+            "loan_types": loan_types_list,
+            "bank_names": bank_names,
+            "settings": settings,
+            "loanable": loanable_amount,
+            "eligible_amounts": eligible_amounts,
+            # ✅ Convert Decimal to float inline — no custom encoder needed
+            "eligible_amounts_json": json.dumps({k: float(v) for k, v in eligible_amounts.items()}),
+        }
+    print(f"loan_request_view took {time.time() - start:.2f} seconds")
     return render(request, "member/loan_request.html", context)
-
-
+ 
 
 @login_required
 @group_required(['members','non staff member','admin','loan committee'])
@@ -690,20 +732,38 @@ def confirm_guarantor_approval(request, pk):
 @group_required(['members','non staff member','admin','loan committee'])
 def my_loan_requests(request):
     member = request.user.member  
-    loan_requests = LoanRequest.objects.filter(member=member).order_by('-date_created')
+
+    loan_requests = (
+        LoanRequest.objects
+        .filter(member=member).select_related("loan_type").prefetch_related("repaybacks")
+        .annotate(
+            total_paid=Coalesce(
+                Sum("repaybacks__amount_paid"),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            )
+        )
+        .order_by("-date_created")
+    )
 
     loan_data = []
+
     for loan in loan_requests:
-        approved_amount = loan.approved_amount or 0
-        total_paid = sum(repay.amount_paid for repay in loan.repaybacks.all())
+        approved_amount = loan.approved_amount or Decimal("0.00")
+        total_paid = loan.total_paid
         balance = approved_amount - total_paid
-        monthly_payment = loan.monthly_payment or 0
+        monthly_payment = loan.monthly_payment or Decimal("0.00")
 
         loan_data.append({
-            'loan': loan,'approved_amount': approved_amount,'total_paid': total_paid,
-            'balance': balance,'monthly_payment': monthly_payment,})
+            'loan': loan,
+            'approved_amount': approved_amount,
+            'total_paid': total_paid,
+            'balance': balance,
+            'monthly_payment': monthly_payment,
+        })
 
     return render(request, 'member/my_loan_requests.html', {'loan_data': loan_data})
+
 
 
 @login_required
@@ -1015,9 +1075,6 @@ def edit_consumable_request(request, request_id):
     return render(request, "member/edit_consumable_request.html", context)
 
 
-
-
-
 @login_required
 @group_required(['members','non staff member','admin','loan committee'])
 def my_consumable_requests(request):
@@ -1108,74 +1165,218 @@ def cancel_consumable_request(request, id):
 @group_required(['members','non staff member','admin','loan committee'])
 def member_withdrawal_request(request):
     member = get_object_or_404(Member, member=request.user)
-    sav = member.total_savings
 
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
 
-        #  Check if member already has a pending withdrawal
+        # 1. Check pending withdrawal
         if Withdrawal.objects.filter(member=member, status='Pending').exists():
             messages.warning(request, "You already have a pending withdrawal request.")
+            return redirect('member_withdrawal_request')
 
-        #  Check if member has enough savings
-        elif member.total_savings is None or member.total_savings <= 0:
+        # 2. Check savings balance
+        if member.total_savings is None or member.total_savings <= 0:
             messages.warning(request, "You are not eligible for withdrawal.")
+            return redirect('member_withdrawal_request')
 
+        # 3. Block if active loan
+        if LoanRequest.objects.filter(member=member, status="Approved").exists():
+            messages.warning(request, "You have an approved loan request. Resolve it before withdrawal.")
+            return redirect('member_withdrawal_request')
 
-        #  Block if member has pending loan / consumable / project finance
-        elif LoanRequest.objects.filter(member=member, status="Approved").exists():
-            messages.warning(request, "You have a pending loan request. Resolve it before withdrawal.")
+        # 4. Block if active consumable
+        if ConsumableRequest.objects.filter(user=request.user, status="Itempicked").exists():
+            messages.warning(request, "You have an approved consumable request. Resolve it before withdrawal.")
+            return redirect('member_withdrawal_request')
 
-        elif ConsumableRequest.objects.filter(user=request.user, status="Itempicked").exists():
-             messages.warning(request, "You have a pending consumable request. Resolve it before withdrawal.")
+        # 5. Block if active project finance
+        if ProjectFinanceRequest.objects.filter(application__member=member, status="Approved").exists():
+            messages.warning(request, "You have an approved project finance request. Resolve it before withdrawal.")
+            return redirect('member_withdrawal_request')
 
-        elif ProjectFinanceRequest.objects.filter(application__member=member, status="Approved").exists():
-             messages.warning(request, "You have a pending project finance request. Resolve it before withdrawal.")
+        # 6. Block if active RAM request
+        if RamRequest.objects.filter(member=member, status="Approved").exists():
+            messages.warning(request, "You have an approved RAM request. Resolve it before withdrawal.")
+            return redirect('member_withdrawal_request')
 
-        else:
-            Withdrawal.objects.create(member=member, reason=reason)
-            messages.success(request, "Withdrawal request submitted successfully.")
+        # 7. Block if active member request
+        if MemberRequest.objects.filter(member=member, status="Approved").exists():
+            messages.warning(request, "You have an approved item request. Resolve it before withdrawal.")
+            return redirect('member_withdrawal_request')
 
+        # 8. Payment check + create withdrawal atomically
+        try:
+            with transaction.atomic():
+                withdrawal_payment_type = PaymentType.objects.get(title="Withdrawal form")
+
+                payment = RequestFormPayment.objects.filter(
+                    member=member,
+                    payment_type=withdrawal_payment_type,
+                    status="paid"
+                ).select_for_update().first()
+
+                if not payment:
+                    messages.error(request, "You have not paid the withdrawal form fee.")
+                    return redirect('member_withdrawal_request')
+
+                updated = RequestFormPayment.objects.filter(
+                    id=payment.id,
+                    status="paid"
+                ).update(status="used")
+
+                if not updated:
+                    messages.error(request, "Payment already used. Please pay again.")
+                    return redirect('member_withdrawal_request')
+
+                # All checks passed — create withdrawal
+                Withdrawal.objects.create(member=member, reason=reason)
+                messages.success(request, "Withdrawal request submitted successfully.")
+
+        except PaymentType.DoesNotExist:
+            messages.error(request,  "Withdrawal payment has not been made. Please make the payment before submitting your withdrawal request.")
+
+        except Exception as e:
+            messages.error(request, "An error occurred. Please try again.")
         return redirect('member_withdrawal_request')
 
     return render(request, 'member/withdrawal_request_form.html', {'member': member})
-
 
 @login_required
 @group_required(['members','non staff member','admin','loan committee'])
 def create_partial_withdrawal_request(request):
     """Member creates withdrawal request"""
     member = request.user.member
-    
-    if request.method == 'POST':
-        amount = Decimal(request.POST.get('amount'))
-        reason = request.POST.get('reason', '')
-        
-        # Simple validation
-        total_savings = Savings.objects.filter(member=member).aggregate(
-            total=models.Sum('month_saving')
-        )['total'] or Decimal('0.00')
-        
-        if amount > total_savings:
-            messages.error(request, f'Amount exceeds your savings of ₦{total_savings:,.2f}')
-            return redirect('my_partial_withdrawal_requests')
-        
-        # Create request
-        PartialWithdrawal.objects.create(
-            member=member,
-            amount_requested=amount,
-            reason=reason
-        )
-        
-        messages.success(request, f'Withdrawal request of ₦{amount:,.2f} submitted!')
-        return redirect('my_partial_withdrawal_requests')
-    
-    # Show form
+
+    # Calculate savings once — reused in both GET and POST
     total_savings = Savings.objects.filter(member=member).aggregate(
-        total=models.Sum('month_saving')
+        total=Sum('month_saving')
     )['total'] or Decimal('0.00')
+
+    max_withdrawal = (total_savings * Decimal('0.50')).quantize(Decimal('0.01'))
+
+    context = {
+        'total_savings': total_savings,
+        'max_withdrawal': max_withdrawal,
+    }
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '')
+
+        try:
+            amount = Decimal(request.POST.get('amount', '0'))
+        except Exception:
+            messages.error(request, "Invalid amount entered.")
+            return render(request, 'member/create_partial_withdrawal_request.html', context)
+
+        # 1. Check amount is positive
+        if amount <= 0:
+            messages.error(request, "Amount must be greater than zero.")
+            return render(request, 'member/create_partial_withdrawal_request.html', context)
+
+        # 2. Check amount does not exceed 50% of savings
+        if amount > max_withdrawal:
+            messages.error(request, f"You can only withdraw up to 50% of your savings (₦{max_withdrawal:,.2f}).")
+            return render(request, 'member/create_partial_withdrawal_request.html', context)
+
+        # 3. Payment check + create atomically
+        try:
+            with transaction.atomic():
+                payment_type = PaymentType.objects.get(title="Partial withdrawal form")
+
+                payment = RequestFormPayment.objects.filter(
+                    member=member,
+                    payment_type=payment_type,
+                    status="paid"
+                ).select_for_update().first()
+
+                if not payment:
+                    messages.error(request, "You have not paid the partial withdrawal form fee.")
+                    return render(request, 'member/create_partial_withdrawal_request.html', context)
+
+                updated = RequestFormPayment.objects.filter(
+                    id=payment.id,
+                    status="paid"
+                ).update(status="used")
+
+                if not updated:
+                    messages.error(request, "Payment already used. Please pay again.")
+                    return render(request, 'member/create_partial_withdrawal_request.html', context)
+
+                # All checks passed — create withdrawal
+                PartialWithdrawal.objects.create(
+                    member=member,
+                    amount_requested=amount,
+                    reason=reason
+                )
+                messages.success(request, f"Withdrawal request of ₦{amount:,.2f} submitted successfully!")
+
+        except PaymentType.DoesNotExist:
+            messages.error(request, "Payment type not configured. Contact admin.")
+
+        except Exception:
+            messages.error(request, "An error occurred. Please try again.")
+
+        return redirect('my_partial_withdrawal_requests')
+
+    return render(request, 'member/create_partial_withdrawal_request.html', context)
+
+# def create_partial_withdrawal_request(request):
+#     """Member creates withdrawal request"""
+#     member = request.user.member
     
-    return render(request, 'member/create_partial_withdrawal_request.html', {'total_savings': total_savings})
+#     if request.method == 'POST':
+#         amount = Decimal(request.POST.get('amount'))
+#         reason = request.POST.get('reason', '')
+        
+#         # Simple validation
+#         total_savings = Savings.objects.filter(member=member).aggregate(
+#             total=models.Sum('month_saving')
+#         )['total'] or Decimal('0.00')
+        
+#         if amount > total_savings:
+#             messages.error(request, f'Amount exceeds your savings of ₦{total_savings:,.2f}')
+#             return redirect('my_partial_withdrawal_requests')
+        
+#          # ── PAYMENT CHECK ──────────────────────
+#         with transaction.atomic():
+#             ram_payment_type = PaymentType.objects.get(title="Partial withdrawal form")
+
+#             payment = RequestFormPayment.objects.filter(
+#                 member=member,
+#                 payment_type=ram_payment_type,
+#                 status="paid"
+#             ).select_for_update().first()
+            
+
+#             if not payment:
+#                 messages.error(request, "You have not paid for this request form Fee.")
+#                 return render(request, 'member/create_partial_withdrawal_request.html', {'total_savings': total_savings})
+
+#             updated = RequestFormPayment.objects.filter(
+#                 id=payment.id,
+#                 status="paid"
+#             ).update(status="used")
+
+#             if not updated:
+#                 messages.error(request, "Payment already used.")
+#                 return render(request, 'member/create_partial_withdrawal_request.html', {'total_savings': total_savings})
+
+#         # Create request
+#         PartialWithdrawal.objects.create(
+#             member=member,
+#             amount_requested=amount,
+#             reason=reason
+#         )
+        
+#         messages.success(request, f'Withdrawal request of ₦{amount:,.2f} submitted!')
+#         return redirect('my_partial_withdrawal_requests')
+    
+#     # Show form
+#     total_savings = Savings.objects.filter(member=member).aggregate(
+#         total=models.Sum('month_saving')
+#     )['total'] or Decimal('0.00')
+    
+#     return render(request, 'member/create_partial_withdrawal_request.html', {'total_savings': total_savings})
 
 
 @login_required
@@ -1228,7 +1429,7 @@ def project_finance_application_list(request):
     markup_expenditure = member_requests.aggregate(
         total_markup=Sum(F('requested_amount') * F('markup_rate') / 100, output_field=DecimalField())
     )['total_markup'] or Decimal('0.00')
-    print("markup_expenditure",markup_expenditure)
+    # print("markup_expenditure",markup_expenditure)
     context = {'applications':applications,'requests':requests,'member_expenditure':member_expenditure,'markup_expenditure':markup_expenditure}
     return render(request, 'member/project_finance_application_list.html', context)
 
@@ -1255,12 +1456,11 @@ def update_project_finance_application(request,id):
 def create_project_finance_request(request, id):
     application = get_object_or_404(ProjectFinanceApplication, pk=id, member=request.user.member)
 
-   # Get all requests for this application that are NOT fully paid
+    # Get all requests for this application that are NOT fully paid
     unpaid_requests = ProjectFinanceRequest.objects.filter(application=application).exclude(status='FullyPaid')
     if unpaid_requests.exists():
         messages.warning(request, "You cannot create a new request until your existing one is fully paid.")
         return redirect('project_finance_application_list')
-
 
     if request.method == 'POST':
         form = ProjectFinanceRequestForm(request.POST)
@@ -1272,23 +1472,83 @@ def create_project_finance_request(request, id):
                 messages.error(request, "The IPPIS number provided does not belong to an existing member.")
                 return redirect('create_project_finance_request', id=id)
 
-            project_finance_request = form.save(commit=False)
-            project_finance_request.application = application
-            project_finance_request.guarantor = guarantor
-            project_finance_request.status = 'Pending'
-            project_finance_request.guarantor_status = 'Pending'
-            project_finance_request.save()
+            # ── PAYMENT CHECK (inside POST + valid form only) ──
+            with transaction.atomic():
+                ram_payment_type = PaymentType.objects.get(title="Project finance form")
+                updated = RequestFormPayment.objects.filter(
+                    member=request.user.member, 
+                    payment_type=ram_payment_type, 
+                    status="paid"
+                ).select_for_update().update(status="used")
+
+                if not updated:
+                    messages.error(request, "No valid payment found. Please pay the request form fee.")
+                    return redirect('create_project_finance_request', id=id)
+
+                project_finance_request = form.save(commit=False)
+                project_finance_request.application = application
+                project_finance_request.guarantor = guarantor
+                project_finance_request.status = 'Pending'
+                project_finance_request.guarantor_status = 'Pending'
+                project_finance_request.save()
 
             messages.success(request, "Your project finance request has been submitted successfully.")
             return redirect('project_finance_application_list')
     else:
+        # ── Show warning on GET if no payment exists ──
+        has_payment = RequestFormPayment.objects.filter(
+            member=request.user.member,
+            status="paid"
+        ).exists()
+        if not has_payment:
+            messages.error(request, "You have not paid for this request form fee.")
+            # return redirect('create_project_finance_request', id=id)
+
         form = ProjectFinanceRequestForm()
 
     context = {'form': form, 'application': application}
     return render(request, 'member/create_project_finance_request.html', context)
 
 
+@login_required
+@group_required(['members','non staff member','admin','loan committee'])
+def project_finance_request_detail(request, id):
 
+    # Admin / superuser can view everything
+    if request.user.is_superuser or (
+        hasattr(request.user, "group") and request.user.group and request.user.group.title == "admin"
+    ):
+        finance_request = get_object_or_404(ProjectFinanceRequest, pk=id)
+
+    else:
+        member = getattr(request.user, "member", None)
+
+        if not member:
+            return render(request, "member/member_dashboard.html")
+
+        finance_request = get_object_or_404(
+            ProjectFinanceRequest,
+            pk=id,
+            application__member=member
+        )
+
+    payments = finance_request.payments.all().order_by('-created_at')
+
+    total_paid = payments.aggregate(total=Sum('amount_paid'))['total'] or 0
+    last_payment = payments.first()
+
+    balance_remaining = (
+        last_payment.balance_remaining
+        if last_payment
+        else (finance_request.total_repayment_amount or finance_request.requested_amount)
+    )
+    context = {
+        "finance_request": finance_request,
+        "payments": payments,
+        "total_paid": total_paid,
+        "balance_remaining": balance_remaining,
+    }
+    return render(request, "member/project_finance_request_detail.html",context )
 
 @login_required
 @group_required(['members','non staff member'])
@@ -1299,3 +1559,106 @@ def approve_guarantor_request(request, id):
         project_request.save()
         messages.success(request, f"You have successfully approved the request for {project_request.application.member.member.first_name}.")
     return redirect('member_dashboard')
+
+
+@login_required
+@group_required(['members','non staff member'])
+def member_items_request(request):
+    try:
+        member = Member.objects.get(member=request.user)
+    except Member.DoesNotExist:
+        return redirect('member_dashboard')
+
+    item_requests = MemberRequest.objects.filter(member=member) \
+        .prefetch_related('details__item__received_item') \
+        .order_by('-date_created')[:5]
+
+    approved_item_requests = MemberRequest.objects.filter(
+        member=member, #status='pending'
+    ).prefetch_related(
+        'details__item__received_item',
+        'repayments'
+    ).order_by('-date_created')
+
+    item_data = []
+    item_total_remaining = Decimal('0.00')
+
+    for item in approved_item_requests:
+        approved_amount = item.calculate_total_price()
+        total_paid = item.total_paid
+        balance = approved_amount - total_paid
+        item_total_remaining += balance
+
+        details = list(item.details.all())
+
+        monthly_payment = sum(
+            d.total_price / d.duration_months
+            for d in details
+            if d.duration_months
+        ) if details else Decimal('0.00')
+
+        paid_count = item.repayments.count()
+        total_months = sum(d.duration_months for d in details if d.duration_months)
+        remaining_count = max(total_months - paid_count, 0)
+
+        detail_breakdown = [
+            {
+                'brand': d.item.received_item.brand,
+                'model': d.item.received_item.model_name,
+                'quantity': d.quantity,
+                'original_price': d.item.selling_price_per_unit,
+                'item_price': d.item_price,
+                'markup_rate': d.markup_rate,
+                'duration_months': d.duration_months,
+                'total_price': d.total_price,
+            }
+            for d in details
+        ]
+
+        item_data.append({
+            'item': item,
+            'approved_amount': approved_amount,
+            'total_paid': total_paid,
+            'balance': balance,
+            'monthly_payment': monthly_payment,
+            'detail_breakdown': detail_breakdown,
+            'has_markup': any(d['markup_rate'] for d in detail_breakdown),
+            'paid_count': paid_count,
+            'remaining_count': remaining_count,
+            'total_months': total_months,
+        })
+
+    context = {
+        'member': member,
+        'item_requests': item_requests,
+        'approved_item_requests': approved_item_requests,
+        'item_data': item_data,
+        'item_total_remaining': item_total_remaining,
+        'total_items_value': sum(e['approved_amount'] for e in item_data),
+        'total_paid_all': sum(e['total_paid'] for e in item_data),
+        'total_paid_count': sum(e['paid_count'] for e in item_data),
+        'total_remaining_count': sum(e['remaining_count'] for e in item_data),
+    }
+
+    return render(request, 'member/member_items_request.html', context)
+
+
+def my_ram_request(request):
+    try:
+        member = Member.objects.get(member=request.user)
+    except Member.DoesNotExist:
+        return redirect('member_dashboard')
+    ram_requests = (
+    RamRequest.objects.filter(member=member).select_related('budget').prefetch_related('items', 'payments').order_by('-date_requested'))
+   
+    total_billed = sum(r.total_selling_price for r in ram_requests) 
+    total_paid =  sum(r.total_paid for r in ram_requests)
+    total_balance = total_billed - total_paid
+    print(ram_requests)
+    context = {'member':member, 'ram_requests': ram_requests,
+               'total_billed': total_billed,
+               "total_paid": total_paid,
+               "total_balance": total_balance,
+               }
+    return render(request,'member/my_ram_request.html',context)
+

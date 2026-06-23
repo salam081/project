@@ -1,0 +1,151 @@
+{% extends "base/base.html" %}
+
+{% block title %}New RAM Request{% endblock %}
+{% block page_title %}New RAM Request{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-list-check me-2"></i> New RAM Request
+            </div>
+            <div class="card-body p-4">
+                <form method="post" id="requestForm">
+                    {% csrf_token %}
+
+                    <!-- Budget Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Select Budget</label>
+                        <select name="budget" class="form-select" required>
+                            <option value="">-- Select an approved budget --</option>
+                            {% for budget in budgets %}
+                            <option value="{{ budget.pk }}">
+                                {{ budget.name }} — ₦{{ budget.remaining_amount|floatformat:2 }} remaining
+                            </option>
+                            {% empty %}
+                            <option disabled>No approved budgets available</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Items -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-semibold mb-0">RAM Items</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="addItemBtn">
+                                <i class="bi bi-plus-lg me-1"></i> Add Item
+                            </button>
+                        </div>
+
+                        <div id="itemsContainer">
+                            <!-- Item Row Template -->
+                            <div class="item-row border rounded p-3 mb-2 bg-light">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-5">
+                                        <label class="form-label small">Item Name</label>
+                                        <input type="text" name="item_name" class="form-control" placeholder="e.g. 8GB DDR4 RAM" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Quantity</label>
+                                        <input type="number" name="quantity" class="form-control" value="1" min="1" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small">Cost Price (₦)</label>
+                                        <input type="number" name="cost_price" class="form-control cost-price" placeholder="0.00" step="0.01" min="0" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Selling Price</label>
+                                        <input type="text" class="form-control selling-price bg-white" placeholder="Auto" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Summary -->
+                    <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+                        <span><i class="bi bi-info-circle me-2"></i> Selling price = cost price + 20%</span>
+                        <span class="fw-bold">Total Member Pays: ₦<span id="grandTotal">0.00</span></span>
+                    </div>
+
+                    <!-- Note -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Note (optional)</label>
+                        <textarea name="note" class="form-control" rows="3" placeholder="Any additional information..."></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-send me-1"></i> Submit Request
+                        </button>
+                        <a href="{% url 'ram_request_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add new item row
+    document.getElementById('addItemBtn').addEventListener('click', function () {
+        const container = document.getElementById('itemsContainer');
+        const firstRow = container.querySelector('.item-row');
+        const newRow = firstRow.cloneNode(true);
+
+        // Clear values
+        newRow.querySelectorAll('input').forEach(i => {
+            if (i.name === 'quantity') i.value = 1;
+            else i.value = '';
+        });
+
+        // Add remove button
+        const removeBtn = document.createElement('div');
+        removeBtn.className = 'text-end mt-2';
+        removeBtn.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i> Remove</button>';
+        newRow.appendChild(removeBtn);
+
+        container.appendChild(newRow);
+        attachListeners(newRow);
+    });
+
+    // Remove row
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-row')) {
+            e.target.closest('.item-row').remove();
+            calculateTotal();
+        }
+    });
+
+    // Calculate selling price and total
+    function attachListeners(row) {
+        row.querySelector('.cost-price').addEventListener('input', function () {
+            const cost = parseFloat(this.value) || 0;
+            const selling = (cost * 1.20).toFixed(2);
+            row.querySelector('.selling-price').value = '₦' + selling;
+            calculateTotal();
+        });
+    }
+
+    function calculateTotal() {
+        let total = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const cost = parseFloat(row.querySelector('.cost-price').value) || 0;
+            const qty = parseInt(row.querySelector('[name="quantity"]').value) || 1;
+            total += (cost * 1.20) * qty;
+        });
+        document.getElementById('grandTotal').textContent = total.toFixed(2);
+    }
+
+    // Attach listeners to first row
+    attachListeners(document.querySelector('.item-row'));
+
+    // Also recalculate when quantity changes
+    document.addEventListener('input', function (e) {
+        if (e.target.name === 'quantity') calculateTotal();
+    });
+</script>
+{% endblock %}

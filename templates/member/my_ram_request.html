@@ -1,0 +1,186 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  <div class="container mt-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+      <div>
+        <h3 class="mb-1">My RAM Requests</h3>
+        <p class="text-muted mb-0">Track your request status, payments and balances</p>
+      </div>
+      <span class="badge bg-primary-subtle text-primary-emphasis fs-6 px-3 py-2">
+        {{ ram_requests|length }} request{{ ram_requests|length|pluralize }}
+      </span>
+    </div>
+
+    {# Summary cards #}
+    {% comment %} <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3 shadow">
+        <div class="card border-0 bg-primary-subtle h-100">
+          <div class="card-body">
+            <div class="text-primary-emphasis small fw-medium mb-1">Total requests</div>
+            <div class="fs-5 fw-semibold text-primary-emphasis">{{ ram_requests|length }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 shadow">
+        <div class="card border-0 bg-info-subtle h-100">
+          <div class="card-body">
+            <div class="text-info-emphasis small fw-medium mb-1">Total billed</div>
+            <div class="fs-5 fw-semibold text-info-emphasis">₦{{ total_billed|floatformat:2 }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 shadow">
+        <div class="card border-0 bg-success-subtle h-100">
+          <div class="card-body">
+            <div class="text-success-emphasis small fw-medium mb-1">Total paid</div>
+            <div class="fs-5 fw-semibold text-success-emphasis">₦{{ total_paid|floatformat:2 }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3 shadow">
+        <div class="card border-0 bg-warning-subtle h-100">
+          <div class="card-body">
+            <div class="text-warning-emphasis small fw-medium mb-1">Outstanding</div>
+            <div class="fs-5 fw-semibold text-warning-emphasis">₦{{ total_balance|floatformat:2 }}</div>
+          </div>
+        </div>
+      </div>
+    </div> {% endcomment %}
+
+    {# Desktop / tablet table #}
+    <div class="card shadow d-none d-lg-block p-4">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 overflow-hidden ">
+          <thead class="table-light">
+            <tr>
+              <th>S/N</th>
+              <th>Date requested</th>
+              {% comment %} <th>Budget</th> {% endcomment %}
+              <th class="text-center">Items</th>
+              <th class="text-end">Total amount</th>
+              <th class="text-end">Amount Paid</th>
+              <th class="text-end">Balance Remaining</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Payment</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for request in ram_requests %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ request.date_requested|date:'d M Y' }}</td>
+                {% comment %} <td>{{ request.budget.name }}</td> {% endcomment %}
+                <td class="text-center">
+                  <span class="status-badge bg-secondary-subtle text-secondary-emphasis">{{ request.items.count }}</span>
+                </td>
+                <td class="text-end">₦{{ request.total_selling_price|floatformat:2 }}</td>
+                <td class="text-end">₦{{ request.total_paid|floatformat:2 }}</td>
+                <td class="text-end fw-semibold">₦{{ request.balance_remaining|floatformat:2 }}</td>
+                <td class="text-center">
+                  {% if request.status == 'approved' %}
+                    <span class="status-badge rounded-pill bg-success">{{ request.get_status_display }}</span>
+                  {% elif request.status == 'pending' %}
+                    <span class="status-badge rounded-pill bg-warning text-dark">{{ request.get_status_display }}</span>
+                  {% elif request.status == 'rejected' %}
+                    <span class="status-badge rounded-pill bg-danger">{{ request.get_status_display }}</span>
+                  {% else %}
+                    <span class="status-badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle">{{ request.get_status_display }}</span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  {% if request.is_fully_paid %}
+                    <span class="status-badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle">Fully paid</span>
+                  {% else %}
+                    <span class="status-badge rounded-pill bg-danger-subtle text-danger-emphasis border border-danger-subtle">Outstanding</span>
+                  {% endif %}
+                </td>
+              </tr>
+
+              {% if request.items.all %}
+                <tr class="table-light">
+                  <td colspan="9">
+                    {% comment %} <div class="text-muted small text-uppercase fw-medium mb-1">Items</div> {% endcomment %}
+                    <ul class="list-group list-group-flush">
+                      {% for item in request.items.all %}
+                        <li class="list-group-item bg-transparent d-flex justify-content-between flex-wrap px-0 py-1 border-0">
+                          <span>Items {{ item.item_name }} <span class="status-badge bg-secondary-subtle text-secondary-emphasis">{{ item.quantity }}x</span></span>
+                          <span class="text-muted">₦{{ item.total_selling_price|floatformat:2 }} · {{ item.duration_months }} Deduction {{ item.duration_months|pluralize }}</span>
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </td>
+                </tr>
+              {% endif %}
+            {% empty %}
+              <tr>
+                <td colspan="9" class="text-center text-muted py-4">No RAM requests found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Mobile / small tablet cards #}
+    <div class="d-lg-none">
+      {% for request in ram_requests %}
+        <div class="card shadow mb-3">
+          <div class="card-header bg-white d-flex justify-content-between align-items-start">
+            <div>
+              <div class="fw-semibold">{{ request.date_requested|date:'d M Y' }}</div>
+              <div class="text-muted small">{{ request.budget.name }}</div>
+            </div>
+            {% if request.status == 'approved' %}
+              <span class="status-badge rounded-pill bg-success">{{ request.get_status_display }}</span>
+            {% elif request.status == 'pending' %}
+              <span class="status-badge rounded-pill bg-warning text-dark">{{ request.get_status_display }}</span>
+            {% elif request.status == 'rejected' %}
+              <span class="status-badge rounded-pill bg-danger">{{ request.get_status_display }}</span>
+            {% else %}
+              <span class="status-badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle">{{ request.get_status_display }}</span>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <div class="row text-center g-2 mb-3">
+              <div class="col-4">
+                <div class="text-muted small">Total</div>
+                <div class="fw-semibold">₦{{ request.total_selling_price|floatformat:2 }}</div>
+              </div>
+              <div class="col-4">
+                <div class="text-muted small">Amount Paid</div>
+                <div class="fw-semibold">₦{{ request.total_paid|floatformat:2 }}</div>
+              </div>
+              <div class="col-4">
+                <div class="text-muted small">Balance Remaining</div>
+                <div class="fw-semibold">₦{{ request.balance_remaining|floatformat:2 }}</div>
+              </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center {% if request.items.all %}mb-2{% endif %}">
+              <span class="status-badge bg-secondary-subtle text-secondary-emphasis">{{ request.items.count }} item{{ request.items.count|pluralize }}</span>
+              {% if request.is_fully_paid %}
+                <span class="status-badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle">Fully paid</span>
+              {% else %}
+                <span class="status-badge rounded-pill bg-danger-subtle text-danger-emphasis border border-danger-subtle">Outstanding</span>
+              {% endif %}
+            </div>
+            {% if request.items.all %}
+              <ul class="list-group list-group-flush small">
+                {% for item in request.items.all %}
+                  <li class="list-group-item d-flex justify-content-between flex-wrap px-0">
+                    <span>{{ item.item_name }} ({{ item.quantity }}x)</span>
+                    <span class="text-muted">₦{{ item.total_selling_price|floatformat:2 }} · {{ item.duration_months }} month{{ item.duration_months|pluralize }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-center text-muted py-4">No RAM requests found.</p>
+      {% endfor %}
+    </div>
+
+  </div>
+{% endblock %}

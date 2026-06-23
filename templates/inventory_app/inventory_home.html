@@ -1,162 +1,354 @@
 {% extends "base/base.html" %}
+{% load humanize %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row mb-4 align-items-center">
-        <div class="col">
-            <h2 class="fw-bold text-dark">Inventory Overview</h2>
-            <p class="text-muted">Tracking actual warehouse value and supplier returns.</p>
-        </div>
-        <div class="col-auto">
-            <a href="{% url 'receive_products' %}" class="btn btn-primary text-white shadow">
-                <i class="bi bi-plus-lg"></i> Receive New Stock
-            </a>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-5">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-primary border-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted text-uppercase small fw-bold">Net Stock Value</h6>
-                            <h3 class="fw-bold mb-0">₦{{ net_stock_value|floatformat:2 }}</h3>
-                        </div>
-                        <div class=" bg-opacity-10 p-3 rounded">
-                            <i class="bi bi-wallet2 text-primary fs-3"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-danger border-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted text-uppercase small fw-bold">Returns Value</h6>
-                            <h3 class="fw-bold mb-0 text-danger">₦{{ total_returned_value|floatformat:2 }}</h3>
-                        </div>
-                        <div class=" bg-opacity-10 p-3 rounded text-danger">
-                            <i class="bi bi-arrow-left-right fs-3"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-success border-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted text-uppercase small fw-bold">Gross Total In</h6>
-                            <h3 class="fw-bold mb-0">₦{{ gross_stock_value|floatformat:2 }}</h3>
-                        </div>
-                        <div class=" bg-opacity-10 p-3 rounded text-success">
-                            <i class="bi bi-graph-up-arrow fs-3"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-warning border-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted text-uppercase small fw-bold">Total Batches</h6>
-                            <h3 class="fw-bold mb-0">{{ product_count }}</h3>
-                        </div>
-                        <div class=" bg-opacity-10 p-3 rounded text-warning">
-                            <i class="bi bi-box-seam fs-3"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between">
-                    <h5 class="fw-bold mb-0">Recent Stock Receipts</h5>
-                    <small class="text-primary fw-bold">Latest 5</small>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="ps-3">Voucher</th>
-                                <th>Supplier</th>
-                                <th>Net Value</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                                
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for supply in supplies %}
-                            <tr>
-                                <td class="ps-3 fw-bold">#{{ supply.id }}</td>
-                                <td>{{ supply.supplier.name }}</td>
-                                <td class="fw-bold">₦{{ supply.net_voucher_value|floatformat:2 }}</td>
-                                <td>
-                                    {% if supply.net_voucher_value < supply.get_total_cost %}
-                                        <span class="status-badge bg-danger-subtle text-danger border border-danger">Returned</span>
-                                    {% else %}
-                                        <span class="status-badge bg-success-subtle text-success border border-success">Complete</span>
-                                    {% endif %}
-                                </td>
-                                <td class="small text-muted">{{ supply.received_at|date:"M d, Y" }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center py-4">No recent receipts.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body">
-                    <h5 class="fw-bold mb-3 text-dark">Quick Actions</h5>
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'receive_products' %}" class="btn btn-outline-primary text-start py-2">
-                            <i class="bi bi-plus-circle me-2"></i> Receive New Stock
-                        </a>
-                        <a href="{% url 'stock_return' %}" class="btn btn-outline-danger text-start py-2">
-                            <i class="bi bi-arrow-return-left me-2"></i> Log Stock Return
-                        </a>
-                        <a href="#" class="btn btn-outline-dark text-start py-2">
-                            <i class="bi bi-file-earmark-pdf me-2"></i> Inventory Report
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card border-0 shadow-sm bg-light">
-                <div class="card-body">
-                    <p class="small text-muted mb-0">
-                        <strong>Note:</strong> The Net Stock Value accounts for all items currently in your warehouse, excluding items that have been returned to suppliers.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <style>
-    body { background-color: #f8f9fa; }
-    .card { border-radius: 15px; transition: transform 0.2s; }
-    .card:hover { transform: translateY(-3px); }
+  /* ── Mobile-first fixes ── */
+  @media (max-width: 575.98px) {
+
+    /* Page header: stack vertically, full-width buttons */
+    .pos-header {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+    .pos-header .btn-group-actions {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+    .pos-header .btn-group-actions a {
+      width: 100%;
+      text-align: left;
+    }
+
+    /* Cards: 2-col on xs is fine for summary rows, but text truncates — shrink font */
+    .card-body h6.fw-bold {
+      font-size: .9rem;
+    }
+
+    /* Request status: 3-col on xs can be tight — allow wrap naturally via row-cols-3 */
+    .status-num {
+      font-size: 1rem;
+    }
+
+    /* Table: make it scroll horizontally and fix oversized cells */
+    .table-responsive {
+      -webkit-overflow-scrolling: touch;
+    }
+    .table td,
+    .table th {
+      white-space: nowrap;
+      font-size: .8rem;
+      padding-left: .75rem !important;
+      padding-right: .75rem !important;
+    }
+
+    /* Quick action buttons: full width already via d-grid — looks fine */
+
+    /* Selling plan row badges: keep aligned */
+    .plan-row {
+      font-size: .85rem;
+    }
+
+    /* Section labels */
+    .section-label {
+      font-size: .7rem;
+    }
+  }
+
+  @media (max-width: 767.98px) {
+
+    /* On sm screens the bottom row should stack (already handled by col-lg-* but ensure) */
+    .bottom-row > [class*="col-lg"] {
+      width: 100%;
+    }
+
+    /* Reduce card padding a little */
+    .card-body {
+      padding: .9rem;
+    }
+  }
+
+  /* Always-on: prevent value text from overflowing on very narrow screens */
+  .card-body h6.fw-bold {
+    word-break: break-all;
+  }
+
+  /* Status badge: keep it inline-block and no-wrap */
+  .status-badge {
+    display: inline-block;
+    padding: .2em .55em;
+    border-radius: .35rem;
+    font-size: .75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 </style>
+
+<div class="container-fluid px-3 px-md-4 py-4">
+
+  <!-- ── Page Header ── -->
+  <div class="pos-header d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h2 class="fw-bold mb-1">Point Of Sales</h2>
+      <p class="text-muted small mb-0">Live warehouse value, supplier returns, and member request activity.</p>
+    </div>
+    <div class="btn-group-actions d-flex flex-wrap gap-2">
+      <a href="{% url 'stock_return' %}" class="btn btn-outline-danger">
+        <i class="bi bi-arrow-return-left me-1"></i> Log Return
+      </a>
+      <a href="{% url 'receive_products' %}" class="btn btn-primary text-white">
+        <i class="bi bi-plus-lg me-1"></i> Receive Stock
+      </a>
+      <a href="{% url 'register_supplier' %}" class="btn btn-primary text-white">
+        <i class="bi bi-plus-lg me-1"></i> Add Supplier
+      </a>
+    </div>
+  </div>
+  <!-- ── Stock Value Cards ── -->
+  <p class="section-label text-muted text-uppercase small fw-semibold mb-2" style="letter-spacing:.08em;">Stock Summary</p>
+
+  <div class="stats-grid">
+        <div class="stat-card shadow-lg border-start border-primary border-4">
+            <div class="stat-icon bg-primary">
+                <i class="bi bi-folder"></i>
+            </div>
+            <div class="stat-content">
+                <p>Net Stock Valu</p>
+                <h6 class="text-success">₦{{ net_stock_value|floatformat:2|intcomma }}</h6>
+            </div>
+        </div>
+        
+        <div class="stat-card shadow-lg border-start border-success border-4">
+            <div class="stat-icon bg-success">
+                <i class="bi bi-graph-up-arrow fs-3 text-white opacity-50 flex-shrink-0"></i>
+            </div>
+            <div class="stat-content">
+                <p>Gross Total In</p>
+                <h6 class="text-primary">₦{{ gross_stock_value|floatformat:2|intcomma }}</h6>
+            </div>
+        </div>
+        
+        <div class="stat-card shadow-lg border-start border-danger border-4">
+            <div class="stat-icon bg-danger">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <p>Returns Value</p>
+                <h6 class="text-danger"> ₦{{ total_returned_value|floatformat:2|intcomma }}</h6>
+            </div>
+        </div>
+        <div class="stat-card shadow-lg border-start border-warning border-4">
+            <div class="stat-icon bg-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                 <p class="text-muted text-uppercase small fw-semibold mb-1" style="letter-spacing:.07em;">Product Batches</p>
+                <h6 class="fw-bold mb-0 text-warning">{{ product_count }}</h6>
+                {% if low_stock_count > 0 %}
+                  <span class="status-badge bg-danger-subtle text-danger small mt-1">{{ low_stock_count }} out of stock</span>
+                {% endif %}
+            </div>
+        </div>
+        
+    </div>
+  
+  <!-- ── Repayment Financial Cards ── -->
+  <p class="section-label text-muted text-uppercase small fw-semibold mb-2" style="letter-spacing:.08em;">Loan & Repayment Summary</p>
+  <div class="row row-cols-1 row-cols-sm-3 g-3 mb-4">
+
+    <div class="col">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted text-uppercase small fw-semibold mb-1" style="letter-spacing:.07em;">Total Loan Value</p>
+          <h6 class="fw-bold mb-0 text-dark">₦{{ total_approved_value|floatformat:2|intcomma }}</h6>
+          <p class="text-muted small mb-0 mt-1">Approved + Active requests</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted text-uppercase small fw-semibold mb-1" style="letter-spacing:.07em;">Total Repaid</p>
+          <h6 class="fw-bold mb-0 text-success">₦{{ total_repaid|floatformat:2|intcomma }}</h6>
+          <p class="text-muted small mb-0 mt-1">All-time payments received</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted text-uppercase small fw-semibold mb-1" style="letter-spacing:.07em;">Outstanding Balance</p>
+          <h6 class="fw-bold mb-0 text-danger">₦{{ total_outstanding|floatformat:2|intcomma }}</h6>
+          <p class="text-muted small mb-0 mt-1">Remaining across all members</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Request Status Overview ── -->
+  <p class="section-label text-muted text-uppercase small fw-semibold mb-2" style="letter-spacing:.08em;">Request Status</p>
+  <div class="row row-cols-3 row-cols-md-6 g-2 g-md-3 mb-4">
+
+    <div class="col">
+      <div class="card border-0 shadow text-center h-100 border-top border-secondary border-3">
+        <div class="card-body py-2 py-md-3 px-1">
+          <h6 class="status-num fw-bold mb-0">{{ total_requests }}</h6>
+          <p class="text-muted small mb-0" style="font-size:.75rem;">Total</p>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card border-0 shadow text-center h-100 border-top border-warning border-3">
+        <div class="card-body py-2 py-md-3 px-1">
+          <h6 class="status-num fw-bold mb-0 text-warning">{{ pending_requests }}</h6>
+          <p class="text-muted small mb-0" style="font-size:.75rem;">Pending</p>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card border-0 shadow text-center h-100 border-top border-success border-3">
+        <div class="card-body py-2 py-md-3 px-1">
+          <h6 class="status-num fw-bold mb-0 text-success">{{ approved_requests }}</h6>
+          <p class="text-muted small mb-0" style="font-size:.75rem;">Approved</p>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card border-0 shadow text-center h-100 border-top border-info border-3">
+        <div class="card-body py-2 py-md-3 px-1">
+          <h6 class="status-num fw-bold mb-0 text-info">{{ picked_requests }}</h6>
+          <p class="text-muted small mb-0" style="font-size:.75rem;">Picked</p>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card border-0 shadow text-center h-100 border-top border-primary border-3">
+        <div class="card-body py-2 py-md-3 px-1">
+          <h6 class="status-num fw-bold mb-0 text-primary">{{ fully_paid_count }}</h6>
+          <p class="text-muted small mb-0" style="font-size:.75rem;">Fully Paid</p>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card border-0 shadow text-center h-100 border-top border-danger border-3">
+        <div class="card-body py-2 py-md-3 px-1">
+          <h6 class="status-num fw-bold mb-0 text-danger">{{ declined_count }}</h6>
+          <p class="text-muted small mb-0" style="font-size:.75rem;">Declined</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Bottom Row: Recent Receipts + Quick Actions ── -->
+  <div class="row g-4 bottom-row">
+
+    <!-- Recent Stock Receipts -->
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+          <h6 class="fw-bold mb-0">Recent Stock Receipts</h6>
+          <span class="status-badge bg-primary-subtle text-primary">Latest 5</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3 py-3 text-muted text-uppercase small" style="letter-spacing:.06em;">Voucher</th>
+                <th class="py-3 text-muted text-uppercase small" style="letter-spacing:.06em;">Supplier</th>
+                <th class="py-3 text-muted text-uppercase small" style="letter-spacing:.06em;">Net Value</th>
+                <th class="py-3 text-muted text-uppercase small" style="letter-spacing:.06em;">Status</th>
+                <th class="pe-3 py-3 text-muted text-uppercase small" style="letter-spacing:.06em;">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for supply in supplies %}
+              <tr>
+                <td class="ps-3 fw-bold">#{{ supply.id }}</td>
+                <td>{{ supply.supplier.name }}</td>
+                <td class="fw-semibold">₦{{ supply.net_voucher_value|floatformat:2|intcomma }}</td>
+                <td>
+                  {% if supply.net_voucher_value < supply.get_total_cost %}
+                    <span class="status-badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle">Returned</span>
+                  {% else %}
+                    <span class="status-badge rounded-pill bg-success-subtle text-success border border-success-subtle">Complete</span>
+                  {% endif %}
+                </td>
+                <td class="pe-3 text-muted small">{{ supply.received_at|date:"d M Y" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center py-5 text-muted">
+                  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                  No recent receipts.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions + Selling Plan Info -->
+    <div class="col-12 col-lg-4 d-flex flex-column gap-3">
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3">Quick Actions</h6>
+          <div class="d-grid gap-2">
+            <a href="{% url 'receive_products' %}" class="btn btn-outline-primary text-start py-2">
+              <i class="bi bi-plus-circle me-2"></i> Receive New Stock
+            </a>
+            <a href="{% url 'stock_return' %}" class="btn btn-outline-danger text-start py-2">
+              <i class="bi bi-arrow-return-left me-2"></i> Log Stock Return
+            </a>
+            <a href="{% url 'member_make_request_list' %}" class="btn btn-outline-warning text-start py-2">
+              <i class="bi bi-list-check me-2"></i> View Member Requests
+              {% if pending_requests > 0 %}
+                <span class="status-badge bg-warning text-dark ms-1">{{ pending_requests }}</span>
+              {% endif %}
+            </a>
+            <a href="{% url 'upload_payments_excel' %}" class="btn btn-outline-success text-start py-2">
+              <i class="bi bi-file-earmark-excel me-2"></i> Upload Payments
+            </a>
+            <a href="{% url 'inventory_report' %}" class="btn btn-outline-success text-start py-2">
+              <i class="bi bi-file-earmark-excel me-2"></i> View Report
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3">Selling Plans</h6>
+          <div class="plan-row d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Available</span>
+            <span class="status-badge bg-success-subtle text-success border border-success-subtle px-3">{{ available_plans }}</span>
+          </div>
+          <div class="plan-row d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Unavailable</span>
+            <span class="status-badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3">{{ unavailable_plans }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm bg-light">
+        <div class="card-body">
+          <p class="small text-muted mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>Net Stock Value</strong> reflects current warehouse stock after all supplier returns are deducted.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- end bottom row -->
+
+</div>
 {% endblock %}

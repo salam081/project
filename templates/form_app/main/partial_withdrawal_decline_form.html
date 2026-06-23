@@ -1,0 +1,102 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Decline Withdrawal{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h6 class="mb-4 text-danger">Decline Withdrawal Request</h6>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <!-- 🔹 Withdrawal Info -->
+            <h6>Withdrawal Details</h6>
+            <hr>
+
+            <p><strong>Member:</strong> {{ withdrawal.member.member.first_name }} {{ withdrawal.member.member.last_name }}</p>
+            <p><strong>IPPIS:</strong> {{ withdrawal.member.ippis }}</p>
+            <p>
+                <strong>Requested Amount:</strong> 
+                <span class="fw-bold text-primary">₦{{ withdrawal.amount_requested|intcomma }}</span>
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+                <span class="status-badge bg-warning text-dark">{{ withdrawal.status }}</span>
+            </p>
+
+            <!-- ⚠️ Warning -->
+            <div class="alert alert-danger mt-3">
+                You are about to decline this withdrawal request.<br>
+                This action cannot be undone.
+            </div>
+
+            <!-- 🔹 Decline Form -->
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Reason for Decline</strong></label>
+                    <textarea name="decline_reason"
+                              class="form-control"
+                              rows="4"
+                              placeholder="Enter reason for declining..."
+                              required></textarea>
+                </div>
+
+                <!-- 🔥 Buttons -->
+                <div class="d-flex flex-column flex-md-row gap-2">
+
+                    <!-- Trigger Modal -->
+                    <button type="button"
+                            class="btn btn-danger w-100 w-md-auto"
+                            data-bs-toggle="modal"
+                            data-bs-target="#confirmDeclineModal">
+                        Decline Request
+                    </button>
+
+                    <a href="{% url 'partial_withdrawal_detail' withdrawal.pk %}"
+                       class="btn btn-secondary w-100 w-md-auto text-white">
+                        Cancel
+                    </a>
+                </div>
+
+                <!-- 🔥 Confirmation Modal -->
+                <div class="modal fade" id="confirmDeclineModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+
+                            <div class="modal-header">
+                                <h5 class="modal-title text-danger">Confirm Decline</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                Are you sure you want to decline this withdrawal?<br><br>
+                                <strong>Amount:</strong> ₦{{ withdrawal.amount_requested|intcomma }}
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    Cancel
+                                </button>
+
+                                <!-- REAL SUBMIT -->
+                                <button type="submit" class="btn btn-danger">
+                                    Yes, Decline
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

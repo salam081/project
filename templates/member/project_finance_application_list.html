@@ -60,16 +60,24 @@
                                             {{ req.guarantor_status }}
                                         </small>
                                     </td>
-                                    <td>
+                                   <td>
                                         <span class="status-badge text-white
-                                            {% if req.status == 'Pending' %}status-pending
-                                            {% elif req.status == 'Reviewed' %}status-active
-                                            {% elif req.status == 'Itempicked' %}status-itempicked
-                                            {% elif req.status == 'FullyPaid' %}status-completed
-                                            {% elif req.status == 'Declined' %}status-cancelled
-                                            {% else %}bg-secondary{% endif %}">
+                                            {% if req.status == 'Pending' %} status-pending
+                                            {% elif req.status == 'Reviewed' %} status-active
+                                            {% elif req.status == 'Approved' %} status-active
+                                            {% elif req.status == 'ItemPicked' %} status-itempicked
+                                            {% elif req.status == 'FullyPaid' %} status-completed
+                                            {% elif req.status == 'Declined' %} status-cancelled
+                                            {% else %} bg-secondary{% endif %}">
+                                            
                                             {{ req.status }}
                                         </span>
+                                    </td>
+                                    <td>
+                                       <a href="{% url 'project_finance_request_detail' req.id %}" 
+                                        class="btn btn-sm btn-outline-primary rounded-3 px-3 shadow-sm">
+                                            <i class="bi bi-eye me-1"></i> View
+                                        </a>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -77,10 +85,10 @@
                         </table>
                     </div>
                     <!-- Add New Request Button for Reviewed Applications with Existing Requests -->
-                    <a href="{% url 'create_project_finance_request' app.id %}" 
+                    {% comment %} <a href="{% url 'create_project_finance_request' app.id %}" 
                         class="btn btn-outline-success fw-semibold py-2 rounded-3 mt-2">
                         <i class="bi bi-plus-circle"></i> Add Another Request
-                    </a>
+                    </a> {% endcomment %}
                 {% else %}
                     <p class="text-success fw-bold mt-3">This application is reviewed. You can now make a request.</p>
                     <a href="{% url 'create_project_finance_request' app.id %}" 

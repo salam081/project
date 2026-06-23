@@ -7,6 +7,7 @@ urlpatterns = [
     path('loan-request-fee/', views.loan_request_fee_payment, name='loan_request_fee_payment'),
     path('admin_loan_requests_list', views.admin_loan_requests_list, name='admin_loan_requests'),
     path('loan_request_detail/<str:id>/',views.loan_request_detail, name='loan_request_detail'),
+    
     path('add_payment/',views.add_payment,name='add_payment'),
     path("ajax/get-loan-types/", views.get_loan_types_for_year, name="get_loan_types_for_year"),
     path('upload_loan_payment/', views.upload_loan_repayment, name='upload_loan_payment'),

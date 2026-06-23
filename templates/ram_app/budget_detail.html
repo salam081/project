@@ -1,0 +1,173 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ budget.name }}{% endblock %}
+{% block page_title %}Budget Detail{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h6 class="fw-bold mb-1">{{ budget.name }}</h6>
+        <span class="badge badge-{{ budget.status }} fs-6">{{ budget.get_status_display }}</span>
+    </div>
+    <div class="d-flex gap-2">
+        {% if user.group.title == 'admin' and budget.status == 'pending' %}
+        <a href="{% url 'budget_approve' budget.pk %}" class="btn btn-success"
+           onclick="return confirm('Approve this budget?')">
+            <i class="bi bi-check-lg me-1"></i> Approve
+        </a>
+        <a href="{% url 'budget_reject' budget.pk %}" class="btn btn-danger"
+           onclick="return confirm('Reject this budget?')">
+            <i class="bi bi-x-lg me-1"></i> Reject
+        </a>
+        {% endif %}
+        <a href="{% url 'budget_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card shadow p-3 bg-primary-subtle">
+            <small class="text-muted">Total Budget</small>
+            <h6 class="fw-bold text-primary mb-0">₦{{ budget.total_amount|floatformat:2 }}</h6>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card shadow p-3 bg-danger-subtle">
+            <small class="text-muted">Total Spent</small>
+            <h6 class="fw-bold text-danger mb-0">₦{{ budget.total_spent|floatformat:2 }}</h6>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card shadow p-3 bg-success-subtle">
+            <small class="text-muted">Remaining Balance</small>
+            <h6 class="fw-bold text-success mb-0">₦{{ budget.remaining_amount|floatformat:2 }}</h6>
+        </div>
+    </div>
+</div>
+
+<!-- Budget Info -->
+<div class="card mb-4">
+    <div class="card-header bg-light">Budget Information</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-1"><span class="text-muted">Created By:</span>
+                    <strong>{{ budget.created_by.get_full_name|default:budget.created_by.username }}</strong>
+                </p>
+                <p class="mb-1"><span class="text-muted">Date Created:</span>
+                    <strong>{{ budget.date_created|date:"d M Y, H:i" }}</strong>
+                </p>
+            </div>
+            <div class="col-md-6">
+                {% if budget.approved_by %}
+                <p class="mb-1"><span class="text-muted">Approved By:</span>
+                    <strong>{{ budget.approved_by.get_full_name }}</strong>
+                </p>
+                <p class="mb-1"><span class="text-muted">Approved Date:</span>
+                    <strong>{{ budget.approved_date|date:"d M Y, H:i" }}</strong>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Requests under this budget -->
+<div class="card">
+    <div class="card-header bg-light d-flex justify-content-between">
+        <span>RAM Requests Under This Budget</span>
+        <span class="status-badge bg-success">{{ requests.count }} request(s)</span>
+    </div>
+    <div class="card-body p-2">
+        <table class="table table-hover ">
+            <thead class="table-info">
+                <tr>
+                    <th class="nowrap">Member</th>
+                    <th>Items</th>
+                    <th>Cost Price</th>
+                    <th>Selling Price</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th class="nowrap">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td class="nowrap">
+                        {% if req.member %}
+                            {{ req.member.member.get_full_name }}
+                        {% else %}
+                            {{ req.guest_name }}
+                        {% endif %}
+                    </td>
+                    <td>{{ req.items.count }} item(s)</td>
+                    <td>₦{{ req.total_cost_price|floatformat:2 }}</td>
+                    <td>₦{{ req.total_selling_price|floatformat:2 }}</td>
+                    <td>
+                        <span class="status-badge badge-{{ req.status }}">{{ req.get_status_display }}</span>
+                    </td>
+                    <td>{{ req.date_requested|date:"d M Y" }}</td>
+                    <td class="nowrap">
+                        <a href="{% url 'ram_request_detail' req.pk %}" class="btn btn-sm btn-primary text-white" title="View Details">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No requests yet for this budget.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+
+        {% if requests.has_previous %}
+            <li class="page-item">
+                <a class="page-link"
+                   href="?page=1">
+                    First
+                </a>
+            </li>
+
+            <li class="page-item">
+                <a class="page-link"
+                   href="?page={{ requests.previous_page_number }}">
+                    Previous
+                </a>
+            </li>
+        {% endif %}
+
+        <li class="page-item active">
+            <span class="page-link">
+                Page {{ requests.number }} of {{ requests.paginator.num_pages }}
+            </span>
+        </li>
+
+        {% if requests.has_next %}
+            <li class="page-item">
+                <a class="page-link"
+                   href="?page={{ requests.next_page_number }}">
+                    Next
+                </a>
+            </li>
+
+            <li class="page-item">
+                <a class="page-link"
+                   href="?page={{ requests.paginator.num_pages }}">
+                    Last
+                </a>
+            </li>
+        {% endif %}
+
+    </ul>
+</nav>
+    </div>
+</div>
+{% endblock %}

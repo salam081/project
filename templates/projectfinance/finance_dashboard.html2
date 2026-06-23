@@ -1,0 +1,313 @@
+{% extends "base/base.html" %}
+
+{% block title %}Project Finance Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="container ">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h6 class="fw-bold mb-0">Project Finance Dashboard</h6>
+    {% comment %} <span class="text-muted">{{ request.user.get_full_name }}</span> {% endcomment %}
+</div>
+
+
+
+
+{% comment %} <h6 class="text-uppercase text-muted ">Finance Requests</h6> {% endcomment %}
+
+<div class="row g-1 mb-4">
+
+    <div class="col-md-3 col-6">
+        <div class="card  shadow " style="border-top: 2px solid blue;">
+            <div class="card-body">
+                <small class="text-muted">Total Requested</small>
+                <h6 class="fw-bold text-primary">
+                    ₦{{ finance_totals.total_requested|floatformat:2 }}
+                </h6>
+                {% comment %} <small class="text-muted">
+                    {{ finance_totals.total_requests }} requests
+                </small> {% endcomment %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="card  shadow" style="border-top: 2px solid wheat;">
+            <div class="card-body">
+                <small class="text-muted">Total Repayable</small>
+                <h6 class="fw-bold text-warning">
+                    ₦{{ finance_totals.total_repayable|floatformat:2 }}
+                </h6>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="card shadow " style="border-top: 2px solid green;">
+            <div class="card-body">
+                <small class="text-muted">Total Collected</small>
+                <h6 class="fw-bold text-success">
+                    ₦{{ finance_totals.total_collected|floatformat:2 }}
+                </h6>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="card shadow 0" style="border-top: 2px solid red;">
+            <div class="card-body">
+                <small class="text-muted">Outstanding Balance</small>
+                <h6 class="fw-bold text-danger">
+                    ₦{{ finance_totals.total_balance|floatformat:2 }}
+                </h6>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<div class="row g-3 mb-4">
+
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow bg-primary-subtle ">
+            <div class="card-body">
+                <small class="text-bild">Total Applications <strong>{{ applications.total }}</strong></small>
+                {% comment %} <h3 class="fw-bold mb-0">{{ applications.total }}</h3> {% endcomment %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow bg-warning-subtle ">
+            <div class="card-body">
+                <small class="text-bold">Pending <strong>{{ applications.pending }}</strong></small>
+                {% comment %} <h3 class="fw-bold mb-0">{{ applications.pending }}</h3> {% endcomment %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow bg-success-subtle ">
+            <div class="card-body">
+                <small class="text-bold">Reviewed <strong>{{ applications.reviewed }}</strong></small>
+                {% comment %} <h3 class="fw-bold mb-0">{{ applications.reviewed }}</h3> {% endcomment %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-6">
+        <div class="card border-0 shadow bg-danger-subtle ">
+            <div class="card-body">
+                <small class="text-bold">Rejected  {{ applications.rejected }}</small>
+                {% comment %} <h3 class="fw-bold mb-0">{{ applications.rejected }}</h3> {% endcomment %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Charts -->
+
+{% comment %} <div class="row g-3 mb-4">
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Request Status</h6>
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Monthly Payments</h6>
+                <canvas id="paymentChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div> {% endcomment %}
+
+<!-- Active Requests -->
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h6 class="fw-bold mb-0">Active Requests</h6>
+
+            <div class="btn-group btn-group-sm">
+
+                <a href="?status=all"
+                   class="btn {% if current_status == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    All
+                </a>
+
+                <a href="?status=Pending"
+                   class="btn {% if current_status == 'Pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Pending
+                </a>
+
+                <a href="?status=Approved"
+                   class="btn {% if current_status == 'Approved' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Approved
+                </a>
+
+                <a href="?status=Completed"
+                   class="btn {% if current_status == 'Completed' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Completed
+                </a>
+
+                <a href="?status=FullyPaid"
+                   class="btn {% if current_status == 'FullyPaid' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Fully Paid
+                </a>
+
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+
+                <thead class="table-info">
+                    <tr>
+                        <th>Member</th>
+                        <th>Product</th>
+                        <th>Requested</th>
+                        <th>Repayable</th>
+                        <th>Balance</th>
+                        <th>Progress</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for r in requests %}
+                    <tr>
+
+                        <td class="text-nowrap">{{ r.member }}</td>
+
+                        <td>{{ r.product }}</td>
+
+                        <td>₦{{ r.requested|floatformat:2 }}</td>
+
+                        <td>₦{{ r.repayable|floatformat:2 }}</td>
+
+                        <td>
+                            {% if r.balance == 0 %}
+                                <span class="text-success fw-bold">
+                                    ₦0.00
+                                </span>
+                            {% else %}
+                                ₦{{ r.balance|floatformat:2 }}
+                            {% endif %}
+                        </td>
+
+                        <td style="width:180px">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:8px;">
+                                    <div class="progress-bar bg-success"
+                                         style="width:{{ r.progress }}%">
+                                    </div>
+                                </div>
+                                <small>{{ r.progress }}%</small>
+                            </div>
+                        </td>
+
+                        <td>
+                            {% if r.status == 'Pending' %}
+                                <span class="status-badge bg-warning text-dark">{{ r.status }}</span>
+                            {% elif r.status == 'Approved' %}
+                                <span class="status-badge bg-success">{{ r.status }}</span>
+                            {% elif r.status == 'Completed' %}
+                                <span class="status-badge bg-primary">{{ r.status }}</span>
+                            {% elif r.status == 'FullyPaid' %}
+                                <span class="status-badge bg-success">{{ r.status }}</span>
+                            {% else %}
+                                <span class="status-badge bg-secondary">{{ r.status }}</span>
+                            {% endif %}
+                        </td>
+
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            No requests found
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<!-- Recent Payments -->
+
+<div class="card shadow border-0">
+
+    <div class="card-body">
+
+        <h6 class="fw-bold mb-3">Recent Payments</h6>
+
+        <div class="table-responsive">
+
+            <table class="table table-hover align-middle">
+
+                <thead class="table-info">
+                    <tr>
+                        <th>Member</th>
+                        <th>Product</th>
+                        <th>Month</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
+                        <th>Recorded By</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for p in payments %}
+                    <tr>
+                        <td class="text-nowrap">{{ p.member }}</td>
+                        <td>{{ p.product }}</td>
+                        <td class="text-nowrap">{{ p.month }}</td>
+                        <td>₦{{ p.paid|floatformat:2 }}</td>
+                        <td>₦{{ p.balance|floatformat:2 }}</td>
+                        <td class="text-nowrap">{{ p.recorded_by }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            No payments found
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+
+
+
+{{ status_breakdown|json_script:"status-data" }}
+{{ monthly_payments|json_script:"payment-data" }}
+
+
+{% endblock %}

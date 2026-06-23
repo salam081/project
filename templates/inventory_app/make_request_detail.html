@@ -6,7 +6,7 @@
 
     <div class="card-header d-flex justify-content-between align-items-center">
         <h3 class="card-title mb-0">Request #{{ member_request.id }} — Details</h3>
-        <a href="{% url 'member_make_request' %}" class="btn btn-secondary btn-sm text-white">
+        <a href="{% url 'member_make_request_list' %}" class="btn btn-secondary btn-sm text-white">
             <i class="bi bi-arrow-left me-1"></i> Back
         </a>
     </div>
@@ -21,11 +21,11 @@
         <div class="col-6 col-md-3">
             <span class="small text-muted d-block">Full Name</span>
             <div class="fw-bold text-truncate">
-                {% if member_request.user %}
-                    {{ member_request.user.get_full_name|default:member_request.user.username }}
+                {% if member_request.member %}
+                    {{ member_request.member.member.get_full_name|default:member_request.member }}
                 {% else %}
                     {{ member_request.guest_name }}
-                    <span class="status-badge bg-secondary ms-1" style="font-size:0.5rem;">GUEST</span>
+                    <span class="status-badge bg-warning ms-1" style="font-size:0.3rem;">GUEST</span>
                 {% endif %}
             </div>
         </div>
@@ -54,15 +54,30 @@
         </div>
         <div class="col-6 col-md-3">
             <span class="small text-muted d-block">Approved By</span>
-            <div class="fw-bold text-truncate">{{ member_request.approved_by.get_full_name|default:"--" }}</div>
+            <div class="fw-bold text-truncate">{{ member_request.approved_by.first_name|default:"--" }} {{ member_request.approved_by.last_name|default:"--" }}</div>
         </div>
+       <div class="col-6 col-md-3">
+    <span class="small text-muted d-block">Guarantor Accepted</span>
+
+    <div>
+        {% if member_request.guarantor_accepted %}
+            <span class="status-badge bg-success-subtle text-success">
+                Accepted
+            </span>
+        {% else %}
+            <span class="status-badge bg-warning-subtle text-warning">
+                Pending
+            </span>
+        {% endif %}
+    </div>
+</div>
     </div>
 
     <!-- Bottom Row: Verification & Documents -->
     <div class="row g-3 align-items-center">
         <div class="col-6 col-md-4">
             <span class="small text-muted d-block">Guarantor IPPIS</span>
-            <div class="fw-bold">{{ member_request.gaurantor_ippis|default:"--" }}</div>
+            <div class="fw-bold">{{member_request.guarantor|default:"--"}} {{ member_request.guarantor.ippis|default:"--" }}</div>
         </div>
         <div class="col-3 col-md-4">
             <span class="small text-muted d-block">Payslip</span>
@@ -166,7 +181,8 @@
                             <th>S/N</th>
                             <th>Brand</th>
                             <th>Model</th>
-                            <th>Unit Price</th>
+                            <th>Markup </th>
+                            <th>Unit Price + Markup</th>
                             <th>Qty</th>
                             <th>Total</th>
                         </tr>
@@ -177,21 +193,22 @@
                             <td>{{ forloop.counter }}</td>
                             <td>{{ d.item.received_item.brand }}</td>
                             <td>{{ d.item.received_item.model_name }}</td>
+                            <td class="text-warning fw-bold">% {{ d.markup_rate}}</td>
                             <td>₦{{ d.item_price|intcomma }}</td>
                             <td>{{ d.quantity }}</td>
                             <td class="fw-bold">₦{{ d.total_price|intcomma }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">No items on this request.</td>
+                            <td colspan="7" class="text-center text-muted py-4">No items on this request.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     {% if details %}
                     <tfoot class="table-light">
                         <tr>
-                            <td colspan="5" class="text-end fw-bold">Grand Total</td>
-                            <td class="fw-bold text-success">
+                            <td colspan="4" class="text-end fw-bold">Grand Total</td>
+                            <td class="fw-bold text-success fs-5">
                                 ₦{{ member_request.calculate_total_price|intcomma }}
                             </td>
                         </tr>

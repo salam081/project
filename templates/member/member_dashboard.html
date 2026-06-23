@@ -5,15 +5,49 @@
 {% block title %}Dashboard - Admin Panel{% endblock %}
 
 {% block content %}
+
 <div id="dashboard" class="content-section active">
-    <div class="content-card shadow">
-        <h6>Member Dashboard</h6> 
+   <div class="rounded-3 overflow-hidden mb-4 shadow" style="border: 0.5px solid #e9ecef;">
+
+  <!-- top accent bar -->
+  <div style="height:4px; background: linear-gradient(90deg, #185FA5, #534AB7);"></div>
+
+  <div class="d-flex align-items-center justify-content-between px-4 py-3 bg-white">
+
+    <!-- left: avatar + name -->
+    <div class="d-flex align-items-center gap-3">
+      {% if member.member.passport %}
+        <img src="{{ member.member.passport.url }}" alt="Passport photo"
+             style="width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid #E6F1FB; flex-shrink:0;">
+      {% else %}
+        <div style="width:42px; height:42px; border-radius:50%; background:#E6F1FB; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:600; color:#0C447C; flex-shrink:0;">
+          {{ member.member.first_name|slice:":1"|upper }}{{ member.member.last_name|slice:":1"|upper }}
+        </div>
+      {% endif %}
+
+      <div>
+        <div style="font-size:15px; font-weight:500; color:#212529;">
+          {{ member.member.get_full_name }}
+        </div>
+        <div style="font-size:11px; color:#adb5bd;">
+          Member dashboard
+        </div>
+      </div>
     </div>
+
+    <!-- right: member id badge -->
+    {% comment %} <span style="font-size:11px; font-weight:600; background:#E6F1FB; color:#0C447C; padding:4px 12px; border-radius:999px;">
+      # {{ member.id }}
+    </span> {% endcomment %}
+
+  </div>
+
+</div>
  {% if pending_guarantor_requests %}
             <div class="card shadow-lg border-0 rounded-4">
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0">
+                        <table class="table table-hover table-custom table-striped mb-0">
                             <thead>
                                 <tr>
                                     <th class="text-secondary text-nowrap">Borrower</th>
@@ -65,21 +99,21 @@
                 </thead>
                 <tbody>
                     {% for loan in pending_guarantor_loans %}
-        <tr>
-            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.member.member.first_name }}  {{ loan.member.member.last_name }}</td>
-            <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.loan_type }}</td>
-            <td>₦{{ loan.amount }}</td>
-            <td>
-                <div class="d-flex">
-                <a href="{% url 'confirm_guarantor_approval' loan.id %}" class="btn btn-sm btn-primary text-white">
-                            Accept as Guarantor
-                        </a>
-                    {% comment %} <a href="{% url 'guarantor_approval_page' loan.id %}" class="btn btn-sm btn-primary ">
-                        Review&Accept
-                    </a> {% endcomment %}
-                </div>
-            </td>
-        </tr>
+                 <tr>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.member.member.first_name }}  {{ loan.member.member.last_name }}</td>
+                    <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ loan.loan_type }}</td>
+                    <td>₦{{ loan.amount }}</td>
+                    <td>
+                    <div class="d-flex">
+                    <a href="{% url 'confirm_guarantor_approval' loan.id %}" class="btn btn-sm btn-primary text-white">
+                                Accept as Guarantor
+                            </a>
+                        {% comment %} <a href="{% url 'guarantor_approval_page' loan.id %}" class="btn btn-sm btn-primary ">
+                            Review&Accept
+                        </a> {% endcomment %}
+                    </div>
+                </td>
+               </tr>
         {% empty %}
         <tr>
             <td colspan="4" class="text-center text-muted">No loans waiting for your approval.</td>
@@ -90,10 +124,80 @@
             </table>
   </div>
 {% endif %}
+{% if inventory_pending_guarantor_requests %}
+<div class="rounded-3 overflow-hidden mb-4 shadow-sm" style="border: 0.5px solid #e9ecef;">
+
+  <!-- header -->
+  <div class="d-flex align-items-center justify-content-between px-4 py-3 bg-white" style="border-bottom: 0.5px solid #e9ecef;">
+    <div class="d-flex align-items-center gap-2">
+      <div style="width:32px; height:32px; border-radius:8px; background:#FAEEDA; display:flex; align-items:center; justify-content:center;">
+        <i class="ti ti-shield-check" style="font-size:16px; color:#633806;"></i>
+      </div>
+      <div>
+        <div style="font-size:14px; font-weight:500; color:#212529;">Guarantee requests</div>
+        <div style="font-size:11px; color:#adb5bd;">Pending your approval</div>
+      </div>
+    </div>
+    <span style="font-size:11px; font-weight:600; background:#FAEEDA; color:#633806; padding:4px 12px; border-radius:999px;">
+      {{ inventory_pending_guarantor_requests|length }} pending
+    </span>
+  </div>
+
+  <!-- rows -->
+  <div class="d-flex flex-column" style="background:#f8f9fa;">
+    {% for i in inventory_pending_guarantor_requests %}
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 px-4 py-3 bg-white {% if not forloop.last %}border-bottom{% endif %}" style="border-color:#f0f0f0;">
+
+      <!-- requester -->
+      <div class="d-flex align-items-center gap-2" style="min-width:160px;">
+        <div style="width:34px; height:34px; border-radius:50%; background:#E6F1FB; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:#0C447C; flex-shrink:0;">
+          {% if i.member %}
+            {{ i.member.member.first_name|slice:":1"|upper }}{{ i.member.member.last_name|slice:":1"|upper }}
+          {% else %}
+            {{ i.guest_name|slice:":1"|upper }}
+          {% endif %}
+        </div>
+        <div>
+          <div style="font-size:13px; font-weight:500; color:#212529;">
+            {% if i.member %}
+              {{ i.member.member.get_full_name|default:i.member.member.username }}
+            {% else %}
+              {{ i.guest_name|default:"--" }}
+            {% endif %}
+          </div>
+          <div style="font-size:11px; color:#adb5bd;">Requesting guarantee</div>
+        </div>
+      </div>
+
+      <!-- amount -->
+      <div style="min-width:100px;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#adb5bd; margin-bottom:3px;">Amount</div>
+        <div style="font-size:14px; font-weight:600; color:#212529; font-variant-numeric:tabular-nums;">₦{{ i.calculate_total_price|intcomma }}</div>
+      </div>
+
+      <!-- action -->
+      <div class="ms-auto">
+        <a href="{% url 'guarantor_approval_view' i.id %}"
+           style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; background:#FAEEDA; color:#633806; padding:7px 16px; border-radius:999px; text-decoration:none;">
+          <i class="ti ti-shield-check" style="font-size:14px;"></i>
+          Accept as guarantor
+        </a>
+      </div>
+
+    </div>
+    {% empty %}
+    <div class="px-4 py-3 text-center" style="font-size:13px; color:#adb5bd;">
+      No guarantee requests pending.
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endif %}
 </div>
 
 
-       <div class="stats-grid">
+    <div class="stats-grid">
         <div class="stat-card shadow-lg">
             <div class="stat-icon bg-primary">
                 <i class="bi bi-folder"></i>
@@ -124,111 +228,282 @@
             </div>
         </div>
         
-        {% comment %} <div class="stat-card">
-            <div class="stat-icon bg-danger">
-                <i class="bi bi-graph-up"></i>
-            </div>
-            <div class="stat-content">
-                <h3>95%</h3>
-                <p>Success Rate</p>
-            </div>
-        </div> {% endcomment %}
     </div>
 
     <!-- Recent Activity -->
-     {% if loan and loan.status != "rejected" %}
-    <div class="content-card">
-        <h3>Active Loan</h3>
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Approved Amount</th>
-                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Monthly Payment</th>
-                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Amount Paid</th>
-                        <th class="text-nowrap text-truncate" style="max-width: 270px;">Remaining Balance</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>₦{{ loan.approved_amount|floatformat:0|intcomma }}</td>
-                        <td>₦{{ loan.monthly_payment|floatformat:2 }}</td>
-                        <td>₦{{ loan_paid|floatformat:0|intcomma }}</td>
-                        <td>₦{{ loan_balance|floatformat:0|intcomma }}</td>
-                    </tr>
-                  
-                </tbody>
-            </table>
+  {% if loan and loan.status != "rejected" %}
+<div class="mb-4 shadow">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="mb-0 d-flex align-items-center gap-2" style="font-size:15px; font-weight:500;">
+      <i class="ti ti-cash" style="font-size:18px;"></i>
+      Active loan
+    </h3>
+    <span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; background:#FAEEDA; color:#633806; padding:6px 14px; border-radius:999px;">
+      <i class="ti ti-clock" style="font-size:13px;"></i> {{ loan.status|capfirst }}
+    </span>
+  </div>
+
+  <div class="border rounded-3 overflow-hidden bg-white">
+    <div class="d-flex align-items-center gap-3 px-3 py-3 flex-wrap">
+
+      <!-- approved amount -->
+      <div style="min-width:110px;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#adb5bd; margin-bottom:4px;">Approved amount</div>
+        <div style="font-size:15px; font-weight:500; color:#212529; font-variant-numeric:tabular-nums;">₦{{ loan.approved_amount|floatformat:0|intcomma }}</div>
+      </div>
+
+      <span style="width:1px; height:36px; background:#f0f0f0; display:inline-block;"></span>
+
+      <!-- monthly payment -->
+      <div style="min-width:110px;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#adb5bd; margin-bottom:4px;">Monthly payment</div>
+        <div style="font-size:15px; font-weight:500; color:#212529; font-variant-numeric:tabular-nums;">₦{{ loan.monthly_payment|floatformat:2 }}</div>
+      </div>
+
+      <span style="width:1px; height:36px; background:#f0f0f0; display:inline-block;"></span>
+
+      <!-- amount paid — blue tint -->
+      <div style="min-width:110px; background:#E6F1FB; border-radius:10px; padding:8px 14px;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#185FA5; margin-bottom:4px;">Amount paid</div>
+        <div style="font-size:15px; font-weight:600; color:#0C447C; font-variant-numeric:tabular-nums;">₦{{ loan_paid|floatformat:0|intcomma }}</div>
+      </div>
+
+      <!-- remaining — purple tint -->
+      <div style="min-width:110px; background:#EEEDFE; border-radius:10px; padding:8px 14px;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#534AB7; margin-bottom:4px;">Remaining balance</div>
+        <div style="font-size:15px; font-weight:600; color:#3C3489; font-variant-numeric:tabular-nums;">₦{{ loan_balance|floatformat:0|intcomma }}</div>
+      </div>
+
+      <!-- progress bar -->
+      <div class="ms-auto" style="min-width:140px;">
+        <div class="d-flex justify-content-between mb-1">
+          <span style="font-size:10px; color:#adb5bd; font-weight:600; text-transform:uppercase; letter-spacing:.05em;">Repaid</span>
+          <span style="font-size:10px; font-weight:600; color:#185FA5;">
+            {% if loan.approved_amount %}{{ loan_paid|floatformat:0 }} / {{ loan.approved_amount|floatformat:0 }}{% endif %}
+          </span>
         </div>
+        <div style="height:6px; background:#f0f0f0; border-radius:999px; overflow:hidden;">
+          <div style="height:100%; border-radius:999px; background:#185FA5;
+            width:{% if loan.approved_amount %}{% widthratio loan_paid loan.approved_amount 100 %}%{% else %}0%{% endif %};"></div>
+        </div>
+      </div>
+
     </div>
-    {% endif %}
-    <!-- Recent Activity -->
-     {% if approved_consumable %}
-    <div class="content-card">
-        <h3>Active Consumable </h3>
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                    {% comment %} <th>Date</th> {% endcomment %}
-                    <!-- <th>Items</th> -->
-                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Items Amount</th>
-                    <th class="text-nowrap text-truncate" style="max-width: 270px;">Monthly Payment</th>
-                    <th>Amount Paid</th>
-                    <th>Remaining Balance</th>
-                </tr>
-                </thead>
-                <tbody>
-                    {% for item in approved_consumable %}
-                <tr>
-                    {% comment %} <td class="text-nowrap text-truncate" style="max-width: 270px;">{{ item.consumable.date_created|date:"M d, Y" }}</td> {% endcomment %}
-                    <td>₦{{ item.approved_amount|floatformat:0|intcomma }}</td>
-                    <td>₦{{ item.monthly_payment|floatformat:0|intcomma }}</td>
-                    <td>₦{{ item.total_paid|floatformat:0|intcomma }}</td>
-                    <td>₦{{ item.balance|floatformat:0|intcomma }}</td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+  </div>
+</div>
+{% endif %}
+
+<hr>
+{% if approved_consumable %}
+<div class="mb-4 shadow">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="mb-0 d-flex align-items-center gap-2" style="font-size:15px; font-weight:500;">
+      <i class="ti ti-shopping-cart" style="font-size:18px;"></i>
+      Active consumable
+    </h3>
+    <span class="text-muted rounded-pill px-3 py-1 bg-light" style="font-size:12px;">
+      {{ approved_consumable|length }} item{{ approved_consumable|length|pluralize }}
+    </span>
+  </div>
+
+  <div class="d-flex flex-column gap-2">
+    {% for item in approved_consumable %}
+    <div class="border rounded-3 overflow-hidden bg-white">
+      <div class="d-flex align-items-center gap-3 px-3 py-3 flex-wrap">
+
+        <!-- index — teal badge -->
+        <div style="min-width:32px; height:32px; background: #CFF3EE; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:#0F6E56; flex-shrink:0;">
+          {{ forloop.counter }}
         </div>
+
+        <!-- items amount -->
+        <div style="min-width:100px;">
+          <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#adb5bd; margin-bottom:4px;">Items amount</div>
+          <div style="font-size:14px; font-weight:500; color:#212529; font-variant-numeric:tabular-nums;">₦{{ item.approved_amount|floatformat:0|intcomma }}</div>
+        </div>
+
+        <span style="width:1px; height:36px; background:#f0f0f0; display:inline-block;"></span>
+
+        <!-- monthly payment -->
+        <div style="min-width:100px;">
+          <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#adb5bd; margin-bottom:4px;">Monthly payment</div>
+          <div style="font-size:14px; font-weight:500; color:#212529; font-variant-numeric:tabular-nums;">₦{{ item.monthly_payment|floatformat:0|intcomma }}</div>
+        </div>
+
+        <span style="width:1px; height:36px; background:#f0f0f0; display:inline-block;"></span>
+
+        <!-- amount paid — teal tint -->
+        <div style="min-width:100px; background: #D1F7E6; border-radius:10px; padding:8px 14px;">
+          <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#0F6E56; margin-bottom:4px;">Amount paid</div>
+          <div style="font-size:14px; font-weight:600; color:#085041; font-variant-numeric:tabular-nums;">₦{{ item.total_paid|floatformat:0|intcomma }}</div>
+        </div>
+
+        <!-- remaining — amber tint -->
+        <div style="min-width:100px; background: #FFF4E5; border-radius:10px; padding:8px 14px;">
+          <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#854F0B; margin-bottom:4px;">Remaining balance</div>
+          <div style="font-size:14px; font-weight:600; color:#633806; font-variant-numeric:tabular-nums;">₦{{ item.balance|floatformat:0|intcomma }}</div>
+        </div>
+
+      </div>
     </div>
-    {% endif %}
-    {% comment %} <!-- Recent Activity -->
-    <div class="content-card">
-        <h3>Recent Activity</h3>
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Action</th>
-                        <th>User</th>
-                        <th>Time</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><i class="bi bi-folder-plus me-2"></i>New case created</td>
-                        <td>John Doe</td>
-                        <td>2 minutes ago</td>
-                        <td><span class="status-badge status-active">Active</span></td>
-                    </tr>
-                    <tr>
-                        <td><i class="bi bi-person-plus me-2"></i>Member added</td>
-                        <td>Jane Smith</td>
-                        <td>15 minutes ago</td>
-                        <td><span class="status-badge status-completed">Completed</span></td>
-                    </tr>
-                    <tr>
-                        <td><i class="bi bi-file-earmark me-2"></i>Report generated</td>
-                        <td>System</td>
-                        <td>1 hour ago</td>
-                        <td><span class="status-badge status-pending">Pending</span></td>
-                    </tr>
-                </tbody>
-            </table>
+    {% endfor %}
+  </div>
+
+</div>
+{% endif %}
+
+
+{% if item_data %}
+<div class="mb-5">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="mb-0 d-flex align-items-center gap-2" style="font-size:15px; font-weight:500;">
+      <i class="ti ti-package" style="font-size:18px;"></i>
+      Active item requests
+    </h3>
+    <span class="text-muted rounded-pill px-3 py-1 bg-light" style="font-size:12px;">
+      {{ item_data|length }} active request{{ item_data|length|pluralize }}
+    </span>
+  </div>
+
+  <!-- summary metrics -->
+  {% comment %} <div class="row g-2 mb-3">
+    <div class="col-4">
+      <div class="rounded-3 p-2 p-md-3" style="background:#E6F1FB;">
+        <div style="font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; color:#185FA5; margin-bottom:4px;">Items value</div>
+        <div style="font-size:16px; font-weight:500; color:#0C447C; font-variant-numeric:tabular-nums;">₦{{ total_items_value|floatformat:0|intcomma }}</div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="rounded-3 p-2 p-md-3" style="background:#EAF3DE;">
+        <div style="font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; color:#3B6D11; margin-bottom:4px;">Total paid</div>
+        <div style="font-size:16px; font-weight:500; color:#27500A; font-variant-numeric:tabular-nums;">₦{{ total_paid_all|floatformat:0|intcomma }}</div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="rounded-3 p-2 p-md-3" style="background:#FCEBEB;">
+        <div style="font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; color:#A32D2D; margin-bottom:4px;">Remaining</div>
+        <div style="font-size:16px; font-weight:500; color:#791F1F; font-variant-numeric:tabular-nums;">₦{{ item_total_remaining|floatformat:0|intcomma }}</div>
+      </div>
+    </div>
+  </div> {% endcomment %}
+
+  <!-- entry cards -->
+  <div class="d-flex flex-column gap-2">
+    {% for entry in item_data %}
+    <div class="border rounded-3 overflow-hidden bg-white">
+
+      <!-- top bar: id + status -->
+      <div class="d-flex align-items-center justify-content-between px-3 pt-3 pb-2">
+        <div>
+          <span style="font-size:13px; font-weight:600; color:#0C447C; background:#E6F1FB; padding:2px 8px; border-radius:6px;">#{{ entry.item.id }}</span>
+          <span class="text-muted ms-2" style="font-size:11px;">{{ entry.item.date_created|date:"M d, Y" }}</span>
         </div>
-    </div> {% endcomment %}
+        <div>
+          {% if entry.item.status == 'Fully Paid' %}
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; background:#EAF3DE; color:#27500A; padding:4px 10px; border-radius:999px;">
+              <i class="ti ti-circle-check" style="font-size:13px;"></i> Fully Paid
+            </span>
+          {% elif entry.item.status == 'ItemPicked' %}
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; background:#E6F1FB; color:#0C447C; padding:4px 10px; border-radius:999px;">
+              <i class="ti ti-shopping-bag" style="font-size:13px;"></i> Item Picked
+            </span>
+          {% elif entry.item.status == 'Approved' %}
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; background:#FAEEDA; color:#633806; padding:4px 10px; border-radius:999px;">
+              <i class="ti ti-clock" style="font-size:13px;"></i> Approved
+            </span>
+          {% elif entry.item.status == 'Declined' %}
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; background:#FCEBEB; color:#791F1F; padding:4px 10px; border-radius:999px;">
+              <i class="ti ti-circle-x" style="font-size:13px;"></i> Declined
+            </span>
+          {% else %}
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; background:#f1f3f5; color:#6c757d; padding:4px 10px; border-radius:999px;">
+              <i class="ti ti-dots" style="font-size:13px;"></i> {{ entry.item.status }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- metrics grid: 2x2 on mobile, 4 cols on desktop -->
+      <div class="row g-2 px-3 pb-3">
+        <div class="col-6 col-md-3">
+          <div class="rounded-2 p-2" style="background:#f8f9fa;">
+            <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#adb5bd; margin-bottom:3px;">Items amount</div>
+            <div style="font-size:14px; font-weight:500; color:#212529; font-variant-numeric:tabular-nums;">₦{{ entry.approved_amount|floatformat:0|intcomma }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="rounded-2 p-2" style="background:#f8f9fa;">
+            <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#adb5bd; margin-bottom:3px;">Monthly</div>
+            <div style="font-size:14px; font-weight:500; color:#212529; font-variant-numeric:tabular-nums;">₦{{ entry.monthly_payment|floatformat:-2|intcomma }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="rounded-2 p-2" style="background:#EAF3DE;">
+            <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#3B6D11; margin-bottom:3px;">Amount paid</div>
+            <div style="font-size:14px; font-weight:600; color:#27500A; font-variant-numeric:tabular-nums;">₦{{ entry.total_paid|floatformat:0|intcomma }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="rounded-2 p-2" style="{% if entry.balance <= 0 %}background:#EAF3DE;{% else %}background:#FCEBEB;{% endif %}">
+            <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:3px; {% if entry.balance <= 0 %}color:#3B6D11;{% else %}color:#A32D2D;{% endif %}">Remaining</div>
+            {% if entry.balance <= 0 %}
+              <div style="font-size:14px; font-weight:600; color:#27500A;">₦0</div>
+            {% else %}
+              <div style="font-size:14px; font-weight:600; color:#791F1F; font-variant-numeric:tabular-nums;">₦{{ entry.balance|floatformat:0|intcomma }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- breakdown -->
+      {% if entry.item.details.all %}
+      <div class="px-3 py-2 border-top" style="background:#f8f9fa;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#adb5bd; margin-bottom:8px;">
+          <i class="ti ti-list" style="font-size:12px; vertical-align:-1px;"></i> Item breakdown
+        </div>
+        <div class="d-flex flex-column gap-2">
+          {% for detail in entry.item.details.all %}
+          <div class="d-flex flex-wrap align-items-center gap-2 bg-white border rounded-3 px-3 py-2" style="font-size:12px;">
+            <span style="background:#E6F1FB; color:#0C447C; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px;">
+              Qty {{ detail.quantity }}
+            </span>
+            <span style="font-weight:500; color:#212529;">
+              {{ detail.item.received_item.brand }} {{ detail.item.received_item.model_name }}
+            </span>
+            <span style="color:#6c757d;">
+              <i class="ti ti-tag" style="font-size:12px; vertical-align:-1px; margin-right:2px;"></i>
+              ₦{{ detail.item_price|floatformat:0|intcomma }} each
+            </span>
+            <span style="background:#FAEEDA; color:#631806; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px;">
+              <i class="ti ti-calendar-time" style="font-size:12px; vertical-align:-1px;"></i>
+              {{ detail.duration_months }}  months Duration
+            </span>
+            <div style="margin-top:6px; font-size:12px;">
+
+        <strong style="background:#a7f3d0; color:#631806; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px;">
+     Payments Made   <span class="fs-6">{{ total_paid_count }}  </span> &nbsp;&nbsp;
+      </strong>
+
+      <strong style="display:inline-block; font-weight:600; background:#fef2f2; padding:3px 7px; border-radius:5px; color:#dc3545;">
+        Payments Remaining  <span class="fs-6">{{ total_remaining_count }} </span>
+      </strong>
+  </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  </div>
+    
+</div>
+{% endif %}
+
 </div>
 </div>
 {% endblock content %}

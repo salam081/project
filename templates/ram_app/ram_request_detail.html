@@ -1,0 +1,252 @@
+{% extends "base/base.html" %}
+
+
+
+{% block title %}Request Detail{% endblock %}
+{% block page_title %}RAM Request Detail{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="container">
+
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+    <div>
+        <h6 class="fw-bold mb-1">
+            Request by {{ ram_request.member.member.get_full_name|default:ram_request.guest_name }}
+            <span class="status-badge bg-success ms-1 text-white {{ ram_request.status }} fs-6">{{ ram_request.get_status_display }}</span>
+        </h6>
+        {% comment %} {% if ram_request.guarantor_accepted %}
+        <span class="status-badge bg-success ms-1">Guarantor Accepted</span>
+        {% endif %} {% endcomment %}
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        {% if user.is_staff and ram_request.status == 'pending' %}
+        <a href="{% url 'ram_request_approve' ram_request.pk %}" class="btn btn-success text-white"
+           onclick="return confirm('Approve this request?')">
+            <i class="bi bi-check-lg me-1"></i> Approve
+        </a>
+        <a href="{% url 'ram_request_reject' ram_request.pk %}" class="btn btn-danger text-white"
+           onclick="return confirm('Reject this request?')">
+            <i class="bi bi-x-lg me-1"></i> Reject
+        </a>
+        {% endif %}
+        {% if user.is_staff and ram_request.status == 'approved' and not ram_request.is_fully_paid %}
+        <a href="{% url 'payment_add' ram_request.pk %}" class="btn btn-primary text-white">
+            <i class="bi bi-cash me-1"></i> Add Payment
+        </a>
+        {% endif %}
+        <a href="{% url 'ram_request_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card blue p-3 shadow">
+            <small class="text-muted">Total Cost Price</small>
+            <h6 class="fw-bold text-primary mb-0">₦{{ ram_request.total_cost_price|floatformat:2 }}</h6>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card orange p-3 shadow">
+            <small class="text-muted">Total Selling Price</small>
+            <h6 class="fw-bold text-warning mb-0">₦{{ ram_request.total_selling_price|floatformat:2 }}</h6>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card green p-3 shadow">
+            <small class="text-muted">Total Paid</small>
+            <h6 class="fw-bold text-success mb-0">₦{{ ram_request.total_paid|floatformat:2 }}</h6>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card red p-3 shadow">
+            <small class="text-muted">Balance Remaining</small>
+            <h6 class="fw-bold text-danger mb-0">₦{{ ram_request.balance_remaining|floatformat:2 }}</h6>
+        </div>
+    </div>
+</div>
+
+{% if ram_request.is_fully_paid %}
+<div class="alert alert-success mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i> This request has been <strong>fully paid</strong>.
+</div>
+{% endif %}
+
+<!-- Request Info -->
+<div class="row g-4 mb-4">
+    <!-- Member Info -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow">
+            <div class="card-header bg-light">Member Information</div>
+            <div class="card-body">
+                {% if ram_request.member %}
+                <p class="mb-1"><span class="text-muted">Name:</span>
+                    <strong>{{ ram_request.member.member.get_full_name }}</strong></p>
+                <p class="mb-1"><span class="text-muted">IPPIS:</span>
+                    <strong>{{ ram_request.member.ippis }}</strong></p>
+                <p class="mb-1"><span class="text-muted">Department:</span>
+                    <strong>{{ ram_request.member.member.department }}</strong></p>
+                <p class="mb-1"><span class="text-muted">Guarantor:</span>    
+                    <strong>{{ ram_request.guarantor }}</strong></p>
+                {% endif %}
+                {% if ram_request.guest_name %}
+                <p class="mb-1"><span class="text-muted">Guest Name:</span>
+                    <strong>{{ ram_request.guest_name }}</strong></p>
+                <p class="mb-1"><span class="text-muted">Guest Phone:</span>
+                    <strong>{{ ram_request.guest_phone|default:"-" }}</strong></p>
+                <p class="mb-1"><span class="text-muted">Guest IPPIS:</span>
+                    <strong>{{ ram_request.guest_ippis|default:"-" }}</strong></p>
+                {% comment %} <p class="mb-1"><span class="text-muted">Guarantor:</span>
+                    <strong>{{ ram_request.guarantor|default:"-" }}</strong></p> {% endcomment %}
+                {% endif %}
+                {% if ram_request.file_payslip %}
+                <p class="mb-1"><span class="text-muted">Payslip:</span>
+                    <a href="{{ ram_request.file_payslip.url }}" target="_blank" class="btn btn-sm btn-outline-secondary ms-2">
+                        <i class="bi bi-file-image me-1"></i> View Payslip
+                    </a>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Info -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow">
+            <div class="card-header bg-light">Request Information</div>
+            <div class="card-body">
+                <p class="mb-1"><span class="text-muted">Budget:</span>
+                    <strong><a href="{% url 'budget_detail' ram_request.budget.pk %}">{{ ram_request.budget.name }}</a></strong></p>
+                <p class="mb-1"><span class="text-muted">Date Requested:</span>
+                    <strong>{{ ram_request.date_requested|date:"d M Y, H:i" }}</strong></p>
+                <p class="mb-1"><span class="text-muted">Created By:</span>
+                    <strong>{{ ram_request.created_by.get_full_name|default:"-" }}</strong></p>
+                {% comment %} {% if ram_request.guarantor %}
+                <p class="mb-1"><span class="text-muted">Guarantor:</span>
+                    <strong>{{ ram_request.guarantor.member.get_full_name }}</strong>
+                    {% if ram_request.guarantor_accepted %}
+                    <span class="status-badge bg-success ms-1">Accepted</span>
+                    {% else %}
+                    <span class="status-badge bg-warning text-dark ms-1">Pending</span>
+                    {% endif %}
+                </p>
+                {% endif %} {% endcomment %}
+                {% if ram_request.approved_by %}
+                <p class="mb-1"><span class="text-muted">Approved By:</span>
+                    <strong>{{ ram_request.approved_by.get_full_name }}</strong></p>
+                <p class="mb-1"><span class="text-muted">Approved Date:</span>
+                    <strong>{{ ram_request.approved_date|date:"d M Y, H:i" }}</strong></p>
+                {% endif %}
+                {% if ram_request.note %}
+                <p class="mb-1"><span class="text-muted">Note:</span>
+                    <strong>{{ ram_request.note }}</strong></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Items -->
+<div class="card mb-4 shadow">
+    <div class="card-header bg-light d-flex justify-content-between">
+        <span>Requested Items</span>
+        <span class="status-badge bg-primary">{{ ram_request.items.count }} item(s)</span>
+    </div>
+        <div class="card border-0 shadow rounded-3 overflow-hidden py-2">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                <thead class="table-info">
+                <tr>
+                    <th class="ps-4">S/N</th>
+                    <th>Item Name</th>
+                    <th>Qty</th>
+                    <th>Cost Price</th>
+                    <th>Selling Price</th>
+                    <th>Total Cost</th>
+                    <th class="pe-4">Total Selling</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in ram_request.items.all %}
+                <tr>
+                    <td class="ps-4">{{ forloop.counter }}</td>
+                    <td class="fw-semibold">{{ item.item_name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>₦{{ item.cost_price|floatformat:2 }}</td>
+                    <td>₦{{ item.selling_price|floatformat:2 }}</td>
+                    <td>₦{{ item.total_cost_price|floatformat:2 }}</td>
+                    <td class="pe-4">₦{{ item.total_selling_price|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <td colspan="5" class="ps-4 text-end">Totals:</td>
+                    <td>₦{{ ram_request.total_cost_price|floatformat:2 }}</td>
+                    <td class="pe-4">₦{{ ram_request.total_selling_price|floatformat:2 }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    </div>
+</div>
+
+<!-- Payments -->
+<div class="card">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <span >Payment History</span>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="status-badge bg-success text-white">{{ ram_request.payments.count }} payment(s)</span>
+            {% if user.is_staff and ram_request.status == 'approved' and not ram_request.is_fully_paid %}
+            <a href="{% url 'payment_add' ram_request.pk %}" class="btn btn-sm btn-primary text-white">
+                Add Payment
+            </a>
+            {% endif %}
+        </div>
+    </div>
+        <div class="card border-0 shadow rounded-3 overflow-hidden py-2">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                <thead class="table-info">
+                <tr>
+                    <th class="ps-4">S/N</th>
+                    <th>Amount</th>
+                    <th>Repayment Month</th>
+                    <th>Receipt</th>
+                    <th>Received By</th>
+                    <th>Date Recorded</th>
+                    <th class="pe-4">Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in ram_request.payments.all %}
+                <tr>
+                    <td class="ps-4">{{ forloop.counter }}</td>
+                    <td class="text-success fw-semibold">₦{{ payment.amount|floatformat:2 }}</td>
+                    <td>{{ payment.repayment_mounth|date:"M Y" }}</td>
+                    <td>
+                        {% if payment.payment_receipt %}
+                        <a href="{{ payment.payment_receipt.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-image"></i> View
+                        </a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td>{{ payment.received_by.get_full_name|default:"-" }}</td>
+                    <td>{{ payment.date_paid|date:"d M Y, H:i" }}</td>
+                    <td class="pe-4">{{ payment.note|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No payments recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    </div>
+</div>
+</div>
+{% endblock %}
